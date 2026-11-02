@@ -185,21 +185,21 @@
       box-sizing: border-box;
     }
 
-    /* Apple-Style Liquid Glass Card */
+    /* Apple-Style Warm Liquid Glass Card */
     .finder-section {
       max-width: 580px;
       width: 100%;
-      background: rgba(255, 255, 255, 0.78);
-      backdrop-filter: blur(32px) saturate(190%);
-      -webkit-backdrop-filter: blur(32px) saturate(190%);
-      border: 1px solid rgba(255, 255, 255, 0.92);
-      border-radius: 32px;
+      background: rgba(255, 252, 240, 0.88);
+      backdrop-filter: blur(32px) saturate(180%);
+      -webkit-backdrop-filter: blur(32px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      border-radius: 36px;
       padding: clamp(2.2rem, 5vw, 3.2rem) clamp(1.5rem, 4vw, 2.5rem);
       text-align: center;
       margin: 0 auto;
       box-shadow:
-        0 30px 60px -12px rgba(0, 0, 0, 0.22),
-        0 18px 36px -18px rgba(0, 0, 0, 0.14),
+        0 30px 60px -12px rgba(0, 0, 0, 0.16),
+        0 18px 36px -18px rgba(0, 0, 0, 0.10),
         inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.95),
         inset 0 -1px 1px 0 rgba(0, 0, 0, 0.04);
       box-sizing: border-box;
@@ -215,16 +215,16 @@
 
     .faceid-badge {
       position: relative;
-      width: 78px;
-      height: 78px;
-      border-radius: 22px;
-      background: rgba(255, 255, 255, 0.72);
+      width: 80px;
+      height: 80px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.82);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.95);
+      border: 1.5px solid rgba(255, 255, 255, 0.98);
       box-shadow:
-        0 10px 24px rgba(15, 92, 77, 0.15),
-        inset 0 1px 1px rgba(255, 255, 255, 0.9);
+        0 10px 24px rgba(15, 92, 77, 0.12),
+        inset 0 1px 1px rgba(255, 255, 255, 0.95);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -278,19 +278,46 @@
     }
 
     .finder-heading {
-      font-size: clamp(1.4rem, 3.2vw, 1.95rem);
-      font-weight: 800;
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+      font-size: clamp(1.48rem, 3.2vw, 2.05rem);
+      font-weight: 700;
       color: #0f172a;
-      margin-bottom: 0.5rem;
-      letter-spacing: -0.025em;
+      margin-bottom: 0.85rem;
+      letter-spacing: -0.015em;
+      line-height: 1.3;
+    }
+
+    .heading-row-1 {
+      display: block;
+    }
+
+    .heading-row-2 {
+      display: block;
+    }
+
+    .mobile-break {
+      display: none;
+    }
+
+    @media (max-width: 640px) {
+      .mobile-break {
+        display: inline;
+      }
+      .heading-row-mp {
+        display: inline-block;
+      }
     }
 
     .finder-subheading {
-      font-size: clamp(0.88rem, 1.8vw, 1rem);
+      font-size: clamp(0.92rem, 1.8vw, 1.02rem);
       color: #4b5563;
-      max-width: 460px;
+      max-width: 520px;
       margin: 0 auto 1.8rem;
-      line-height: 1.55;
+      line-height: 1.6;
+    }
+
+    .sub-break {
+      display: inline;
     }
 
     .finder-actions-row {
@@ -362,106 +389,86 @@
       min-height: 1.4em;
     }
 
-    /* Social Connect Bar (Apple Frosted Glass) */
-    .social-connect-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      background: rgba(255, 255, 255, 0.65);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.88);
-      border-radius: 20px;
-      padding: 0.85rem 1.25rem;
-      margin: 1.75rem 0 0.5rem;
-      box-shadow: 
-        0 8px 24px -6px rgba(0, 0, 0, 0.08),
-        inset 0 1px 1px rgba(255, 255, 255, 0.95);
-      text-align: left;
+    /* Subtle Card Dividers */
+    .card-divider {
+      width: 100%;
+      height: 1px;
+      background: rgba(0, 0, 0, 0.08);
+      margin: 1.8rem 0 1.25rem;
+      border: none;
     }
 
-    .social-text-block {
+    /* Social Connect Section (Centered - Matching Reference) */
+    .social-section-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.85rem;
+      text-align: center;
+    }
+
+    .social-label-wrap {
       display: flex;
       flex-direction: column;
       gap: 2px;
     }
 
-    .social-eyebrow {
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.1em;
-      color: #b45309;
-      text-transform: uppercase;
+    .social-follow-text {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #374151;
+      letter-spacing: -0.01em;
     }
 
-    .social-title {
-      font-size: 1.05rem;
+    .social-channels-text {
+      font-size: 1.08rem;
       font-weight: 800;
       color: #0f172a;
       letter-spacing: -0.015em;
     }
 
-    .social-icons-row {
+    .social-icons-center {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      justify-content: center;
+      gap: 0.85rem;
     }
 
-    .social-icon-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 13px;
+    .social-light-pill {
+      width: 48px;
+      height: 48px;
+      border-radius: 15px;
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.05),
+        inset 0 1px 1px rgba(255, 255, 255, 0.95);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: #ffffff;
+      color: #111827;
       text-decoration: none;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, filter 0.22s ease;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
       flex-shrink: 0;
     }
 
-    .social-icon-btn:hover {
+    .social-light-pill:hover {
       transform: translateY(-2px) scale(1.06);
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
-      filter: brightness(1.08);
+      background: #ffffff;
+      color: #000000;
+      border-color: rgba(0, 0, 0, 0.12);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
     }
 
-    .social-icon-btn:active {
+    .social-light-pill:active {
       transform: scale(0.96);
-    }
-
-    .social-ig {
-      background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
-    }
-
-    .social-fb {
-      background: #1877f2;
-    }
-
-    .social-x {
-      background: #000000;
-    }
-
-    @media (max-width: 520px) {
-      .social-connect-bar {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        gap: 0.85rem;
-        padding: 0.9rem 1rem;
-      }
-      .social-text-block {
-        align-items: center;
-      }
     }
 
     /* Liquid Card Footer with WhatsApp link */
     .liquid-card-footer {
-      margin-top: 1.8rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid rgba(0, 0, 0, 0.07);
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
       display: flex;
       justify-content: center;
     }
@@ -1146,10 +1153,15 @@
         </div>
       </div>
 
-      <h1 class="finder-heading">Find your photographs with BRK Sir</h1>
-      <p class="finder-subheading">Take a selfie or upload a photo to find all pictures taken with <strong>Bhashyam Rama
-          Krishna Garu, MP Rajya Sabha</strong>
-        <br> using AI facial recognition.
+      <h1 class="finder-heading">
+        <span class="heading-row-1">Find your photographs with</span>
+        <span class="heading-row-2">
+          <span>Bhashyam Rama Krishna Garu,</span><span class="mobile-break"><br></span>
+          <span class="heading-row-mp">MP Rajya Sabha</span>
+        </span>
+      </h1>
+      <p class="finder-subheading">
+        Take a selfie or upload a photo to find all pictures<br class="sub-break">taken with Sir using our AI facial recognition.
       </p>
 
       <!-- Hidden native inputs -->
@@ -1163,7 +1175,7 @@
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
             <circle cx="12" cy="13" r="4" />
           </svg>
-          <span>Take Selfie (Camera)</span>
+          <span>Take Selfie</span>
         </button>
         <button class="btn-find-photos btn-outline" id="uploadFileBtn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
@@ -1179,35 +1191,41 @@
       <!-- Search progress / scanning status -->
       <div id="searchStatus" class="search-status-text"></div>
 
-      <!-- Social Media Connect Bar (Frosted Glass with Official Brand Logos) -->
-      <div class="social-connect-bar">
-        <div class="social-text-block">
-          <div class="social-eyebrow">CONNECT WITH US</div>
-          <div class="social-title">Official Channels</div>
+      <!-- Divider line above Social Section -->
+      <div class="card-divider"></div>
+
+      <!-- Follow Us On Our Official Channels -->
+      <div class="social-section-center">
+        <div class="social-label-wrap">
+          <div class="social-follow-text">Follow Us On Our</div>
+          <div class="social-channels-text">Official Channels</div>
         </div>
-        <div class="social-icons-row">
+        <div class="social-icons-center">
           <!-- Instagram -->
-          <a href="https://www.instagram.com/ramakrishnabhashyam/" target="_blank" rel="noopener noreferrer" class="social-icon-btn social-ig" title="Follow Bhashyam Ramakrishna on Instagram" aria-label="Instagram">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <a href="https://www.instagram.com/ramakrishnabhashyam/" target="_blank" rel="noopener noreferrer" class="social-light-pill" title="Follow Bhashyam Ramakrishna on Instagram" aria-label="Instagram">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
               <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
               <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
             </svg>
           </a>
           <!-- Facebook -->
-          <a href="https://www.facebook.com/ramakrishnabhashyam" target="_blank" rel="noopener noreferrer" class="social-icon-btn social-fb" title="Follow Bhashyam Ramakrishna on Facebook" aria-label="Facebook">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffffff">
+          <a href="https://www.facebook.com/ramakrishnabhashyam" target="_blank" rel="noopener noreferrer" class="social-light-pill" title="Follow Bhashyam Ramakrishna on Facebook" aria-label="Facebook">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
             </svg>
           </a>
           <!-- X (Twitter) -->
-          <a href="https://x.com/bhashyambrk" target="_blank" rel="noopener noreferrer" class="social-icon-btn social-x" title="Follow Bhashyam Ramakrishna on X" aria-label="X">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff">
+          <a href="https://x.com/bhashyambrk" target="_blank" rel="noopener noreferrer" class="social-light-pill" title="Follow Bhashyam Ramakrishna on X" aria-label="X">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
             </svg>
           </a>
         </div>
       </div>
+
+      <!-- Divider line below Social Section -->
+      <div class="card-divider" style="margin: 1.3rem 0 1.25rem;"></div>
 
       <!-- Liquid Card Footer: Powered by Magni Digitech with WhatsApp Link -->
       <div class="liquid-card-footer">
