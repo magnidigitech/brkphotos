@@ -157,6 +157,7 @@
       0% {
         transform: translateX(0);
       }
+
       100% {
         transform: translateX(-50%);
       }
@@ -196,7 +197,7 @@
       padding: clamp(2.2rem, 5vw, 3.2rem) clamp(1.5rem, 4vw, 2.5rem);
       text-align: center;
       margin: 0 auto;
-      box-shadow: 
+      box-shadow:
         0 30px 60px -12px rgba(0, 0, 0, 0.22),
         0 18px 36px -18px rgba(0, 0, 0, 0.14),
         inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.95),
@@ -211,6 +212,7 @@
       justify-content: center;
       margin-bottom: 1.4rem;
     }
+
     .faceid-badge {
       position: relative;
       width: 78px;
@@ -220,7 +222,7 @@
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.95);
-      box-shadow: 
+      box-shadow:
         0 10px 24px rgba(15, 92, 77, 0.15),
         inset 0 1px 1px rgba(255, 255, 255, 0.9);
       display: flex;
@@ -229,16 +231,26 @@
       color: #0f5c4d;
       overflow: hidden;
     }
+
     .faceid-svg {
       width: 48px;
       height: 48px;
       display: block;
       animation: faceIdPulse 2.8s ease-in-out infinite;
     }
+
     @keyframes faceIdPulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
     }
+
     .faceid-laser-beam {
       position: absolute;
       left: 8px;
@@ -250,11 +262,15 @@
       animation: faceIdLaserScan 2.4s ease-in-out infinite;
       pointer-events: none;
     }
+
     @keyframes faceIdLaserScan {
-      0%, 100% {
+
+      0%,
+      100% {
         top: 12px;
         opacity: 0.2;
       }
+
       50% {
         top: 62px;
         opacity: 1;
@@ -268,6 +284,7 @@
       margin-bottom: 0.5rem;
       letter-spacing: -0.025em;
     }
+
     .finder-subheading {
       font-size: clamp(0.88rem, 1.8vw, 1rem);
       color: #4b5563;
@@ -283,6 +300,7 @@
       flex-wrap: wrap;
       align-items: center;
     }
+
     .btn-find-photos {
       background: linear-gradient(135deg, #0f5c4d 0%, #0a4539 100%);
       color: #ffffff;
@@ -299,14 +317,17 @@
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       font-family: inherit;
     }
+
     .btn-find-photos:hover {
       transform: translateY(-2px);
       box-shadow: 0 12px 28px rgba(15, 92, 77, 0.42);
       background: linear-gradient(135deg, #126e5c 0%, #0c5244 100%);
     }
+
     .btn-find-photos:active {
       transform: scale(0.97);
     }
+
     .btn-find-photos.btn-outline {
       background: rgba(255, 255, 255, 0.85);
       color: #1f2937;
@@ -314,6 +335,7 @@
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05), inset 0 1px 1px #fff;
       backdrop-filter: blur(8px);
     }
+
     .btn-find-photos.btn-outline:hover {
       background: #ffffff;
       border-color: #0f5c4d;
@@ -321,20 +343,118 @@
       transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
     }
+
     .btn-find-photos.btn-outline:active {
       transform: scale(0.97);
     }
+
     .btn-find-photos:disabled {
       opacity: 0.55;
       cursor: not-allowed;
       transform: none;
     }
+
     .search-status-text {
       font-size: 0.95rem;
       font-weight: 600;
       color: #374151;
       margin-top: 1.25rem;
       min-height: 1.4em;
+    }
+
+    /* Social Connect Bar (Apple Frosted Glass) */
+    .social-connect-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.88);
+      border-radius: 20px;
+      padding: 0.85rem 1.25rem;
+      margin: 1.75rem 0 0.5rem;
+      box-shadow: 
+        0 8px 24px -6px rgba(0, 0, 0, 0.08),
+        inset 0 1px 1px rgba(255, 255, 255, 0.95);
+      text-align: left;
+    }
+
+    .social-text-block {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .social-eyebrow {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: #b45309;
+      text-transform: uppercase;
+    }
+
+    .social-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.015em;
+    }
+
+    .social-icons-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .social-icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      text-decoration: none;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, filter 0.22s ease;
+      flex-shrink: 0;
+    }
+
+    .social-icon-btn:hover {
+      transform: translateY(-2px) scale(1.06);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+      filter: brightness(1.08);
+    }
+
+    .social-icon-btn:active {
+      transform: scale(0.96);
+    }
+
+    .social-ig {
+      background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+    }
+
+    .social-fb {
+      background: #1877f2;
+    }
+
+    .social-x {
+      background: #000000;
+    }
+
+    @media (max-width: 520px) {
+      .social-connect-bar {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.85rem;
+        padding: 0.9rem 1rem;
+      }
+      .social-text-block {
+        align-items: center;
+      }
     }
 
     /* Liquid Card Footer with WhatsApp link */
@@ -345,6 +465,7 @@
       display: flex;
       justify-content: center;
     }
+
     .powered-by-wa-badge {
       display: inline-flex;
       align-items: center;
@@ -359,6 +480,7 @@
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
       transition: all 0.2s ease;
     }
+
     .powered-by-wa-badge:hover {
       background: #ffffff;
       color: #111827;
@@ -366,14 +488,17 @@
       box-shadow: 0 4px 14px rgba(37, 211, 102, 0.25);
       transform: translateY(-1px);
     }
+
     .powered-by-wa-badge .wa-icon {
       color: #25d366;
       flex-shrink: 0;
     }
+
     .powered-by-wa-badge .wa-brand {
       font-weight: 700;
       color: #111827;
     }
+
     /* Photos Section */
     .photos-section {
       max-width: 1040px;
@@ -1006,15 +1131,15 @@
         <div class="faceid-badge" title="AI Face Recognition">
           <svg class="faceid-svg" viewBox="0 0 48 48" fill="none" stroke="currentColor">
             <!-- Sleek Corner Scanner Brackets -->
-            <path d="M6 16V10a4 4 0 0 1 4-4h6" stroke-width="2.8" stroke-linecap="round"/>
-            <path d="M32 6h6a4 4 0 0 1 4 4v6" stroke-width="2.8" stroke-linecap="round"/>
-            <path d="M42 32v6a4 4 0 0 1-4 4h-6" stroke-width="2.8" stroke-linecap="round"/>
-            <path d="M16 42h-6a4 4 0 0 1-4-4v-6" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M6 16V10a4 4 0 0 1 4-4h6" stroke-width="2.8" stroke-linecap="round" />
+            <path d="M32 6h6a4 4 0 0 1 4 4v6" stroke-width="2.8" stroke-linecap="round" />
+            <path d="M42 32v6a4 4 0 0 1-4 4h-6" stroke-width="2.8" stroke-linecap="round" />
+            <path d="M16 42h-6a4 4 0 0 1-4-4v-6" stroke-width="2.8" stroke-linecap="round" />
             <!-- Minimalist Face Contour -->
-            <circle cx="17.5" cy="19.5" r="2.2" fill="currentColor" stroke="none"/>
-            <circle cx="30.5" cy="19.5" r="2.2" fill="currentColor" stroke="none"/>
-            <path d="M24 21.5v4" stroke-width="2.4" stroke-linecap="round"/>
-            <path d="M18 30c1.8 3 4.2 4 6 4s4.2-1 6-4" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="17.5" cy="19.5" r="2.2" fill="currentColor" stroke="none" />
+            <circle cx="30.5" cy="19.5" r="2.2" fill="currentColor" stroke="none" />
+            <path d="M24 21.5v4" stroke-width="2.4" stroke-linecap="round" />
+            <path d="M18 30c1.8 3 4.2 4 6 4s4.2-1 6-4" stroke-width="2.4" stroke-linecap="round" />
           </svg>
           <!-- Glowing Scanning Laser Beam -->
           <div class="faceid-laser-beam"></div>
@@ -1022,7 +1147,10 @@
       </div>
 
       <h1 class="finder-heading">Find your photographs with BRK Sir</h1>
-      <p class="finder-subheading">Take a selfie or upload a photo to find all pictures taken with Bhashyam Ramakrishna Garu, MP Rajya Sabha using AI facial recognition.</p>
+      <p class="finder-subheading">Take a selfie or upload a photo to find all pictures taken with <strong>Bhashyam Rama
+          Krishna Garu, MP Rajya Sabha</strong>
+        <br> using AI facial recognition.
+      </p>
 
       <!-- Hidden native inputs -->
       <input type="file" id="selfieCameraInput" accept="image/*" capture="user" style="display:none;">
@@ -1030,17 +1158,19 @@
 
       <div class="finder-actions-row">
         <button class="btn-find-photos" id="cameraBtn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
           </svg>
           <span>Take Selfie (Camera)</span>
         </button>
         <button class="btn-find-photos btn-outline" id="uploadFileBtn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
           <span>Upload Photo</span>
         </button>
@@ -1049,15 +1179,44 @@
       <!-- Search progress / scanning status -->
       <div id="searchStatus" class="search-status-text"></div>
 
+      <!-- Social Media Connect Bar (Frosted Glass with Official Brand Logos) -->
+      <div class="social-connect-bar">
+        <div class="social-text-block">
+          <div class="social-eyebrow">CONNECT WITH US</div>
+          <div class="social-title">Official Channels</div>
+        </div>
+        <div class="social-icons-row">
+          <!-- Instagram -->
+          <a href="https://www.instagram.com/ramakrishnabhashyam/" target="_blank" rel="noopener noreferrer" class="social-icon-btn social-ig" title="Follow Bhashyam Ramakrishna on Instagram" aria-label="Instagram">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+            </svg>
+          </a>
+          <!-- Facebook -->
+          <a href="https://www.facebook.com/ramakrishnabhashyam" target="_blank" rel="noopener noreferrer" class="social-icon-btn social-fb" title="Follow Bhashyam Ramakrishna on Facebook" aria-label="Facebook">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffffff">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+          </a>
+          <!-- X (Twitter) -->
+          <a href="https://x.com/bhashyambrk" target="_blank" rel="noopener noreferrer" class="social-icon-btn social-x" title="Follow Bhashyam Ramakrishna on X" aria-label="X">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
       <!-- Liquid Card Footer: Powered by Magni Digitech with WhatsApp Link -->
       <div class="liquid-card-footer">
-        <a href="https://wa.me/918184974589?text=Hi%20Magni%20Digitech%2C%20Contacting%20from%20BRK%20Sir%20Photos%20Page" 
-           target="_blank" 
-           rel="noopener noreferrer" 
-           class="powered-by-wa-badge"
-           title="Contact Magni Digitech on WhatsApp">
+        <a href="https://wa.me/918184974589?text=Hi%20Magni%20Digitech%2C%20Contacting%20from%20BRK%20Sir%20Photos%20Page"
+          target="_blank" rel="noopener noreferrer" class="powered-by-wa-badge"
+          title="Contact Magni Digitech on WhatsApp">
           <svg class="wa-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.93.53 3.75 1.51 5.33L2 22l4.91-1.59a9.85 9.85 0 0 0 5.13 1.43h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.64-1.03-5.13-2.9-7A9.87 9.87 0 0 0 12.04 2zm0 17.5c-1.63 0-3.23-.43-4.63-1.25l-.33-.2-3.44 1.11 1.14-3.34-.22-.35a8.13 8.13 0 0 1-1.25-4.4c0-4.52 3.68-8.2 8.2-8.2 2.19 0 4.25.85 5.8 2.4a8.16 8.16 0 0 1 2.4 5.8c0 4.52-3.68 8.2-8.2 8.2zm4.49-6.14c-.25-.12-1.46-.72-1.69-.8-.22-.09-.39-.12-.55.12-.17.25-.64.8-.78.97-.15.17-.3.19-.55.07-.25-.12-1.05-.39-2-1.24-.74-.66-1.24-1.48-1.39-1.73-.15-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.12-.55-1.33-.76-1.82-.2-.48-.41-.41-.56-.42l-.48-.01c-.17 0-.43.06-.66.31-.22.25-.86.84-.86 2.05s.88 2.38 1 2.55c.12.17 1.73 2.64 4.19 3.7.59.25 1.04.41 1.4.52.59.19 1.13.16 1.56.1.47-.07 1.46-.6 1.67-1.17.21-.58.21-1.07.15-1.17-.06-.1-.22-.16-.47-.28z"/>
+            <path
+              d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.93.53 3.75 1.51 5.33L2 22l4.91-1.59a9.85 9.85 0 0 0 5.13 1.43h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.64-1.03-5.13-2.9-7A9.87 9.87 0 0 0 12.04 2zm0 17.5c-1.63 0-3.23-.43-4.63-1.25l-.33-.2-3.44 1.11 1.14-3.34-.22-.35a8.13 8.13 0 0 1-1.25-4.4c0-4.52 3.68-8.2 8.2-8.2 2.19 0 4.25.85 5.8 2.4a8.16 8.16 0 0 1 2.4 5.8c0 4.52-3.68 8.2-8.2 8.2zm4.49-6.14c-.25-.12-1.46-.72-1.69-.8-.22-.09-.39-.12-.55.12-.17.25-.64.8-.78.97-.15.17-.3.19-.55.07-.25-.12-1.05-.39-2-1.24-.74-.66-1.24-1.48-1.39-1.73-.15-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.12-.55-1.33-.76-1.82-.2-.48-.41-.41-.56-.42l-.48-.01c-.17 0-.43.06-.66.31-.22.25-.86.84-.86 2.05s.88 2.38 1 2.55c.12.17 1.73 2.64 4.19 3.7.59.25 1.04.41 1.4.52.59.19 1.13.16 1.56.1.47-.07 1.46-.6 1.67-1.17.21-.58.21-1.07.15-1.17-.06-.1-.22-.16-.47-.28z" />
           </svg>
           <span>Powered by <span class="wa-brand">Magni Digitech</span></span>
         </a>
