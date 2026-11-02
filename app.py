@@ -2096,6 +2096,17 @@ def robots_txt():
         return FileResponse(f, media_type="text/plain")
     raise HTTPException(404, "Robots not found")
 
+@app.get("/favicon.ico")
+def get_favicon():
+    """Serves site favicon."""
+    f = BASE / "static" / "favicon.ico"
+    if f.exists():
+        return FileResponse(f, media_type="image/x-icon")
+    f_png = BASE / "static" / "images" / "favicon.png"
+    if f_png.exists():
+        return FileResponse(f_png, media_type="image/png")
+    raise HTTPException(404, "Favicon not found")
+
 @app.get("/manifest.json")
 def get_manifest():
     """Serves PWA Web App Manifest."""

@@ -2,9 +2,12 @@
 const CACHE_NAME = 'brk-photos-v1';
 const PRECACHE_ASSETS = [
   '/',
+  '/favicon.ico',
   '/manifest.json',
   '/static/images/pwa-icon-192.png',
-  '/static/images/pwa-icon-512.png'
+  '/static/images/pwa-icon-512.png',
+  '/static/images/apple-touch-icon.png',
+  '/static/images/favicon.png'
 ];
 
 self.addEventListener('install', event => {
@@ -63,3 +66,4 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
