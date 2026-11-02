@@ -1901,6 +1901,29 @@ def admin_analytics_metrics(token: str = Depends(get_auth_token)):
 def admin_page():
     return FileResponse(BASE / "static" / "admin.html")
 
+@app.get("/")
+def root_index():
+    """Redirects visitors to the active event gallery, or serves event landing."""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
+        row = cursor.fetchone()
+        conn.close()
+        if row and row[0]:
+            return RedirectResponse(url=f"/{row[0]}", status_code=307)
+    except Exception:
+        pass
+    return FileResponse(BASE / "static" / "event.html")
+
+@app.get("/images/{filename}")
+def serve_header_image(filename: str):
+    """Direct route to serve header parallax and logo images."""
+    img_path = BASE / "static" / "images" / filename
+    if img_path.exists() and img_path.is_file():
+        return FileResponse(img_path)
+    raise HTTPException(404, "Image not found")
+
 @app.get("/{slug}")
 def event_landing_page(slug: str):
     """Serves the event-specific landing page for any valid event slug."""

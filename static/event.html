@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>Gallery - BRK Photos</title>
+<title>Photo with BRK Sir - BRK Photos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -62,50 +62,141 @@
     padding: 0 1.25rem;
   }
 
-  /* Top Hero Card (Matches Image 3) */
-  .hero-card {
-    background: var(--banner-bg);
+  /* BRK 3D Tilt Hero Panel (Adapted from LoginPage.jsx) */
+  .brk-header-panel {
+    background-color: #161313;
+    border-radius: 20px;
+    padding: 24px 20px;
+    margin: 1.25rem 0 2.25rem;
+    border: 1px solid #292524;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+  }
+  @media (min-width: 768px) {
+    .brk-header-panel {
+      padding: 36px 32px;
+    }
+  }
+
+  .login-hero-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .login-hero-title {
+    font-size: 28px;
+    font-weight: 800;
     color: #ffffff;
-    border-radius: 18px;
-    padding: 3rem 1.5rem;
-    text-align: center;
-    margin: 1.5rem 0 2.5rem;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.12);
-  }
-  .hero-eyebrow {
-    font-size: 0.76rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    color: var(--banner-eyebrow);
-    margin-bottom: 0.65rem;
-  }
-  .hero-title {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: clamp(2.3rem, 5.5vw, 3.8rem);
-    font-weight: 600;
     line-height: 1.15;
-    letter-spacing: -0.01em;
-    margin-bottom: 0.5rem;
+    margin: 0 0 18px;
+    letter-spacing: -0.03em;
+    font-family: -apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', system-ui, sans-serif;
   }
-  .hero-tagline {
-    font-size: 1.05rem;
-    color: var(--banner-tagline);
-    margin-bottom: 1.35rem;
-    font-weight: 400;
+  @media (min-width: 768px) {
+    .login-hero-title {
+      font-size: 44px;
+      margin-bottom: 24px;
+    }
   }
-  .hero-badge-wrap { display: flex; justify-content: center; }
-  .hero-badge {
-    display: inline-flex;
+
+  .login-banner-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1470 / 490;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 50px rgba(245, 158, 11, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background-color: #0a0a0a;
+    transform-style: preserve-3d;
+    will-change: transform;
+    cursor: pointer;
+    touch-action: pan-y;
+  }
+
+  .hero-border-glow {
+    position: absolute;
+    inset: -1px;
+    border-radius: 16px;
+    padding: 1.5px;
+    background: transparent;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 10;
+    transition: background 0.05s ease-out;
+  }
+
+  .hero-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  @keyframes layerFadeIn {
+    0% { opacity: 0; transform: scale(0.98); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes layerFadeUp {
+    0% { opacity: 0; transform: translateY(32px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes layerSlideFromLeft {
+    0% { opacity: 0; transform: translateX(-36px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes layerSlideFromRight {
+    0% { opacity: 0; transform: translateX(36px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes layerSmoothReveal {
+    0% { opacity: 0; transform: scale(0.92); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  .animate-layer-bg {
+    z-index: 1;
+    animation: layerFadeIn 1.0s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .animate-layer-lokesh {
+    z-index: 2;
+    animation: layerSlideFromLeft 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
+    opacity: 0;
+  }
+  .animate-layer-brk {
+    z-index: 2;
+    animation: layerSlideFromRight 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.55s forwards;
+    opacity: 0;
+  }
+  .animate-layer-cbn {
+    z-index: 3;
+    animation: layerFadeUp 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+    opacity: 0;
+  }
+  .animate-layer-logo {
+    z-index: 4;
+    animation: layerSmoothReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
+    opacity: 0;
+  }
+
+  .brk-header-footer {
+    display: flex;
+    justify-content: flex-end;
     align-items: center;
-    background: var(--banner-badge-bg);
-    border: 1px solid var(--banner-badge-border);
-    color: var(--banner-badge-ink);
-    font-size: 0.78rem;
-    font-weight: 600;
-    padding: 0.3rem 0.9rem;
-    border-radius: 99px;
-    letter-spacing: 0.02em;
+    font-size: 13px;
+    color: #a8a29e;
+    margin-top: 16px;
+    font-weight: 500;
   }
 
   /* Section Header */
@@ -643,13 +734,73 @@
 
 <div class="container">
   
-  <!-- 1. Top Banner Card (Matches Image 3) -->
-  <div class="hero-card">
-    <div class="hero-eyebrow" id="eventType">THE WEDDING CELEBRATION</div>
-    <h1 class="hero-title" id="eventName">Rahul & Priya</h1>
-    <p class="hero-tagline" id="eventDesc">A beautiful celebration of love</p>
-    <div class="hero-badge-wrap">
-      <span class="hero-badge" id="eventBadge">Gallery available</span>
+  <!-- Hidden placeholder elements to maintain legacy event data binding -->
+  <div style="display:none;" aria-hidden="true">
+    <span id="eventType"></span>
+    <span id="eventName">Photo with BRK Sir</span>
+    <span id="eventDesc"></span>
+    <span id="eventBadge"></span>
+  </div>
+
+  <!-- Top Hero Header (Extracted from LoginPage.jsx) -->
+  <div class="brk-header-panel">
+    <div class="login-hero-container">
+      <h1 class="login-hero-title">
+        Photo with <br />
+        <span style="color: #d6d3d1">BRK Sir</span>
+      </h1>
+
+      <!-- Multi-Layer 3D Tilt Animated Composite Header Graphic -->
+      <div class="login-banner-wrapper" id="heroBanner">
+        <!-- Dynamic Cursor Border Glow Highlight Overlay strictly on Card Border (Yellow Shade) -->
+        <div id="heroBorderGlow" class="hero-border-glow"></div>
+
+        <!-- Layer 1: Background -->
+        <img
+          src="/images/header_bg.png"
+          alt="Header Background"
+          class="hero-layer animate-layer-bg"
+          id="layerBg"
+        />
+
+        <!-- Layer 2: Nara Lokesh Garu (Beneath CBN) -->
+        <img
+          src="/images/header_lokesh.png"
+          alt="Nara Lokesh"
+          class="hero-layer animate-layer-lokesh"
+          id="layerLokesh"
+        />
+
+        <!-- Layer 3: Bhashyam Ramakrishna Garu (Beneath CBN) -->
+        <img
+          src="/images/header_brk.png"
+          alt="Bhashyam Ramakrishna"
+          class="hero-layer animate-layer-brk"
+          id="layerBrk"
+        />
+
+        <!-- Layer 4: N. Chandrababu Naidu Garu (ON TOP of Lokesh & BRK) -->
+        <img
+          src="/images/header_cbn.png"
+          alt="CBN"
+          class="hero-layer animate-layer-cbn"
+          id="layerCbn"
+        />
+
+        <!-- Layer 5: BRK / TDP Logo Overlay (On top of everything) -->
+        <img
+          src="/images/header_logo.png"
+          alt="BRK Social Emblem"
+          class="hero-layer animate-layer-logo"
+          id="layerLogo"
+        />
+      </div>
+
+      <!-- Bottom Info Footer (Constituency removed, Powered by Magni Digitech preserved) -->
+      <div class="brk-header-footer">
+        <div></div>
+        <span>Powered by Magni Digitech</span>
+      </div>
     </div>
   </div>
 
@@ -816,10 +967,116 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const slug = window.location.pathname.replace(/^\/|\/$/g, '') || 'rahul-priya';
+const slug = window.location.pathname.replace(/^\/|\/$/g, '') || 'wedding';
 let eventData = null;
 let currentPhotosList = [];
 let currentPhotoIndex = 0;
+
+// 3D Tilt Parallax and Spotlight Glow for BRK Header Card (from LoginPage.jsx)
+(function initHeroTilt() {
+  const banner = $('heroBanner');
+  const glow = $('heroBorderGlow');
+  const lBg = $('layerBg');
+  const lLokesh = $('layerLokesh');
+  const lBrk = $('layerBrk');
+  const lCbn = $('layerCbn');
+  const lLogo = $('layerLogo');
+
+  if (!banner) return;
+
+  let isHovered = false;
+
+  function onMouseMove(e) {
+    const rect = banner.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const rotateX = -((y - centerY) / centerY) * 5;
+    const rotateY = ((x - centerX) / centerX) * 5;
+
+    const layerX = ((x - centerX) / centerX) * 8;
+    const layerY = ((y - centerY) / centerY) * 8;
+
+    const posX = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    const posY = Math.max(0, Math.min(100, (y / rect.height) * 100));
+
+    banner.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+    banner.style.transition = 'transform 0.1s ease-out';
+
+    if (glow) {
+      glow.style.background = `radial-gradient(280px circle at ${posX}% ${posY}%, #ffd700 0%, #f59e0b 55%, transparent 100%)`;
+      glow.style.transition = 'background 0.05s ease-out';
+    }
+
+    if (lBg) {
+      lBg.style.transform = `translate3d(${layerX * 0.25}px, ${layerY * 0.25}px, 0px)`;
+      lBg.style.transition = 'transform 0.1s ease-out';
+    }
+    if (lLokesh) {
+      lLokesh.style.transform = `translate3d(${layerX * 0.6}px, ${layerY * 0.6}px, 15px)`;
+      lLokesh.style.transition = 'transform 0.1s ease-out';
+    }
+    if (lBrk) {
+      lBrk.style.transform = `translate3d(${layerX * 0.6}px, ${layerY * 0.6}px, 15px)`;
+      lBrk.style.transition = 'transform 0.1s ease-out';
+    }
+    if (lCbn) {
+      lCbn.style.transform = `translate3d(${layerX * 1.1}px, ${layerY * 1.1}px, 30px)`;
+      lCbn.style.transition = 'transform 0.1s ease-out';
+    }
+    if (lLogo) {
+      lLogo.style.transform = `translate3d(${layerX * 1.5}px, ${layerY * 1.5}px, 45px)`;
+      lLogo.style.transition = 'transform 0.1s ease-out';
+    }
+  }
+
+  function onMouseEnter() {
+    isHovered = true;
+  }
+
+  function onMouseLeave() {
+    isHovered = false;
+    banner.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
+    banner.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+    if (glow) {
+      glow.style.background = 'transparent';
+      glow.style.transition = 'background 0.4s ease-out';
+    }
+    [
+      { el: lBg, z: 0 },
+      { el: lLokesh, z: 15 },
+      { el: lBrk, z: 15 },
+      { el: lCbn, z: 30 },
+      { el: lLogo, z: 45 }
+    ].forEach(({ el, z }) => {
+      if (el) {
+        el.style.transform = `translate3d(0px, 0px, ${z}px)`;
+        el.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+      }
+    });
+  }
+
+  banner.addEventListener('mousemove', onMouseMove);
+  banner.addEventListener('mouseenter', onMouseEnter);
+  banner.addEventListener('mouseleave', onMouseLeave);
+
+  // Touch support for mobile dragging/panning
+  banner.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches[0]) {
+      const touch = e.touches[0];
+      const rect = banner.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+        onMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+      }
+    }
+  }, { passive: true });
+
+  banner.addEventListener('touchend', onMouseLeave);
+})();
 
 const FALLBACK_COVERS = {
   haldi: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=800&q=80",
@@ -837,17 +1094,17 @@ async function loadEvent() {
     renderEvent(eventData);
     loadPeople();
   } catch (err) {
-    $('eventName').textContent = 'Event Gallery';
-    $('eventDesc').textContent = 'Welcome to the celebration gallery.';
+    if ($('eventName')) $('eventName').textContent = 'Photo with BRK Sir';
+    if ($('eventDesc')) $('eventDesc').textContent = 'Welcome to the gallery.';
   }
 }
 
 function renderEvent(data) {
   const e = data.event;
-  document.title = `${e.name} - BRK Photos`;
-  $('eventType').textContent = e.event_type ? `THE ${e.event_type.toUpperCase()} CELEBRATION` : 'THE WEDDING CELEBRATION';
-  $('eventName').textContent = e.name;
-  $('eventDesc').textContent = e.description || 'A beautiful celebration of love';
+  document.title = `${e.name || 'Photo with BRK Sir'} - BRK Photos`;
+  if ($('eventType')) $('eventType').textContent = e.event_type ? `THE ${e.event_type.toUpperCase()} CELEBRATION` : '';
+  if ($('eventName')) $('eventName').textContent = e.name;
+  if ($('eventDesc')) $('eventDesc').textContent = e.description || '';
 
   const grid = $('albumGrid');
   grid.replaceChildren();
