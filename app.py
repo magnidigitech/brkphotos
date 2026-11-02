@@ -64,8 +64,8 @@ def reload_drive_map():
 reload_drive_map()
 
 def get_event_index(slug: str = "wedding"):
-    """Loads and caches face embeddings for a specific event slug."""
-    if slug in {"default", "wedding"}:
+    """Loads and caches face embeddings for albums and photos."""
+    if slug in {"default", "wedding", ""}:
         data_dir = DATA
     else:
         data_dir = DATA / "events" / slug
@@ -73,6 +73,11 @@ def get_event_index(slug: str = "wedding"):
     f = data_dir / "embeddings.npy"
     names_file = data_dir / "names.json"
     
+    if not f.exists() or not names_file.exists():
+        # Fall back to root DATA
+        f = DATA / "embeddings.npy"
+        names_file = DATA / "names.json"
+
     if not f.exists() or not names_file.exists():
         return np.zeros((0, 512), dtype=np.float32), [], set()
         
@@ -582,8 +587,8 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "wedding"):
         FROM photos p
         JOIN events e ON p.event_id = e.id
         LEFT JOIN albums a ON p.album_id = a.id
-        WHERE e.slug = ?
-    """, (event_slug,))
+        WHERE e.slug = ? OR ? IN ('wedding', 'default', '')
+    """, (event_slug, event_slug))
     photo_info = {r["filename"]: dict(r) for r in cursor.fetchall()}
     conn.close()
 
@@ -605,12 +610,12 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "wedding"):
 
 @app.post("/api/search")
 def default_search(selfie: UploadFile = File(...)):
-    """Legacy backward-compatible search for the primary wedding."""
+    """Search for matching photos using face recognition."""
     return perform_face_search(selfie, "wedding")
 
 @app.post("/api/{slug}/search")
 def event_search(slug: str, selfie: UploadFile = File(...)):
-    """Scoped facial recognition search for a specific event."""
+    """Search for matching photos using face recognition."""
     return perform_face_search(selfie, slug)
 
 @app.get("/thumb/{name:path}")
@@ -846,7 +851,27 @@ def download_4k(name: str):
 
     raise HTTPException(404, "Original 4K photo not found")
 
-# --- Public Event Metadata APIs ---
+# --- Public Gallery Metadata APIs ---
+
+@app.get("/api/public/gallery")
+def public_gallery():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    slug = row["slug"] if row else "wedding"
+    return public_event_details(slug)
+
+@app.get("/api/public/albums/{album_slug}")
+def public_album_direct(album_slug: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    slug = row["slug"] if row else "wedding"
+    return public_album_photos(slug, album_slug)
 
 @app.get("/api/public/events/{slug}")
 def public_event_details(slug: str):
@@ -855,14 +880,18 @@ def public_event_details(slug: str):
     cursor.execute("SELECT * FROM events WHERE slug = ? AND status != 'archived'", (slug,))
     event = cursor.fetchone()
     if not event:
+        # Fallback to the primary event
+        cursor.execute("SELECT * FROM events WHERE status != 'archived' ORDER BY id ASC LIMIT 1")
+        event = cursor.fetchone()
+    if not event:
         conn.close()
-        raise HTTPException(404, "Event not found")
+        raise HTTPException(404, "No gallery found")
         
     cursor.execute("""
         SELECT a.*, COUNT(p.id) as photo_count 
         FROM albums a
         LEFT JOIN photos p ON a.id = p.album_id AND p.is_deleted = 0 AND p.is_hidden = 0
-        WHERE a.event_id = ? AND a.is_published = 1
+        WHERE a.event_id = ? AND a.is_published = 1 AND a.is_deleted = 0
         GROUP BY a.id
         ORDER BY a.sort_order ASC, a.name ASC
     """, (event["id"],))
@@ -909,9 +938,18 @@ def public_album_photos(slug: str, album_slug: str):
         SELECT a.id, a.name, a.slug, e.id as event_id
         FROM albums a
         JOIN events e ON a.event_id = e.id
-        WHERE e.slug = ? AND a.slug = ? AND a.is_published = 1
-    """, (slug, album_slug))
+        WHERE (e.slug = ? OR ? IN ('wedding', 'default', '')) AND a.slug = ? AND a.is_published = 1 AND a.is_deleted = 0
+    """, (slug, slug, album_slug))
     album = cursor.fetchone()
+    if not album:
+        # Fallback search album by slug regardless of event
+        cursor.execute("""
+            SELECT id, name, slug, event_id
+            FROM albums
+            WHERE slug = ? AND is_published = 1 AND is_deleted = 0
+            ORDER BY id ASC LIMIT 1
+        """, (album_slug,))
+        album = cursor.fetchone()
     if not album:
         conn.close()
         raise HTTPException(404, "Album not found")
@@ -1158,6 +1196,32 @@ def admin_event_workspace(slug: str, token: str = Depends(get_auth_token)):
         "indexed_faces": len(embs),
         "current_task": current_task
     }
+
+@app.get("/api/admin/albums")
+def admin_get_all_albums(token: str = Depends(get_auth_token)):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.*, COUNT(p.id) as photo_count
+        FROM albums a
+        LEFT JOIN photos p ON a.id = p.album_id AND p.is_deleted = 0
+        WHERE a.is_deleted = 0
+        GROUP BY a.id
+        ORDER BY a.sort_order ASC, a.name ASC
+    """)
+    albums = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return {"albums": albums}
+
+@app.post("/api/admin/albums")
+def admin_create_album_direct(payload: dict, token: str = Depends(get_auth_token)):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    slug = row["slug"] if row else "wedding"
+    return admin_create_album(slug, payload, token)
 
 @app.post("/api/admin/events/{slug}/albums")
 def admin_create_album(slug: str, payload: dict, token: str = Depends(get_auth_token)):
@@ -1835,6 +1899,26 @@ def admin_person_photos(slug: str, person_id: int, token: str = Depends(get_auth
     photos = get_person_photos(slug, person_id)
     return {"photos": photos}
 
+@app.get("/api/public/people")
+def public_people_all():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    slug = row["slug"] if row else "wedding"
+    return public_event_people(slug)
+
+@app.get("/api/public/people/{person_id}/photos")
+def public_person_photos_direct(person_id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    slug = row["slug"] if row else "wedding"
+    return public_person_photos(slug, person_id)
+
 @app.get("/api/public/events/{slug}/people")
 def public_event_people(slug: str):
     people = list_people_for_event(slug)
@@ -1903,18 +1987,13 @@ def admin_page():
 
 @app.get("/")
 def root_index():
-    """Redirects visitors to the active event gallery, or serves event landing."""
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
-        row = cursor.fetchone()
-        conn.close()
-        if row and row[0]:
-            return RedirectResponse(url=f"/{row[0]}", status_code=307)
-    except Exception:
-        pass
+    """Serves the primary photos gallery directly at the root landing page."""
     return FileResponse(BASE / "static" / "event.html")
+
+@app.get("/wedding")
+def legacy_wedding_redirect():
+    """Redirects legacy /wedding handle directly to root landing page."""
+    return RedirectResponse(url="/", status_code=301)
 
 @app.get("/images/{filename}")
 def serve_header_image(filename: str):
@@ -1926,18 +2005,12 @@ def serve_header_image(filename: str):
 
 @app.get("/{slug}")
 def event_landing_page(slug: str):
-    """Serves the event-specific landing page for any valid event slug."""
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM events WHERE slug = ?", (slug,))
-    row = cursor.fetchone()
-    conn.close()
-    if row:
-        return FileResponse(BASE / "static" / "event.html")
-    # If not an event, check if static file exists
+    """Serves static files or redirects legacy handles to root landing page."""
+    # Check if static file exists
     static_file = BASE / "static" / slug
     if static_file.exists() and static_file.is_file():
         return FileResponse(static_file)
-    raise HTTPException(404, "Page not found")
+    # Redirect legacy slugs directly to root landing page
+    return RedirectResponse(url="/", status_code=301)
 
 app.mount("/", StaticFiles(directory=BASE / "static", html=True), name="static")

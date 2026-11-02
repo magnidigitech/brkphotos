@@ -210,16 +210,19 @@ def migrate_existing_data():
     cursor = conn.cursor()
     
     # Check if default event exists
-    cursor.execute("SELECT id FROM events WHERE slug = 'wedding' OR slug = 'default'")
+    cursor.execute("SELECT id, name FROM events WHERE slug = 'wedding' OR slug = 'default'")
     row = cursor.fetchone()
     if not row:
         cursor.execute("""
             INSERT INTO events (slug, name, event_type, event_date, location, description, status)
-            VALUES ('wedding', 'The Wedding Celebration', 'Wedding', '2026-10-29', 'Hyderabad', 'A beautiful celebration of love and togetherness.', 'published')
+            VALUES ('wedding', 'Photo with BRK Sir', 'Celebration', '2026-11-02', 'BRK Photos', 'Photo with BRK Sir', 'published')
         """)
         event_id = cursor.lastrowid
     else:
         event_id = row["id"]
+        if row["name"] == "The Wedding Celebration":
+            cursor.execute("UPDATE events SET name = 'Photo with BRK Sir' WHERE id = ?", (event_id,))
+            conn.commit()
         
     # Check if default album exists
     cursor.execute("SELECT id FROM albums WHERE event_id = ? AND slug = 'ceremony'", (event_id,))

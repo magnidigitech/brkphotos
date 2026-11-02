@@ -816,7 +816,7 @@
         <span class="brand-title">BRK Photos</span>
         <span class="admin-badge">Admin</span>
       </div>
-      <button class="btn-icon-sub" onclick="openNewEventModal()" title="Create Event">
+      <button class="btn-icon-sub" onclick="openNewAlbumModal()" title="Create Album">
         <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
     </div>
@@ -828,13 +828,6 @@
         <div class="nav-item-content">
           <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           <span>Dashboard</span>
-        </div>
-      </li>
-
-      <li class="nav-item" data-tab="events">
-        <div class="nav-item-content">
-          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <span>Events</span>
         </div>
       </li>
 
@@ -924,14 +917,10 @@
     
     <!-- Top Header Bar -->
     <header class="top-header">
-      <div class="welcome-msg" id="topGreeting">Welcome back, Administrator</div>
+      <div class="welcome-msg" id="topGreeting">BRK Photos Admin Console</div>
 
       <div class="top-tools">
-        <div class="event-picker-wrap">
-          <span class="event-picker-label">Current Event:</span>
-          <select id="activeEventSelect" style="width:auto;min-width:210px;padding:0.25rem 0.5rem;font-size:0.85rem;font-weight:600;border:none;background:transparent;"></select>
-        </div>
-        <a id="btnViewActiveEvent" href="/rahul-priya" target="_blank" class="btn-outline">
+        <a id="btnViewActiveEvent" href="/" target="_blank" class="btn-outline">
           <svg class="icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           <span>Live Gallery</span>
         </a>
@@ -987,20 +976,20 @@
       <section id="panel-dashboard">
         <div class="views-bar">
           <div class="views-bar-title">Platform Dashboard</div>
-          <button class="btn-primary" onclick="openNewEventModal()">
+          <button class="btn-primary" onclick="openNewAlbumModal()">
             <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Create Event</span>
+            <span>+ New Album</span>
           </button>
         </div>
 
         <div class="grid-metrics">
           <div class="metric-box">
-            <div class="metric-label">Total Events</div>
-            <div class="metric-value" id="metricEvents">3</div>
+            <div class="metric-label">Total Albums</div>
+            <div class="metric-value" id="metricAlbums">0</div>
             <div class="metric-progress">
               <div class="metric-bar-fill" style="width:100%;background:var(--primary);"></div>
             </div>
-            <div class="metric-footer"><span id="metricActiveEvents">3</span> published galleries</div>
+            <div class="metric-footer"><span id="metricActiveAlbums">0</span> published albums</div>
           </div>
 
           <div class="metric-box">
@@ -1009,7 +998,7 @@
             <div class="metric-progress">
               <div class="metric-bar-fill" style="width:85%;background:var(--orange);"></div>
             </div>
-            <div class="metric-footer">Across all event albums</div>
+            <div class="metric-footer">Across all celebration albums</div>
           </div>
 
           <div class="metric-box">
@@ -1040,6 +1029,10 @@
               <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span>Upload Photos / ZIP</span>
             </button>
+            <button class="btn-outline" onclick="openNewAlbumModal()">
+              <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>+ New Album</span>
+            </button>
             <button class="btn-outline" onclick="switchTab('albums')">
               <svg class="icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               <span>Manage Albums</span>
@@ -1056,27 +1049,13 @@
         </div>
       </section>
 
-      <!-- PANEL 2: EVENTS -->
-      <section id="panel-events" hidden>
-        <div class="views-bar">
-          <div class="views-bar-title">Events Registry</div>
-          <button class="btn-primary" onclick="openNewEventModal()">
-            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>New Event</span>
-          </button>
-        </div>
-        <div class="people-grid" id="eventsGrid">
-          <div style="color:var(--muted);">Loading events...</div>
-        </div>
-      </section>
-
-      <!-- PANEL 3: ALBUMS & FOLDERS -->
+      <!-- PANEL 2: ALBUMS & FOLDERS -->
       <section id="panel-albums" hidden>
         <div class="views-bar">
           <div class="views-bar-title" id="albumsPanelTitle">Albums & Ceremony Folders</div>
           <button class="btn-primary" onclick="openNewAlbumModal()">
             <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>New Album</span>
+            <span>+ New Album</span>
           </button>
         </div>
         <div class="people-grid" id="albumsGrid">
@@ -1412,67 +1391,37 @@
   </main>
 </div>
 
-<!-- Create Event Modal -->
-<div id="eventModal" class="modal-backdrop" hidden>
-  <div class="modal-card">
-    <button class="modal-close" onclick="closeModal('eventModal')">&times;</button>
-    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Create New Event</h2>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Deploy a dedicated event with its own URL slug, albums, and AI model.</p>
-    
-    <form id="createEventForm">
-      <div class="field">
-        <label>Event Name</label>
-        <input type="text" id="evName" placeholder="e.g. Arjun & Meghana Wedding" required>
-      </div>
-      <div class="field">
-        <label>URL Slug (photos.bhashyamramakrishna.in/&lt;slug&gt;)</label>
-        <input type="text" id="evSlug" placeholder="e.g. arjun-meghana" required>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-        <div class="field">
-          <label>Event Type</label>
-          <select id="evType">
-            <option value="Wedding">Wedding</option>
-            <option value="Reception">Reception</option>
-            <option value="Corporate">Corporate</option>
-            <option value="Birthday">Birthday</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Event Date</label>
-          <input type="date" id="evDate">
-        </div>
-      </div>
-      <div class="field">
-        <label>Location</label>
-        <input type="text" id="evLocation" placeholder="e.g. Hyderabad, India">
-      </div>
-      <div class="field">
-        <label>Description</label>
-        <textarea id="evDesc" rows="2" placeholder="A beautiful celebration of love and togetherness."></textarea>
-      </div>
-      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:0.7rem;">Create Event</button>
-    </form>
-  </div>
-</div>
-
 <!-- Create Album Modal -->
 <div id="albumModal" class="modal-backdrop" hidden>
   <div class="modal-card">
     <button class="modal-close" onclick="closeModal('albumModal')">&times;</button>
-    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Create New Album / Folder</h2>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Add a program or category folder (e.g. Haldi, Mehendi, Reception, Pre-Wedding).</p>
+    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Create New Album</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Defaulted to date with calendar option (dd-mm-yy). Automatically generates slug replacing spaces with hyphens (-).</p>
     
     <form id="createAlbumForm">
       <div class="field">
-        <label>Album / Folder Name</label>
-        <input type="text" id="albumNameInput" placeholder="e.g. Pre-Wedding Shoot" required>
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Calendar Option (dd-mm-yyyy)</span>
+          <span style="font-size:0.75rem;color:var(--muted);font-weight:normal;">Pick date to auto-fill name</span>
+        </label>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <input type="date" id="albumDatePicker" style="flex:1;">
+          <button type="button" class="btn-outline" id="btnTodayDate" style="padding:0.45rem 0.75rem;font-size:0.8rem;white-space:nowrap;">
+            Today
+          </button>
+        </div>
       </div>
       <div class="field">
-        <label>Folder Slug</label>
-        <input type="text" id="albumSlugInput" placeholder="e.g. pre-wedding" required>
+        <label>Album Name</label>
+        <input type="text" id="albumNameInput" placeholder="e.g. 22-12-2026" required>
+        <span style="font-size:0.75rem;color:var(--muted);margin-top:0.25rem;display:block;">Defaulted to date (e.g. 22-12-2026) or custom title</span>
       </div>
-      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:0.7rem;">Create Folder</button>
+      <div class="field">
+        <label>Album Slug</label>
+        <input type="text" id="albumSlugInput" placeholder="e.g. 22-12-2026" required>
+        <span style="font-size:0.75rem;color:var(--muted);margin-top:0.25rem;display:block;">Auto-generated replacing spaces with hyphen (-)</span>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:0.7rem;margin-top:0.5rem;">Create Album</button>
     </form>
   </div>
 </div>
@@ -1517,53 +1466,23 @@
   </div>
 </div>
 
-<!-- Edit Event Modal -->
-<div id="editEventModal" class="modal-backdrop" hidden>
-  <div class="modal-card">
-    <button class="modal-close" onclick="closeModal('editEventModal')">&times;</button>
-    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Edit Event</h2>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Update the event name, slug URL, location, and description.</p>
-    <form id="editEventForm">
-      <input type="hidden" id="editEventOldSlug">
-      <div class="field">
-        <label>Event Name</label>
-        <input type="text" id="editEventName" required>
-      </div>
-      <div class="field">
-        <label>URL Slug (photos.bhashyamramakrishna.in/&lt;slug&gt;)</label>
-        <input type="text" id="editEventSlug" required>
-      </div>
-      <div class="field">
-        <label>Location</label>
-        <input type="text" id="editEventLocation">
-      </div>
-      <div class="field">
-        <label>Description</label>
-        <textarea id="editEventDesc" rows="2"></textarea>
-      </div>
-      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:0.7rem;">Save Changes</button>
-      <button type="button" id="btnDeleteCurrentEvent" class="btn-outline" style="color:var(--err);border-color:var(--err);width:100%;margin-top:0.6rem;justify-content:center;">Move Event to Trash</button>
-    </form>
-  </div>
-</div>
-
 <!-- Edit Album Modal -->
 <div id="editAlbumModal" class="modal-backdrop" hidden>
   <div class="modal-card">
     <button class="modal-close" onclick="closeModal('editAlbumModal')">&times;</button>
-    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Edit Album / Folder</h2>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Update folder display name and directory slug.</p>
+    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Edit Album</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Update album display name and URL slug.</p>
     <form id="editAlbumForm">
       <input type="hidden" id="editAlbumId">
       <div class="field">
-        <label>Folder Name</label>
+        <label>Album Name</label>
         <input type="text" id="editAlbumName" required>
       </div>
       <div class="field">
-        <label>Folder Slug</label>
+        <label>Album Slug</label>
         <input type="text" id="editAlbumSlug" required>
       </div>
-      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:0.7rem;">Save Folder</button>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:0.7rem;">Save Album</button>
     </form>
   </div>
 </div>
@@ -1653,8 +1572,44 @@ document.querySelectorAll('.sidebar-nav-list > .nav-item').forEach(el => {
 
 function openModal(id) { $(id).hidden = false; }
 function closeModal(id) { $(id).hidden = true; }
-function openNewEventModal() { openModal('eventModal'); }
-function openNewAlbumModal() { openModal('albumModal'); }
+
+function formatDateDDMMYYYY(d) {
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
+function formatDateYYYYMMDD(d) {
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${year}-${month}-${day}`;
+}
+
+function generateSlug(text) {
+  return (text || '')
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/g, '-')       // replace spaces and underscores with hyphens
+    .replace(/[^a-z0-9\-]/g, '')   // remove disallowed characters except letters, digits, and hyphens
+    .replace(/-+/g, '-')           // collapse consecutive hyphens
+    .replace(/^-|-$/g, '');        // trim leading/trailing hyphens
+}
+
+function openNewAlbumModal() {
+  const today = new Date();
+  const dateFormatted = formatDateDDMMYYYY(today);
+  const pickerVal = formatDateYYYYMMDD(today);
+  
+  if ($('albumDatePicker')) $('albumDatePicker').value = pickerVal;
+  if ($('albumNameInput')) $('albumNameInput').value = dateFormatted;
+  if ($('albumSlugInput')) $('albumSlugInput').value = dateFormatted;
+  
+  openModal('albumModal');
+  setTimeout(() => $('albumNameInput')?.focus(), 80);
+}
 
 // Delete Confirmation Modal Handling with Text Input Verification
 let pendingDeleteAction = null;
@@ -1843,41 +1798,33 @@ $('logoutBtn').addEventListener('click', async () => {
 
 // Event Selector & Workspace Management
 function populateEventSelector(events) {
-  allEvents = events;
-  const sel = $('activeEventSelect');
-  sel.replaceChildren();
-  for (const ev of events) {
-    const opt = document.createElement('option');
-    opt.value = ev.slug;
-    opt.textContent = `${ev.name} (${ev.slug})`;
-    if (ev.slug === activeSlug) opt.selected = true;
-    sel.append(opt);
-  }
-  if (!events.some(e => e.slug === activeSlug) && events.length > 0) {
+  allEvents = events || [];
+  if (events && events.length > 0) {
     activeSlug = events[0].slug;
   }
   updateActiveEventButtons();
 }
 
-$('activeEventSelect').addEventListener('change', async e => {
+$('activeEventSelect')?.addEventListener('change', async e => {
   await setEventWorkspace(e.target.value, true);
 });
 
 function updateActiveEventButtons() {
-  $('btnViewActiveEvent').href = `/${activeSlug}`;
+  if ($('btnViewActiveEvent')) $('btnViewActiveEvent').href = '/';
 }
 
 async function setEventWorkspace(slug, refreshActiveTab = true) {
-  activeSlug = slug;
-  $('activeEventSelect').value = slug;
+  activeSlug = slug || 'wedding';
+  if ($('activeEventSelect')) $('activeEventSelect').value = activeSlug;
   updateActiveEventButtons();
 
   // Fetch event workspace details
   try {
-    const res = await fetch(`/api/admin/events/${slug}`);
+    let res = await fetch(`/api/admin/albums`);
+    if (!res.ok) res = await fetch(`/api/admin/events/${slug}`);
     if (res.ok) {
       const d = await res.json();
-      currentEvent = d.event;
+      currentEvent = d.event || { name: 'BRK Photos', slug: activeSlug };
       allAlbums = d.albums || [];
       $('sidebarAlbumCount').textContent = allAlbums.length;
 
@@ -1888,9 +1835,8 @@ async function setEventWorkspace(slug, refreshActiveTab = true) {
       renderUploadTargets();
 
       // Update panel headers
-      const evName = currentEvent ? currentEvent.name : slug;
-      $('albumsPanelTitle').textContent = `Albums & Folders — ${evName}`;
-      $('photosPanelTitle').textContent = `Photo Library — ${evName}`;
+      if ($('albumsPanelTitle')) $('albumsPanelTitle').textContent = `Albums & Folders`;
+      if ($('photosPanelTitle')) $('photosPanelTitle').textContent = `Photo Library`;
 
       if (refreshActiveTab) {
         const activeTab = document.querySelector('.sidebar-nav-list > .nav-item.active')?.getAttribute('data-tab') || 'albums';
@@ -1898,7 +1844,7 @@ async function setEventWorkspace(slug, refreshActiveTab = true) {
       }
     }
   } catch (e) {
-    console.error('Failed to load event workspace:', e);
+    console.error('Failed to load workspace:', e);
   }
 }
 
@@ -2004,141 +1950,22 @@ async function loadDashboard() {
     const res = await fetch('/api/admin/overview');
     if (!res.ok) return;
     const d = await res.json();
-    $('metricEvents').textContent = d.metrics.total_events || 0;
-    $('metricActiveEvents').textContent = d.metrics.active_events || 0;
-    $('metricPhotos').textContent = d.metrics.total_photos || 0;
-    $('metricPeople').textContent = d.metrics.identified_people || 0;
+    if ($('metricAlbums')) $('metricAlbums').textContent = d.metrics.total_albums || 0;
+    if ($('metricActiveAlbums')) $('metricActiveAlbums').textContent = d.metrics.total_albums || 0;
+    if ($('metricPhotos')) $('metricPhotos').textContent = d.metrics.total_photos || 0;
+    if ($('metricPeople')) $('metricPeople').textContent = d.metrics.identified_people || 0;
   } catch (e) {}
-}
-
-// Events
-async function loadEvents() {
-  try {
-    const res = await fetch('/api/admin/overview');
-    if (!res.ok) return;
-    const d = await res.json();
-    const grid = $('eventsGrid');
-    grid.replaceChildren();
-    for (const ev of d.events) {
-      const card = document.createElement('div');
-      card.className = 'person-card';
-      card.style.flexDirection = 'column';
-      card.style.alignItems = 'flex-start';
-      const safeName = (ev.name || '').replace(/'/g, "\\'");
-      card.innerHTML = `
-        <div style="display:flex;justify-content:space-between;width:100%;align-items:flex-start;">
-          <h4 style="font-size:1.05rem;font-weight:700;">${ev.name}</h4>
-          <span class="badge ${ev.status === 'published' ? 'badge-published' : 'badge-draft'}">${ev.status}</span>
-        </div>
-        <div style="color:var(--muted);font-family:monospace;font-size:0.8rem;margin-top:0.2rem;">/${ev.slug}</div>
-        <p style="font-size:0.82rem;color:var(--muted);margin:0.5rem 0 0.8rem;">${ev.description || 'No description provided.'}</p>
-        <div style="display:flex;gap:0.5rem;width:100%;flex-wrap:wrap;">
-          <button class="btn-primary" style="padding:0.35rem 0.75rem;font-size:0.8rem;" onclick="selectEventWorkspace('${ev.slug}')">Open Workspace</button>
-          <button class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;" onclick="openEditEventModal('${ev.slug}', '${safeName}')">Edit</button>
-          <button class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;color:var(--err);border-color:var(--err);" onclick="promptDeleteEvent('${ev.slug}', '${safeName}')">Delete</button>
-          <a href="/${ev.slug}" target="_blank" class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;">Live Gallery ↗</a>
-        </div>
-      `;
-      grid.append(card);
-    }
-  } catch (e) {}
-}
-
-async function selectEventWorkspace(slug) {
-  await setEventWorkspace(slug, false);
-  switchTab('albums');
-}
-
-// Edit Event Modal Handlers
-function openEditEventModal(eventSlug, eventName) {
-  const ev = (allEvents || []).find(e => e.slug === eventSlug) || currentEvent || { slug: eventSlug, name: eventName };
-  $('editEventOldSlug').value = ev.slug;
-  $('editEventName').value = ev.name || '';
-  $('editEventSlug').value = ev.slug || '';
-  $('editEventLocation').value = ev.location || '';
-  $('editEventDesc').value = ev.description || '';
-
-  const delBtn = $('btnDeleteCurrentEvent');
-  if (delBtn) {
-    delBtn.onclick = () => {
-      closeModal('editEventModal');
-      promptDeleteEvent(ev.slug, ev.name || eventName);
-    };
-  }
-  openModal('editEventModal');
-}
-
-$('editEventForm')?.addEventListener('submit', async e => {
-  e.preventDefault();
-  const oldSlug = $('editEventOldSlug').value;
-  const name = $('editEventName').value.trim();
-  const slug = $('editEventSlug').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/^-+|-+$/g, '');
-  const location = $('editEventLocation').value.trim();
-  const description = $('editEventDesc').value.trim();
-
-  if (!name || !slug) { alert('Name and slug are required'); return; }
-
-  try {
-    let res = await fetch(`/api/admin/events/${oldSlug}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, slug, location, description })
-    });
-    // Fallback if PUT returned 405 Method Not Allowed
-    if (res.status === 405) {
-      res = await fetch(`/api/admin/events/${oldSlug}/update`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, slug, location, description })
-      });
-    }
-
-    if (res.ok) {
-      closeModal('editEventModal');
-      activeSlug = slug;
-      localStorage.setItem('admin_active_event_slug', slug);
-      await checkAuth();
-      await loadEvents();
-    } else {
-      const j = await res.json();
-      alert(j.detail || 'Failed to update event');
-    }
-  } catch (err) {
-    alert('Error updating event: ' + err);
-  }
-});
-
-function promptDeleteEvent(eventSlug, eventName) {
-  openDeleteConfirmModal(
-    `Move Event "${eventName}" to Trash?`,
-    `Are you sure you want to move <strong>"${eventName}" (${eventSlug})</strong> to the Trash Bin? Photos and albums will be hidden from the public gallery.`,
-    eventSlug,
-    async () => {
-      let res = await fetch(`/api/admin/events/${eventSlug}`, { method: 'DELETE' });
-      if (res.status === 405 || !res.ok) {
-        res = await fetch(`/api/admin/events/${eventSlug}/delete`, { method: 'POST' });
-      }
-      if (res.ok) {
-        alert(`Event "${eventName}" moved to Trash Bin.`);
-        await checkAuth();
-        await loadEvents();
-      } else {
-        const j = await res.json();
-        alert(j.detail || 'Failed to delete event');
-      }
-    },
-    'Move to Trash'
-  );
 }
 
 // Albums
 async function loadAlbums() {
   try {
-    const res = await fetch(`/api/admin/events/${activeSlug}`);
+    let res = await fetch('/api/admin/albums');
+    if (!res.ok) res = await fetch(`/api/admin/events/${activeSlug}`);
     if (!res.ok) return;
     const d = await res.json();
     allAlbums = d.albums || [];
-    currentEvent = d.event;
+    currentEvent = d.event || { name: 'BRK Photos', slug: activeSlug };
     $('sidebarAlbumCount').textContent = allAlbums.length;
     renderSidebarSubfolders();
 
@@ -2146,7 +1973,7 @@ async function loadAlbums() {
     grid.replaceChildren();
 
     if (allAlbums.length === 0) {
-      grid.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;">No albums found for this event. Click "New Album" to create one.</div>';
+      grid.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;">No albums found. Click "+ New Album" to create one.</div>';
       return;
     }
 
@@ -2179,6 +2006,10 @@ function openEditAlbumModal(albumId, albumName, albumSlug) {
   $('editAlbumSlug').value = albumSlug;
   openModal('editAlbumModal');
 }
+
+$('editAlbumName')?.addEventListener('input', () => {
+  $('editAlbumSlug').value = generateSlug($('editAlbumName').value);
+});
 
 $('editAlbumForm')?.addEventListener('submit', async e => {
   e.preventDefault();
@@ -2909,30 +2740,27 @@ $('toggleRawLogsBtn')?.addEventListener('click', () => {
   }
 });
 
-// Create Event
-$('createEventForm')?.addEventListener('submit', async e => {
-  e.preventDefault();
-  const payload = {
-    name: $('evName').value.trim(),
-    slug: $('evSlug').value.trim(),
-    event_type: $('evType').value,
-    event_date: $('evDate').value,
-    location: $('evLocation').value.trim(),
-    description: $('evDesc').value.trim()
-  };
-  const res = await fetch('/api/admin/events', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  if (res.ok) {
-    closeModal('eventModal');
-    activeSlug = payload.slug;
-    checkAuth();
-    switchTab('albums');
-  } else {
-    alert('Error creating event.');
-  }
+// Date picker and auto-slug listeners for Album creation
+$('albumDatePicker')?.addEventListener('change', () => {
+  const val = $('albumDatePicker').value;
+  if (!val) return;
+  const [y, m, d] = val.split('-');
+  const dateFormatted = `${d}-${m}-${y}`;
+  $('albumNameInput').value = dateFormatted;
+  $('albumSlugInput').value = dateFormatted;
+});
+
+$('btnTodayDate')?.addEventListener('click', () => {
+  const today = new Date();
+  const dateFormatted = formatDateDDMMYYYY(today);
+  const pickerVal = formatDateYYYYMMDD(today);
+  $('albumDatePicker').value = pickerVal;
+  $('albumNameInput').value = dateFormatted;
+  $('albumSlugInput').value = dateFormatted;
+});
+
+$('albumNameInput')?.addEventListener('input', () => {
+  $('albumSlugInput').value = generateSlug($('albumNameInput').value);
 });
 
 // Create Album
@@ -2942,17 +2770,25 @@ $('createAlbumForm')?.addEventListener('submit', async e => {
     name: $('albumNameInput').value.trim(),
     slug: $('albumSlugInput').value.trim()
   };
-  const res = await fetch(`/api/admin/events/${activeSlug}/albums`, {
+  let res = await fetch('/api/admin/albums', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
+  if (!res.ok) {
+    res = await fetch(`/api/admin/events/${activeSlug}/albums`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  }
   if (res.ok) {
     closeModal('albumModal');
-    await setEventWorkspace(activeSlug, false);
-    loadAlbums();
+    await loadAlbums();
+    await loadDashboard();
   } else {
-    alert('Error creating album.');
+    const j = await res.json().catch(() => ({}));
+    alert(j.detail || 'Error creating album.');
   }
 });
 

@@ -835,15 +835,19 @@
       </svg>
     </div>
     <h2 class="finder-heading">Find your photographs</h2>
-    <p class="finder-subheading">Take a selfie with your camera or upload a photo to discover your pictures with AI facial recognition.</p>
-    <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;margin-top:1rem;">
-      <button class="btn-find-photos" id="cameraBtn">
+    <p class="finder-subheading">Upload a selfie to discover your pictures with AI facial recognition.</p>
+    <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.25rem;">
+      <button class="btn-find-photos" id="uploadSelfieMainBtn" style="font-size:1.05rem;padding:0.75rem 1.6rem;box-shadow:0 6px 18px rgba(15, 92, 77, 0.35);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>Upload Selfie</span>
+      </button>
+      <button class="btn-find-photos btn-outline" id="cameraBtn">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        <span>Take Selfie (Camera)</span>
+        <span>Open Front Camera</span>
       </button>
       <button class="btn-find-photos btn-outline" id="uploadFileBtn">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <span>Upload from Files</span>
+        <span>Browse Files</span>
       </button>
     </div>
   </div>
@@ -926,28 +930,41 @@
 <div id="selfieModal" class="modal-backdrop" hidden>
   <div class="modal-box">
     <button class="modal-close" id="closeModalBtn">&times;</button>
-    <h3 style="font-family:'Playfair Display',serif;font-size:1.45rem;margin-bottom:0.4rem;">Find My Photographs</h3>
-    <p style="color:var(--muted);font-size:0.88rem;">Take a quick selfie or upload any clear picture of yourself.</p>
+    <h3 style="font-family:'Playfair Display',serif;font-size:1.45rem;margin-bottom:0.4rem;">Upload Selfie</h3>
+    <p style="color:var(--muted);font-size:0.88rem;">Open your front camera or browse files to find all matching photographs.</p>
 
-    <!-- Hidden native file inputs -->
+    <!-- Hidden native file inputs: capture="user" specifically activates the front camera -->
     <input type="file" id="selfieCameraInput" accept="image/*" capture="user" style="display:none;">
     <input type="file" id="selfieFileInput" accept="image/*" style="display:none;">
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin:1.25rem 0 0.75rem;">
-      <button type="button" class="btn-find-photos" id="modalCameraBtn" style="justify-content:center;padding:0.65rem 0.5rem;font-size:0.85rem;">
+      <button type="button" class="btn-find-photos" id="modalCameraBtn" style="justify-content:center;padding:0.75rem 0.6rem;font-size:0.88rem;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        <span>Open Camera</span>
+        <span>Open Front Cam</span>
       </button>
-      <button type="button" class="btn-find-photos btn-outline" id="modalFilesBtn" style="justify-content:center;padding:0.65rem 0.5rem;font-size:0.85rem;">
+      <button type="button" class="btn-find-photos btn-outline" id="modalFilesBtn" style="justify-content:center;padding:0.75rem 0.6rem;font-size:0.88rem;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span>Browse Files</span>
       </button>
     </div>
 
+    <!-- Live Front Camera Stream Viewfinder Container -->
+    <div id="webcamContainer" style="display:none;position:relative;margin:0.75rem 0;border-radius:12px;overflow:hidden;background:#000;">
+      <video id="webcamVideo" autoplay playsinline style="width:100%;max-height:240px;object-fit:cover;transform:scaleX(-1);display:block;"></video>
+      <div style="position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:0.5rem;z-index:10;">
+        <button type="button" id="snapPhotoBtn" class="btn-find-photos" style="padding:0.4rem 1.1rem;font-size:0.85rem;background:#ffffff;color:#111827;font-weight:700;">
+          📸 Capture Photo
+        </button>
+        <button type="button" id="closeWebcamBtn" class="btn-outline" style="padding:0.4rem 0.75rem;font-size:0.85rem;background:rgba(0,0,0,0.6);color:#fff;border-color:rgba(255,255,255,0.4);">
+          Cancel
+        </button>
+      </div>
+    </div>
+
     <div class="drop-box" id="dropArea" style="margin-top:0.5rem;">
       <div id="dropPrompt">
         <div style="font-size:2rem;margin-bottom:0.25rem;">📸</div>
-        <strong style="font-size:0.9rem;color:var(--ink);">Or drag and drop photo here</strong>
+        <strong style="font-size:0.9rem;color:var(--ink);">Click to browse files or drag & drop</strong>
         <p style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">Processed in-memory with InsightFace AI</p>
       </div>
       <img id="selfiePreview" style="max-height:160px;border-radius:10px;margin:0 auto;" hidden>
@@ -1088,7 +1105,8 @@ const FALLBACK_COVERS = {
 
 async function loadEvent() {
   try {
-    const res = await fetch(`/api/public/events/${slug}`);
+    let res = await fetch('/api/public/gallery');
+    if (!res.ok) res = await fetch(`/api/public/events/${slug}`);
     if (!res.ok) throw new Error('Event not found');
     eventData = await res.json();
     renderEvent(eventData);
@@ -1139,7 +1157,8 @@ function renderEvent(data) {
 
 async function loadPeople() {
   try {
-    const res = await fetch(`/api/public/events/${slug}/people`);
+    let res = await fetch('/api/public/people');
+    if (!res.ok) res = await fetch(`/api/public/events/${slug}/people`);
     if (!res.ok) return;
     const j = await res.json();
     if (j.people && j.people.length > 0) {
@@ -1165,7 +1184,8 @@ async function loadPeople() {
 
 async function loadAlbumPhotos(albumSlug, albumName) {
   try {
-    const res = await fetch(`/api/public/events/${slug}/albums/${albumSlug}`);
+    let res = await fetch(`/api/public/albums/${albumSlug}`);
+    if (!res.ok) res = await fetch(`/api/public/events/${slug}/albums/${albumSlug}`);
     if (!res.ok) return;
     const j = await res.json();
     $('photosSectionTitle').textContent = albumName;
@@ -1178,7 +1198,8 @@ async function loadAlbumPhotos(albumSlug, albumName) {
 
 async function loadPersonPhotos(personId, personName) {
   try {
-    const res = await fetch(`/api/public/events/${slug}/people/${personId}/photos`);
+    let res = await fetch(`/api/public/people/${personId}/photos`);
+    if (!res.ok) res = await fetch(`/api/public/events/${slug}/people/${personId}/photos`);
     if (!res.ok) return;
     const j = await res.json();
     $('photosSectionTitle').textContent = `Photos of ${personName}`;
@@ -1859,6 +1880,7 @@ $('closePhotosBtn').addEventListener('click', () => {
 
 // Modal & Finder Handling
 let selectedSelfieFile = null;
+let mediaStream = null;
 
 function handleSelfieSelect(file) {
   if (!file) return;
@@ -1866,16 +1888,79 @@ function handleSelfieSelect(file) {
   $('selfiePreview').src = URL.createObjectURL(file);
   $('selfiePreview').hidden = false;
   $('dropPrompt').hidden = true;
+  stopWebcam();
   $('startSearchBtn').disabled = !$('consentCheck').checked;
   $('selfieModal').hidden = false;
 }
 
-$('cameraBtn').addEventListener('click', () => $('selfieCameraInput').click());
+function stopWebcam() {
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+  if ($('webcamContainer')) $('webcamContainer').style.display = 'none';
+  if ($('dropArea')) $('dropArea').style.display = 'flex';
+}
+
+async function openFrontCamera() {
+  $('selfieModal').hidden = false;
+  // If mobile, open native front camera input directly
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    $('selfieCameraInput').click();
+    return;
+  }
+
+  // On desktop, open live front webcam preview
+  try {
+    stopWebcam();
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    $('webcamVideo').srcObject = mediaStream;
+    $('webcamContainer').style.display = 'block';
+    $('dropArea').style.display = 'none';
+  } catch (err) {
+    console.warn('Webcam access error, fallback to native file input:', err);
+    $('selfieCameraInput').click();
+  }
+}
+
+function captureWebcamPhoto() {
+  const video = $('webcamVideo');
+  if (!video || !video.videoWidth) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  // Mirror to match front cam view
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  stopWebcam();
+
+  canvas.toBlob(blob => {
+    if (blob) {
+      const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+      handleSelfieSelect(file);
+    }
+  }, 'image/jpeg', 0.92);
+}
+
+// Open modal or direct actions
+$('uploadSelfieMainBtn')?.addEventListener('click', () => {
+  $('selfieModal').hidden = false;
+});
+$('cameraBtn').addEventListener('click', () => openFrontCamera());
 $('uploadFileBtn').addEventListener('click', () => $('selfieFileInput').click());
 
-$('modalCameraBtn').addEventListener('click', () => $('selfieCameraInput').click());
+$('modalCameraBtn').addEventListener('click', () => openFrontCamera());
 $('modalFilesBtn').addEventListener('click', () => $('selfieFileInput').click());
 $('dropArea').addEventListener('click', () => $('selfieFileInput').click());
+
+$('snapPhotoBtn')?.addEventListener('click', captureWebcamPhoto);
+$('closeWebcamBtn')?.addEventListener('click', stopWebcam);
 
 $('selfieCameraInput').addEventListener('change', () => {
   handleSelfieSelect($('selfieCameraInput').files[0]);
@@ -1886,7 +1971,29 @@ $('selfieFileInput').addEventListener('change', () => {
 });
 
 $('closeModalBtn').addEventListener('click', () => {
+  stopWebcam();
   $('selfieModal').hidden = true;
+});
+
+// Drag and drop support
+const dropArea = $('dropArea');
+['dragenter', 'dragover'].forEach(eventName => {
+  dropArea.addEventListener(eventName, e => {
+    e.preventDefault();
+    dropArea.style.borderColor = 'var(--accent)';
+  }, false);
+});
+['dragleave', 'drop'].forEach(eventName => {
+  dropArea.addEventListener(eventName, e => {
+    e.preventDefault();
+    dropArea.style.borderColor = 'var(--line)';
+  }, false);
+});
+dropArea.addEventListener('drop', e => {
+  const dt = e.dataTransfer;
+  if (dt && dt.files && dt.files.length > 0) {
+    handleSelfieSelect(dt.files[0]);
+  }
 });
 
 $('consentCheck').addEventListener('change', () => {
@@ -1903,7 +2010,10 @@ $('startSearchBtn').addEventListener('click', async () => {
   fd.append('selfie', selectedSelfieFile);
 
   try {
-    const res = await fetch(`/api/${slug}/search`, { method: 'POST', body: fd });
+    let res = await fetch('/api/search', { method: 'POST', body: fd });
+    if (!res.ok) {
+      res = await fetch(`/api/${slug}/search`, { method: 'POST', body: fd });
+    }
     const j = await res.json();
     if (!res.ok) throw new Error(j.detail || 'Search failed');
 
