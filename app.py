@@ -2017,6 +2017,10 @@ def serve_header_image(filename: str):
     img_path = BASE / "static" / "images" / filename
     if img_path.exists() and img_path.is_file():
         return FileResponse(img_path)
+    # Case-insensitive fallback
+    for f in (BASE / "static" / "images").glob("*"):
+        if f.name.lower() == filename.lower():
+            return FileResponse(f)
     raise HTTPException(404, "Image not found")
 
 @app.get("/{slug}")
@@ -2029,4 +2033,5 @@ def event_landing_page(slug: str):
     # Redirect legacy slugs directly to root landing page
     return RedirectResponse(url="/", status_code=301)
 
+app.mount("/static", StaticFiles(directory=BASE / "static"), name="static_dir")
 app.mount("/", StaticFiles(directory=BASE / "static", html=True), name="static")

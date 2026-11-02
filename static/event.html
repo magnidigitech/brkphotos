@@ -99,11 +99,12 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: var(--bg);
+    background: transparent;
     color: var(--ink);
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     line-height: 1.5;
     padding-bottom: 5rem;
+    min-height: 100vh;
   }
   .container {
     max-width: 1040px;
@@ -111,21 +112,80 @@
     padding: 0 1.25rem;
   }
 
-  /* Full Width BRK Hero Header (Edge-to-edge, zero white padding) */
+  /* Full-Length Seamless Vertical Scrolling Background (photowithmyleader.com style) */
+  .site-bg-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    z-index: -10;
+    pointer-events: none;
+    background-color: #d97706;
+  }
+
+  .site-bg-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 200%;
+    display: flex;
+    flex-direction: column;
+    animation: bgVerticalScroll 38s linear infinite;
+    will-change: transform;
+  }
+
+  @keyframes bgVerticalScroll {
+    0% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(-50%);
+    }
+  }
+
+  .site-bg-tile {
+    width: 100%;
+    height: 50%;
+    background-image: url('/static/images/Background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    flex-shrink: 0;
+    filter: contrast(1.1) saturate(1.2);
+  }
+
+  .site-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(234, 179, 8, 0.84) 0%, rgba(202, 138, 4, 0.88) 100%);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  .site-bg-tint {
+    position: absolute;
+    inset: 0;
+    background: rgba(245, 158, 11, 0.22);
+    pointer-events: none;
+  }
+
+  /* Full Width BRK Hero Header (Transparent over yellow animated collage) */
   .brk-header-panel {
-    background-color: #161313;
+    background: transparent;
     width: 100%;
     margin: 0;
-    padding: 18px 0 24px;
-    border-bottom: 1px solid #292524;
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+    padding: 16px 0 20px;
+    border-bottom: none;
+    box-shadow: none;
     box-sizing: border-box;
     position: relative;
-    overflow: hidden;
   }
   @media (min-width: 768px) {
     .brk-header-panel {
-      padding: 24px 0 30px;
+      padding: 22px 0 26px;
     }
   }
 
@@ -153,27 +213,44 @@
   }
 
   .login-hero-title {
-    font-size: clamp(1rem, 3.2vw, 2.2rem);
+    font-size: clamp(1rem, 2.8vw, 1.95rem);
     font-weight: 800;
-    color: #ffffff;
-    line-height: 1.2;
+    color: #0f172a;
+    line-height: 1.25;
     margin: 0;
     letter-spacing: -0.025em;
     font-family: -apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', system-ui, sans-serif;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7);
+  }
+
+  .title-desktop {
+    display: inline;
+  }
+  .title-mobile {
+    display: none;
+  }
+  @media (max-width: 640px) {
+    .title-desktop {
+      display: none;
+    }
+    .title-mobile {
+      display: inline;
+    }
   }
 
   .powered-by-tag {
     font-size: clamp(0.72rem, 1.4vw, 0.85rem);
-    color: #a8a29e;
-    font-weight: 500;
+    color: #1e293b;
+    font-weight: 700;
     white-space: nowrap;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 6px;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7);
   }
 
   .login-banner-wrapper {
@@ -265,13 +342,15 @@
 
   /* Finder Section */
   .finder-section {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 24px;
     padding: clamp(1.8rem, 4vw, 2.8rem) 1.5rem;
     text-align: center;
     margin: 2rem 0;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
   .finder-icon-svg {
     display: inline-flex;
@@ -287,13 +366,13 @@
   .finder-heading {
     font-size: clamp(1.35rem, 3vw, 1.85rem);
     font-weight: 800;
-    color: var(--ink);
+    color: #111827;
     margin-bottom: 0.5rem;
     letter-spacing: -0.02em;
   }
   .finder-subheading {
     font-size: clamp(0.88rem, 1.8vw, 1rem);
-    color: var(--muted);
+    color: #4b5563;
     max-width: 540px;
     margin: 0 auto 1.8rem;
     line-height: 1.55;
@@ -327,13 +406,13 @@
     background: #0d4e41;
   }
   .btn-find-photos.btn-outline {
-    background: var(--card);
-    color: var(--ink);
-    border: 1.5px solid var(--line);
+    background: #ffffff;
+    color: #1f2937;
+    border: 1.5px solid #d1d5db;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
   }
   .btn-find-photos.btn-outline:hover {
-    background: var(--bg);
+    background: #f9fafb;
     border-color: var(--accent);
     color: var(--accent);
   }
@@ -345,7 +424,7 @@
   .search-status-text {
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--muted);
+    color: #374151;
     margin-top: 1.25rem;
     min-height: 1.4em;
   }
@@ -354,6 +433,13 @@
   .photos-section {
     margin: 2.5rem 0 4rem;
     scroll-margin-top: 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 24px;
+    padding: clamp(1.2rem, 3vw, 2rem);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
   .photos-head {
     display: flex;
@@ -723,6 +809,16 @@
 </head>
 <body>
 
+  <!-- Full-Length Seamless Vertical Scrolling Background with Warm Yellow Overlay (photowithmyleader.com style) -->
+  <div class="site-bg-wrapper" aria-hidden="true">
+    <div class="site-bg-track">
+      <div class="site-bg-tile"></div>
+      <div class="site-bg-tile"></div>
+    </div>
+    <div class="site-bg-overlay"></div>
+    <div class="site-bg-tint"></div>
+  </div>
+
   <!-- Hidden placeholder elements to maintain legacy event data binding -->
   <div style="display:none;" aria-hidden="true">
     <span id="eventType"></span>
@@ -739,7 +835,10 @@
     <div class="login-hero-container">
       <!-- Title & Powered By in single top row -->
       <div class="hero-top-row">
-        <h1 class="login-hero-title">Photo with Bhashyam Ramakrishna Sir</h1>
+        <h1 class="login-hero-title">
+          <span class="title-desktop">Photo with Bhashyam Rama Krishna Sir</span>
+          <span class="title-mobile">Photo with BRK Sir</span>
+        </h1>
         <span class="powered-by-tag">Powered by Magni Digitech</span>
       </div>
 
