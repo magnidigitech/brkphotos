@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /images/
+Allow: /thumb/
+Disallow: /admin
+Disallow: /api/admin/
+
+Sitemap: https://photos.bhashyamramakrishna.in/sitemap.xml

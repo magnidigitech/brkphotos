@@ -1995,6 +1995,22 @@ def legacy_wedding_redirect():
     """Redirects legacy /wedding handle directly to root landing page."""
     return RedirectResponse(url="/", status_code=301)
 
+@app.get("/sitemap.xml")
+def sitemap_xml():
+    """Serves the SEO sitemap for search engine indexing."""
+    f = BASE / "static" / "sitemap.xml"
+    if f.exists():
+        return FileResponse(f, media_type="application/xml")
+    raise HTTPException(404, "Sitemap not found")
+
+@app.get("/robots.txt")
+def robots_txt():
+    """Serves search engine crawling guidelines."""
+    f = BASE / "static" / "robots.txt"
+    if f.exists():
+        return FileResponse(f, media_type="text/plain")
+    raise HTTPException(404, "Robots not found")
+
 @app.get("/images/{filename}")
 def serve_header_image(filename: str):
     """Direct route to serve header parallax and logo images."""

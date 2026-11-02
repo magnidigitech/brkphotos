@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://photos.bhashyamramakrishna.in/</loc>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://photos.bhashyamramakrishna.in/images/header_brk.png</image:loc>
+      <image:title>Bhashyam Ramakrishna Garu MP Rajya Sabha - Photo with BRK Sir</image:title>
+      <image:caption>Official Photo Portal for Bhashyam Ramakrishna Garu, Member of Parliament, Rajya Sabha (BRK Sir)</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://photos.bhashyamramakrishna.in/images/header_bg.png</image:loc>
+      <image:title>Photo with BRK Sir - Official AI Photo Finder</image:title>
+    </image:image>
+  </url>
+</urlset>

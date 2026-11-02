@@ -205,7 +205,7 @@ def get_task_by_id(task_id: str):
     return dict(row) if row else None
 
 def migrate_existing_data():
-    """Migrates existing single-event data into the multi-event structure seamlessly."""
+    """Migrates existing single-event data into the BRK Photos platform structure seamlessly."""
     conn = get_db()
     cursor = conn.cursor()
     
@@ -215,26 +215,29 @@ def migrate_existing_data():
     if not row:
         cursor.execute("""
             INSERT INTO events (slug, name, event_type, event_date, location, description, status)
-            VALUES ('wedding', 'Photo with BRK Sir', 'Celebration', '2026-11-02', 'BRK Photos', 'Photo with BRK Sir', 'published')
+            VALUES ('default', 'Photo with BRK Sir', 'Public Gathering', '2026-11-02', 'Andhra Pradesh', 'Official Photo Portal for Bhashyam Ramakrishna Garu, Member of Parliament, Rajya Sabha (BRK Sir)', 'published')
         """)
         event_id = cursor.lastrowid
     else:
         event_id = row["id"]
-        if row["name"] == "The Wedding Celebration":
-            cursor.execute("UPDATE events SET name = 'Photo with BRK Sir' WHERE id = ?", (event_id,))
+        if row["name"] in ("The Wedding Celebration", "Wedding"):
+            cursor.execute("UPDATE events SET name = 'Photo with BRK Sir', event_type = 'Public Gathering', description = 'Official Photo Portal for Bhashyam Ramakrishna Garu, Member of Parliament, Rajya Sabha (BRK Sir)' WHERE id = ?", (event_id,))
             conn.commit()
         
     # Check if default album exists
-    cursor.execute("SELECT id FROM albums WHERE event_id = ? AND slug = 'ceremony'", (event_id,))
+    cursor.execute("SELECT id, name FROM albums WHERE event_id = ? AND (slug = 'brk-photos' OR slug = 'ceremony')", (event_id,))
     album_row = cursor.fetchone()
     if not album_row:
         cursor.execute("""
             INSERT INTO albums (event_id, slug, name, sort_order, is_published)
-            VALUES (?, 'ceremony', 'Wedding Ceremony', 1, 1)
+            VALUES (?, 'brk-photos', 'BRK Photos', 1, 1)
         """, (event_id,))
         album_id = cursor.lastrowid
     else:
         album_id = album_row["id"]
+        if "Wedding" in album_row["name"]:
+            cursor.execute("UPDATE albums SET name = 'BRK Photos', slug = 'brk-photos' WHERE id = ?", (album_id,))
+            conn.commit()
         
     # Migrate any photos on disk
     photos_dir = STORAGE / "photos"
