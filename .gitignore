@@ -2,6 +2,6 @@ storage/
 __pycache__/
 *.zip
 .DS_Store
-*.txt
+!requirements.txt
 
 
