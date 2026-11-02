@@ -23,6 +23,13 @@ def get_db():
     except Exception:
         pass
     try:
+        # Deduplicate any pre-existing duplicates on rel_path before enforcing unique index
+        conn.execute("""
+            DELETE FROM photos 
+            WHERE id NOT IN (
+                SELECT MIN(id) FROM photos GROUP BY rel_path
+            );
+        """)
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_event_rel ON photos(event_id, rel_path);")
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_rel_unique ON photos(rel_path);")
         conn.commit()
@@ -218,19 +225,27 @@ def migrate_existing_data():
     cursor = conn.cursor()
     
     # Check if default event exists
-    cursor.execute("SELECT id, name FROM events WHERE slug = 'wedding' OR slug = 'default'")
+    cursor.execute("SELECT id, name, slug FROM events WHERE slug IN ('brk-sir', 'brksir', 'wedding', 'default')")
     row = cursor.fetchone()
     if not row:
         cursor.execute("""
             INSERT INTO events (slug, name, event_type, event_date, location, description, status)
-            VALUES ('default', 'Photo with BRK Sir', 'Public Gathering', '2026-11-02', 'Andhra Pradesh', 'Official Photo Portal for Bhashyam Ramakrishna Garu, Member of Parliament, Rajya Sabha (BRK Sir)', 'published')
+            VALUES ('brk-sir', 'BRK Sir', 'Public Gathering', '2026-11-02', 'Andhra Pradesh', 'Official Photo Portal for Bhashyam Ramakrishna Garu, Member of Parliament, Rajya Sabha (BRK Sir)', 'published')
         """)
         event_id = cursor.lastrowid
     else:
         event_id = row["id"]
-        if row["name"] in ("The Wedding Celebration", "Wedding"):
-            cursor.execute("UPDATE events SET name = 'Photo with BRK Sir', event_type = 'Public Gathering', description = 'Official Photo Portal for Bhashyam Ramakrishna Garu, Member of Parliament, Rajya Sabha (BRK Sir)' WHERE id = ?", (event_id,))
-            conn.commit()
+        cursor.execute("""
+            UPDATE events 
+            SET name = 'BRK Sir', 
+                slug = 'brk-sir', 
+                event_type = 'Public Gathering', 
+                description = 'Official Photo Portal for Bhashyam Ramakrishna Garu, Member of Parliament, Rajya Sabha (BRK Sir)' 
+            WHERE id = ?
+        """, (event_id,))
+        cursor.execute("UPDATE task_history SET event_slug = 'BRK Sir' WHERE event_slug IN ('wedding', 'default', 'brk-sir', 'brksir')")
+        cursor.execute("UPDATE task_history SET log_text = REPLACE(REPLACE(log_text, 'wedding', 'BRK Sir'), 'The Wedding Celebration', 'Photo with BRK Sir') WHERE log_text LIKE '%wedding%'")
+        conn.commit()
         
     # Check if default album exists
     cursor.execute("SELECT id, name FROM albums WHERE event_id = ? AND (slug = 'brk-photos' OR slug = 'ceremony')", (event_id,))
@@ -243,7 +258,7 @@ def migrate_existing_data():
         album_id = cursor.lastrowid
     else:
         album_id = album_row["id"]
-        if "Wedding" in album_row["name"]:
+        if "Wedding" in album_row["name"] or album_row["name"] == "Ceremony":
             cursor.execute("UPDATE albums SET name = 'BRK Photos', slug = 'brk-photos' WHERE id = ?", (album_id,))
             conn.commit()
         
@@ -276,7 +291,7 @@ def migrate_existing_data():
     conn.commit()
     conn.close()
 
-def cluster_and_sync_people(event_slug="wedding", threshold=0.48):
+def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
     """
     Groups indexed face embeddings for an event into accurate Person Profiles.
     Uses centroid-based clustering and merging so the same person is not fragmented,
@@ -291,7 +306,7 @@ def cluster_and_sync_people(event_slug="wedding", threshold=0.48):
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM events WHERE slug = ?", (event_slug,))
+    cursor.execute("SELECT id FROM events WHERE slug = ? OR ? IN ('wedding', 'default', 'brk-sir', 'brksir')", (event_slug, event_slug))
     event_row = cursor.fetchone()
     if not event_row:
         conn.close()
@@ -299,7 +314,7 @@ def cluster_and_sync_people(event_slug="wedding", threshold=0.48):
         
     event_id = event_row["id"]
     
-    if event_slug in {"default", "wedding"}:
+    if event_slug in {"default", "wedding", "brk-sir", "brksir"}:
         data_dir = STORAGE / "data"
     else:
         data_dir = STORAGE / "data" / "events" / event_slug
@@ -394,16 +409,12 @@ def cluster_and_sync_people(event_slug="wedding", threshold=0.48):
     people_created = 0
     for idx, cl in enumerate(clusters):
         sample_raw = names[cl[0]]
-        if event_slug not in {"default", "wedding"} and not sample_raw.startswith("events/"):
+        if event_slug not in {"default", "wedding", "brk-sir", "brksir"} and not sample_raw.startswith("events/"):
             sample_rel = f"events/{event_slug}/{sample_raw}"
         else:
             sample_rel = sample_raw
             
-        default_name = f"Guest #{idx + 1}"
-        if idx == 0:
-            default_name = "Rahul (Groom)" if event_slug == "rahul-priya" else "Featured Person"
-        elif idx == 1:
-            default_name = "Priya (Bride)" if event_slug == "rahul-priya" else "Key Family"
+        default_name = "Bhashyam Ramakrishna Garu (BRK Sir)" if idx == 0 else f"Person #{idx + 1}"
             
         cursor.execute("""
             INSERT INTO person_profiles (event_id, name, avatar_thumb_path)

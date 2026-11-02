@@ -1522,7 +1522,12 @@ window.fetch = async function(url, options = {}) {
   return res;
 };
 
-let activeSlug = localStorage.getItem('admin_active_event_slug') || 'anilkumar-vengamamba';
+let storedSlug = localStorage.getItem('admin_active_event_slug');
+if (!storedSlug || ['wedding', 'anilkumar-vengamamba', 'default'].includes(storedSlug)) {
+  storedSlug = 'brk-sir';
+  localStorage.setItem('admin_active_event_slug', 'brk-sir');
+}
+let activeSlug = storedSlug;
 let allEvents = [];
 let allAlbums = [];
 let currentEvent = null;
@@ -1814,7 +1819,8 @@ function updateActiveEventButtons() {
 }
 
 async function setEventWorkspace(slug, refreshActiveTab = true) {
-  activeSlug = slug || 'wedding';
+  activeSlug = slug || 'brk-sir';
+  if (activeSlug === 'wedding' || activeSlug === 'default') activeSlug = 'brk-sir';
   if ($('activeEventSelect')) $('activeEventSelect').value = activeSlug;
   updateActiveEventButtons();
 
@@ -2401,11 +2407,16 @@ function setupUploadTab() {
   const gdSel = $('gdriveTargetAlbumSelect');
   if (gdSel) {
     gdSel.replaceChildren();
+    const autoOpt = document.createElement('option');
+    autoOpt.value = 'auto';
+    autoOpt.textContent = '⚡ Auto-detect albums from Google Drive folders (Recommended)';
+    autoOpt.selected = true;
+    gdSel.append(autoOpt);
+
     for (const a of allAlbums) {
       const o = document.createElement('option');
       o.value = a.slug;
-      o.textContent = a.name;
-      if (a.slug === activeUploadAlbumSlug) o.selected = true;
+      o.textContent = `Specific Album: ${a.name}`;
       gdSel.append(o);
     }
   }
@@ -2558,7 +2569,9 @@ async function pollTaskStatus() {
     // Task Name & Target
     const isGdrive = (task.task_type || task.type) === 'gdrive_ingest' || (task.task_type || task.type) === 'gdrive';
     $('taskNameText').textContent = isGdrive ? 'Google Drive Ingestion & Compression' : 'AI Facial Recognition Indexing';
-    $('taskEventTargetText').textContent = `${task.event_slug || task.event || activeSlug} > ${task.target_folder || task.target || 'General'}`;
+    let targetEv = task.event_slug || task.event || activeSlug;
+    if (['wedding', 'default', 'brk-sir', 'brksir'].includes(targetEv)) targetEv = 'BRK Sir';
+    $('taskEventTargetText').textContent = `${targetEv} > ${task.target_folder || task.target || 'All Albums'}`;
 
     // Progress Bar
     const pct = Math.min(100, Math.max(0, task.progress_pct !== undefined ? task.progress_pct : (status === 'completed' ? 100 : 15)));
@@ -2668,7 +2681,7 @@ async function loadTaskHistory() {
           </div>
         </td>
         <td style="padding:0.75rem 1rem;">
-          <span style="font-weight:600;">${t.event_slug}</span>
+          <span style="font-weight:600;">${['wedding', 'default', 'brk-sir', 'brksir'].includes(t.event_slug) ? 'BRK Sir' : t.event_slug}</span>
           <span style="color:var(--muted);font-size:0.78rem;"> / ${t.target_folder || 'All'}</span>
         </td>
         <td style="padding:0.75rem 1rem;">
@@ -2709,7 +2722,8 @@ async function viewTaskLogs(taskId) {
     const t = data.task;
     if (!t) return;
 
-    $('taskLogViewerTitle').textContent = `${t.task_type === 'gdrive_ingest' ? 'Google Drive Ingest' : 'AI Facial Index'} (${t.event_slug} > ${t.target_folder || 'All'})`;
+    const evDisp = ['wedding', 'default', 'brk-sir', 'brksir'].includes(t.event_slug) ? 'BRK Sir' : t.event_slug;
+    $('taskLogViewerTitle').textContent = `${t.task_type === 'gdrive_ingest' ? 'Google Drive Ingest' : 'AI Facial Index'} (${evDisp} > ${t.target_folder || 'All'})`;
     $('taskLogViewerMeta').textContent = `Started: ${t.started_at} | Saved: ${(t.storage_saved_mb || 0).toFixed(1)} MB | Status: ${t.status.toUpperCase()}`;
 
     const logs = t.log_text ? t.log_text.trim() : 'No log entries recorded for this task.';

@@ -26,11 +26,12 @@ MODELS = STORAGE / "models"
 DET_SIZE = int(os.environ.get("DET_SIZE", "960"))
 EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
-def index_event(event_slug="wedding"):
-    print(f"=== Starting Face Indexing for Event: '{event_slug}' ===")
+def index_event(event_slug="brk-sir"):
+    display_name = "BRK Sir" if event_slug in {"default", "wedding", "brk-sir", "brksir"} else event_slug
+    print(f"=== Starting Face Indexing for: '{display_name}' ===")
     
     # Per-event directories
-    if event_slug in {"default", "wedding"}:
+    if event_slug in {"default", "wedding", "brk-sir", "brksir"}:
         event_photos_dir = PHOTOS
         event_data_dir = DATA
     else:
@@ -59,7 +60,7 @@ def index_event(event_slug="wedding"):
         done_file.write_text(json.dumps(sorted(done)))
         
         # Mirror to root DATA for backward compatibility if default event
-        if event_slug in {"default", "wedding"}:
+        if event_slug in {"default", "wedding", "brk-sir", "brksir"}:
             if embs:
                 np.save(DATA / "embeddings.npy", np.array(embs, dtype=np.float32).reshape(-1, 512))
             (DATA / "names.json").write_text(json.dumps(names))
@@ -83,7 +84,7 @@ def index_event(event_slug="wedding"):
             thumb.thumbnail((480, 480))
             thumb_name = rel.replace("/", "__") + ".jpg"
             thumb.save(thumbs_dir / thumb_name, quality=80)
-            if event_slug in {"default", "wedding"}:
+            if event_slug in {"default", "wedding", "brk-sir", "brksir"}:
                 (DATA / "thumbs").mkdir(parents=True, exist_ok=True)
                 thumb.save(DATA / "thumbs" / thumb_name, quality=80)
 
@@ -113,7 +114,7 @@ def index_event(event_slug="wedding"):
         print(f"Clustering note: {e}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="MagniWedding Multi-Event Face Indexer")
-    parser.add_argument("--event", type=str, default="wedding", help="Event slug to index")
+    parser = argparse.ArgumentParser(description="BRK Photos Multi-Event Face Indexer")
+    parser.add_argument("--event", type=str, default="brk-sir", help="Event slug to index")
     args = parser.parse_args()
     index_event(args.event)

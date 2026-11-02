@@ -64,9 +64,9 @@ def reload_drive_map():
 
 reload_drive_map()
 
-def get_event_index(slug: str = "wedding"):
+def get_event_index(slug: str = "brk-sir"):
     """Loads and caches face embeddings for albums and photos."""
-    if slug in {"default", "wedding", ""}:
+    if slug in {"default", "wedding", "brk-sir", "brksir", ""}:
         data_dir = DATA
     else:
         data_dir = DATA / "events" / slug
@@ -181,26 +181,27 @@ def download_gdrive_file(url: str, dest_path: Path) -> tuple[bool, str]:
             except Exception: pass
         return False, str(e)
 
-def run_indexing_task(event_slug="wedding", task_id=None):
+def run_indexing_task(event_slug="brk-sir", task_id=None):
     global current_task, active_process
+    display_title = "BRK Sir" if event_slug in {"default", "wedding", "brk-sir", "brksir"} else event_slug
     owns_task = False
     if not task_id:
         owns_task = True
         task_id = f"idx_{secrets.token_hex(4)}"
-        create_task_record(task_id, "face_index", event_slug, "All Albums", "Local Storage")
+        create_task_record(task_id, "face_index", display_title, "All Albums", "Local Storage")
 
     with task_lock:
         current_task["task_id"] = task_id
         current_task["status"] = "running"
         current_task["type"] = "indexing"
-        current_task["event"] = event_slug
+        current_task["event"] = display_title
         current_task["progress_pct"] = 80 if not owns_task else 20
-        current_task["message"] = f"Face indexing for event '{event_slug}' in progress..."
+        current_task["message"] = f"Face indexing for '{display_title}' in progress..."
 
-    append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Starting face indexing for event '{event_slug}'")
+    append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Starting face indexing for '{display_title}'")
     update_task_progress(task_id, progress_pct=80 if not owns_task else 20,
-                         current_step=f"Analyzing faces with InsightFace in '{event_slug}'...",
-                         log_line=f"Face indexing started for event '{event_slug}'")
+                         current_step=f"Analyzing faces with InsightFace for '{display_title}'...",
+                         log_line=f"Face indexing started for '{display_title}'")
 
     try:
         proc = subprocess.Popen(
@@ -253,9 +254,10 @@ def run_indexing_task(event_slug="wedding", task_id=None):
 
 def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: str, allowed_exts: list = None):
     global current_task, drive_map, active_process
+    display_title = "BRK Sir" if event_slug in {"default", "wedding", "brk-sir", "brksir"} else event_slug
     task_cancel_event.clear()
     task_id = f"gdrive_{secrets.token_hex(4)}"
-    create_task_record(task_id, "gdrive_ingest", event_slug, dest_dir.name, url)
+    create_task_record(task_id, "gdrive_ingest", display_title, dest_dir.name, url)
 
     if not allowed_exts:
         allowed_exts = ["jpg", "jpeg", "png", "webp"]
@@ -266,7 +268,7 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
             "task_id": task_id,
             "status": "running",
             "type": "gdrive_ingest",
-            "event": event_slug,
+            "event": display_title,
             "target_folder": dest_dir.name,
             "source_url": url,
             "progress_pct": 5,
@@ -277,7 +279,7 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
             "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
-    append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Starting Google Drive download for event '{event_slug}', folder '{dest_dir.name}' from {url}")
+    append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Starting Google Drive download for '{display_title}', folder '{dest_dir.name}' from {url}")
     update_task_progress(task_id, progress_pct=5, current_step="Scanning Google Drive folder manifest...",
                          log_line=f"Target: {dest_dir.name} | Formats: {', '.join(sorted(allowed_set))} | Source: {url}")
 
@@ -328,6 +330,7 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
                                  log_line=f"Found {len(items)} total files. Kept {total_photos} photos, skipped {skipped_count} files.")
 
             # Step 3: Stream download each valid photo directly
+            skipped_existing_count = 0
             for idx, item in enumerate(valid_items):
                 if task_cancel_event.is_set():
                     append_log("Download cancelled by administrator.")
@@ -337,32 +340,27 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
                     update_task_progress(task_id, status="cancelled", current_step="Task stopped by admin.", log_line="Task cancelled by administrator.")
                     return
 
-                fname = Path(item.get("path", f"photo_{idx}.jpg")).name
+                item_raw_path = item.get("path", f"photo_{idx}.jpg")
+                p = Path(item_raw_path)
+                fname = p.name
                 furl = item.get("url", "")
                 
                 # Extract file id
                 fid_match = re.search(r'id=([a-zA-Z0-9_-]+)', furl)
                 fid = fid_match.group(1) if fid_match else ""
 
-                dest_file = dest_dir / fname
+                # Preserve folder hierarchy on disk for automatic album creation
+                dest_file = dest_dir / item_raw_path
+                dest_file.parent.mkdir(parents=True, exist_ok=True)
                 
-                # Skip if already exists and is valid
+                # Skip if already exists on disk and is valid (UPSERT & SKIP EXISTING)
                 if dest_file.exists() and dest_file.stat().st_size > 1000:
+                    rel = str(dest_file.relative_to(PHOTOS))
                     if fid:
-                        drive_map[f"{rel_prefix}/{fname}"] = fid
+                        drive_map[rel] = fid
                         drive_map[fname] = fid
-                    # Ensure active status in database for existing file
-                    try:
-                        conn_chk = get_db()
-                        conn_chk.execute("""
-                            UPDATE photos SET is_deleted = 0 
-                            WHERE event_id = (SELECT id FROM events WHERE slug = ?) AND filename = ?
-                        """, (event_slug, fname))
-                        conn_chk.commit()
-                        conn_chk.close()
-                    except Exception:
-                        pass
                     processed_count += 1
+                    skipped_existing_count += 1
                     continue
 
                 # Download with retry
@@ -390,7 +388,8 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
 
                     # Pre-generate web thumbnail immediately to avoid browser stampede
                     try:
-                        t_path = DATA / "thumbs" / (f"{rel_prefix}/{fname}".replace("/", "__") + ".jpg")
+                        rel = str(dest_file.relative_to(PHOTOS))
+                        t_path = DATA / "thumbs" / (rel.replace("/", "__") + ".jpg")
                         t_path.parent.mkdir(parents=True, exist_ok=True)
                         with Image.open(dest_file) as timg:
                             try: timg.draft("RGB", (480, 480))
@@ -401,8 +400,9 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
                     except Exception:
                         pass
                     
+                    rel = str(dest_file.relative_to(PHOTOS))
                     if fid:
-                        drive_map[f"{rel_prefix}/{fname}"] = fid
+                        drive_map[rel] = fid
                         drive_map[fname] = fid
                         
                     processed_count += 1
@@ -414,16 +414,19 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
                         current_task["processed_files"] = processed_count
                         current_task["total_files"] = total_photos
                         current_task["storage_saved_mb"] = saved_mb
-                        current_task["message"] = f"Downloaded & optimized {fname} ({processed_count}/{total_photos})"
+                        current_task["message"] = f"Processed {fname} ({processed_count}/{total_photos})"
 
                     if processed_count % 5 == 0 or processed_count == total_photos:
                         update_task_progress(task_id, progress_pct=pct,
-                                             current_step=f"Downloaded & optimized {fname} ({processed_count}/{total_photos})",
+                                             current_step=f"Processed {fname} ({processed_count}/{total_photos}, skipped {skipped_existing_count} existing)",
                                              processed_files=processed_count, total_files=total_photos,
                                              storage_saved_mb=saved_mb)
                     time.sleep(0.04) # Keep CPU cool
                 else:
                     append_log(f"Skipping {fname}: could not download ({err_msg})")
+
+            if skipped_existing_count > 0:
+                append_log(f"Skipped {skipped_existing_count} already downloaded photos.")
 
         else:
             # Fallback if --json manifest could not be retrieved
@@ -473,25 +476,42 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
         update_task_progress(task_id, progress_pct=78, current_step="Registering photos in database...")
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM events WHERE slug = ?", (event_slug,))
+        cursor.execute("SELECT id FROM events WHERE slug = ? OR ? IN ('wedding', 'default', 'brk-sir', 'brksir')", (event_slug, event_slug))
         erow = cursor.fetchone()
         if erow:
             eid = erow["id"]
-            album_name = dest_dir.name
-            album_slug = re.sub(r"[^a-zA-Z0-9_-]", "-", album_name.lower()).strip("-")
-            cursor.execute("SELECT id FROM albums WHERE event_id = ? AND (slug = ? OR name = ?)", (eid, album_slug, album_name.replace("-", " ").title()))
-            arow = cursor.fetchone()
-            if not arow:
-                cursor.execute("""
-                    INSERT INTO albums (event_id, slug, name, sort_order)
-                    VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM albums WHERE event_id = ?))
-                """, (eid, album_slug, album_name.replace("-", " ").title(), eid))
-                album_id = cursor.lastrowid
-            else:
-                album_id = arow["id"]
+            album_cache = {}
 
             for img_path in dest_dir.rglob("*"):
                 if img_path.is_file() and img_path.suffix.lower().strip(".") in allowed_set and not img_path.name.startswith("."):
+                    rel_to_dest = img_path.relative_to(dest_dir)
+                    sub_parts = rel_to_dest.parent.parts
+                    if sub_parts:
+                        # Auto-detect album name from subfolders (e.g. "01-10-26" or "05 OCT - 01-10-26")
+                        if len(sub_parts) > 1:
+                            album_name = f"{sub_parts[0]} - {sub_parts[-1]}"
+                        else:
+                            album_name = sub_parts[0]
+                    else:
+                        album_name = dest_dir.name
+
+                    album_slug = re.sub(r"[^a-zA-Z0-9_-]", "-", album_name.lower()).strip("-")
+                    if not album_slug:
+                        album_slug = "brk-photos"
+
+                    if album_slug not in album_cache:
+                        cursor.execute("SELECT id FROM albums WHERE event_id = ? AND (slug = ? OR name = ?)", (eid, album_slug, album_name))
+                        arow = cursor.fetchone()
+                        if not arow:
+                            cursor.execute("""
+                                INSERT INTO albums (event_id, slug, name, sort_order)
+                                VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM albums WHERE event_id = ?))
+                            """, (eid, album_slug, album_name, eid))
+                            album_cache[album_slug] = cursor.lastrowid
+                        else:
+                            album_cache[album_slug] = arow["id"]
+
+                    album_id = album_cache[album_slug]
                     rel = str(img_path.relative_to(PHOTOS))
                     fsize = img_path.stat().st_size
                     did = drive_map.get(rel) or drive_map.get(img_path.name)
@@ -562,7 +582,7 @@ def crop_face_thumb(img, bbox, target_size=(160, 160)):
     _, buf = cv2.imencode(".jpg", crop_resized, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
     return "data:image/jpeg;base64," + base64.b64encode(buf).decode("utf-8")
 
-def perform_face_search(selfie: UploadFile, event_slug: str = "wedding", face_index: Optional[int] = None):
+def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_index: Optional[int] = None):
     embs, names, known = get_event_index(event_slug)
     if len(names) == 0:
         raise HTTPException(503, "Photos are still being prepared for this event. Please check back soon.")
@@ -633,7 +653,7 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "wedding", face_in
         FROM photos p
         JOIN events e ON p.event_id = e.id
         LEFT JOIN albums a ON p.album_id = a.id
-        WHERE e.slug = ? OR ? IN ('wedding', 'default', '')
+        WHERE e.slug = ? OR ? IN ('brk-sir', 'brksir', 'wedding', 'default', '')
     """, (event_slug, event_slug))
     photo_info = {r["filename"]: dict(r) for r in cursor.fetchall()}
     conn.close()
@@ -665,7 +685,7 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "wedding", face_in
 @app.post("/api/search")
 def default_search(selfie: UploadFile = File(...), face_index: Optional[int] = Form(None)):
     """Search for matching photos using face recognition."""
-    return perform_face_search(selfie, "wedding", face_index=face_index)
+    return perform_face_search(selfie, "brk-sir", face_index=face_index)
 
 @app.post("/api/{slug}/search")
 def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[int] = Form(None)):
@@ -914,7 +934,7 @@ def public_gallery():
     cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
     row = cursor.fetchone()
     conn.close()
-    slug = row["slug"] if row else "wedding"
+    slug = row["slug"] if row else "brk-sir"
     return public_event_details(slug)
 
 @app.get("/api/public/albums/{album_slug}")
@@ -924,7 +944,7 @@ def public_album_direct(album_slug: str):
     cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
     row = cursor.fetchone()
     conn.close()
-    slug = row["slug"] if row else "wedding"
+    slug = row["slug"] if row else "brk-sir"
     return public_album_photos(slug, album_slug)
 
 @app.get("/api/public/events/{slug}")
@@ -992,7 +1012,7 @@ def public_album_photos(slug: str, album_slug: str):
         SELECT a.id, a.name, a.slug, e.id as event_id
         FROM albums a
         JOIN events e ON a.event_id = e.id
-        WHERE (e.slug = ? OR ? IN ('wedding', 'default', '')) AND a.slug = ? AND a.is_published = 1 AND a.is_deleted = 0
+        WHERE (e.slug = ? OR ? IN ('brk-sir', 'brksir', 'wedding', 'default', '')) AND a.slug = ? AND a.is_published = 1 AND a.is_deleted = 0
     """, (slug, slug, album_slug))
     album = cursor.fetchone()
     if not album:
@@ -1141,7 +1161,7 @@ def sync_event_folders_and_photos(slug: str):
         return
     eid = erow["id"]
 
-    if slug in {"default", "wedding"}:
+    if slug in {"default", "wedding", "brk-sir", "brksir"}:
         event_dir = PHOTOS
     else:
         event_dir = PHOTOS / "events" / slug
@@ -1276,7 +1296,7 @@ def admin_create_album_direct(payload: dict, token: str = Depends(get_auth_token
     cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
     row = cursor.fetchone()
     conn.close()
-    slug = row["slug"] if row else "wedding"
+    slug = row["slug"] if row else "brk-sir"
     return admin_create_album(slug, payload, token)
 
 @app.post("/api/admin/events/{slug}/albums")
@@ -1288,7 +1308,7 @@ def admin_create_album(slug: str, payload: dict, token: str = Depends(get_auth_t
         
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM events WHERE slug = ?", (slug,))
+    cursor.execute("SELECT id FROM events WHERE slug = ? OR ? IN ('wedding', 'default', 'brk-sir', 'brksir')", (slug, slug))
     event = cursor.fetchone()
     if not event:
         conn.close()
@@ -1307,7 +1327,7 @@ def admin_create_album(slug: str, payload: dict, token: str = Depends(get_auth_t
     conn.close()
     
     # Create folder on disk
-    if slug in {"default", "wedding"}:
+    if slug in {"default", "wedding", "brk-sir", "brksir"}:
         (PHOTOS / album_slug).mkdir(parents=True, exist_ok=True)
     else:
         (PHOTOS / "events" / slug / album_slug).mkdir(parents=True, exist_ok=True)
@@ -1415,7 +1435,7 @@ def admin_update_album(slug: str, album_id: int, payload: dict, token: str = Dep
             raise HTTPException(400, f"Album slug '{new_slug}' already exists in this event.")
 
         # Rename directory on disk
-        if slug in {"default", "wedding"}:
+        if slug in {"default", "wedding", "brk-sir", "brksir"}:
             old_dir = PHOTOS / old_slug
             new_dir = PHOTOS / new_slug
             old_rel = old_slug + "/"
@@ -1693,7 +1713,7 @@ def admin_permanent_delete_trash(payload: dict, token: str = Depends(get_auth_to
                 cursor.execute(f"DELETE FROM face_detections WHERE photo_id IN ({','.join('?' for _ in pids)})", pids)
                 cursor.execute(f"DELETE FROM photos WHERE id IN ({','.join('?' for _ in pids)})", pids)
             cursor.execute("DELETE FROM albums WHERE id = ?", (aid,))
-            alb_dir = PHOTOS / "events" / eslug / aslug if eslug not in {"default", "wedding"} else PHOTOS / aslug
+            alb_dir = PHOTOS / "events" / eslug / aslug if eslug not in {"default", "wedding", "brk-sir", "brksir"} else PHOTOS / aslug
             if alb_dir.exists():
                 shutil.rmtree(alb_dir, ignore_errors=True)
             append_log(f"Permanently purged album '{alb['name']}' ({aslug}) and removed folder from disk.")
@@ -1732,7 +1752,7 @@ def admin_permanent_delete_trash(payload: dict, token: str = Depends(get_auth_to
 
         cursor.execute("SELECT a.id, a.slug, e.slug as eslug FROM albums a JOIN events e ON a.event_id = e.id WHERE a.is_deleted = 1")
         for a in cursor.fetchall():
-            adir = PHOTOS / "events" / a["eslug"] / a["slug"] if a["eslug"] not in {"default", "wedding"} else PHOTOS / a["slug"]
+            adir = PHOTOS / "events" / a["eslug"] / a["slug"] if a["eslug"] not in {"default", "wedding", "brk-sir", "brksir"} else PHOTOS / a["slug"]
             if adir.exists():
                 shutil.rmtree(adir, ignore_errors=True)
         cursor.execute("DELETE FROM albums WHERE is_deleted = 1")
@@ -1774,7 +1794,7 @@ async def admin_upload_to_event(
     album_id = arow["id"] if arow else None
     
     safe_album = "".join(c for c in album_slug.strip() if c.isalnum() or c in "-_") or "highlights"
-    if slug in {"default", "wedding"}:
+    if slug in {"default", "wedding", "brk-sir", "brksir"}:
         target_dir = PHOTOS / safe_album
         rel_prefix = safe_album
     else:
@@ -1841,14 +1861,23 @@ def admin_event_gdrive(slug: str, payload: dict, token: str = Depends(get_auth_t
     if not url:
         raise HTTPException(400, "Google Drive URL is required.")
         
-    album_slug = payload.get("album_slug", "").strip() or "gdrive_photos"
-    safe_album = "".join(c for c in album_slug if c.isalnum() or c in "-_") or "gdrive_photos"
+    album_slug = payload.get("album_slug", "").strip() or "auto"
     allowed_exts = payload.get("allowed_extensions") or ["jpg", "jpeg", "png", "webp"]
     
-    if slug in {"default", "wedding"}:
+    if album_slug == "auto" or not album_slug:
+        if slug in {"default", "wedding", "brk-sir", "brksir"}:
+            dest_dir = PHOTOS
+            rel_prefix = ""
+        else:
+            dest_dir = PHOTOS / "events" / slug
+            rel_prefix = f"events/{slug}"
+        safe_album = "auto"
+    elif slug in {"default", "wedding", "brk-sir", "brksir"}:
+        safe_album = "".join(c for c in album_slug if c.isalnum() or c in "-_") or "brk-photos"
         dest_dir = PHOTOS / safe_album
         rel_prefix = safe_album
     else:
+        safe_album = "".join(c for c in album_slug if c.isalnum() or c in "-_") or "brk-photos"
         dest_dir = PHOTOS / "events" / slug / safe_album
         rel_prefix = f"events/{slug}/{safe_album}"
         
@@ -1962,7 +1991,7 @@ def public_people_all():
     cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
     row = cursor.fetchone()
     conn.close()
-    slug = row["slug"] if row else "wedding"
+    slug = row["slug"] if row else "brk-sir"
     return public_event_people(slug)
 
 @app.get("/api/public/people/{person_id}/photos")
@@ -1972,7 +2001,7 @@ def public_person_photos_direct(person_id: int):
     cursor.execute("SELECT slug FROM events ORDER BY id ASC LIMIT 1")
     row = cursor.fetchone()
     conn.close()
-    slug = row["slug"] if row else "wedding"
+    slug = row["slug"] if row else "brk-sir"
     return public_person_photos(slug, person_id)
 
 @app.get("/api/public/events/{slug}/people")
@@ -2066,6 +2095,22 @@ def robots_txt():
     if f.exists():
         return FileResponse(f, media_type="text/plain")
     raise HTTPException(404, "Robots not found")
+
+@app.get("/manifest.json")
+def get_manifest():
+    """Serves PWA Web App Manifest."""
+    f = BASE / "static" / "manifest.json"
+    if f.exists():
+        return FileResponse(f, media_type="application/manifest+json")
+    raise HTTPException(404, "Manifest not found")
+
+@app.get("/sw.js")
+def get_sw():
+    """Serves PWA Service Worker with root scope permissions."""
+    f = BASE / "static" / "sw.js"
+    if f.exists():
+        return FileResponse(f, media_type="application/javascript", headers={"Service-Worker-Allowed": "/"})
+    raise HTTPException(404, "Service Worker not found")
 
 @app.get("/images/{filename}")
 def serve_header_image(filename: str):

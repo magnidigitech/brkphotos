@@ -1,0 +1,25 @@
+{
+  "name": "BRK Photos",
+  "short_name": "BRK Photos",
+  "description": "Find and download photos taken with Bhashyam Ramakrishna Garu, MP Rajya Sabha (BRK Sir)",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fffdf5",
+  "theme_color": "#0f5c4d",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/static/images/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
