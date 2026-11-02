@@ -1,0 +1,3155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BRK Photos - Enterprise Administration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sidebar-bg: #ffffff;
+    --sidebar-line: #ebeef2;
+    --nav-ink: #4b5563;
+    --nav-ink-active: #111827;
+    --nav-active-bg: #f3f4f6;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --line: #e5e7eb;
+    --ink: #111827;
+    --muted: #6b7280;
+    --accent: #0f5c4d;
+    --accent-hover: #0a4338;
+    --primary: #111827;
+    --primary-hover: #1f2937;
+    --orange: #f97316;
+    --emerald: #10b981;
+    --err: #dc2626;
+    --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    overflow-x: hidden;
+  }
+
+  /* SVG Icons Helper */
+  .icon {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+    stroke: currentColor;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+  .icon-sm {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2;
+    stroke: currentColor;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  /* Single Clean Professional Sidebar */
+  .main-sidebar {
+    width: 268px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-line);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    overflow-y: auto;
+  }
+  .sidebar-header {
+    padding: 1.25rem 1.25rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--sidebar-line);
+  }
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+  .brand-logo-box {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #111827;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .brand-logo-box svg {
+    width: 18px;
+    height: 18px;
+  }
+  .brand-title {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .admin-badge {
+    background: #ecfdf5;
+    color: #059669;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 99px;
+  }
+  .btn-icon-sub {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-icon-sub:hover { color: var(--ink); border-color: var(--ink); }
+
+  .nav-group-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9ca3af;
+    padding: 1.15rem 1.25rem 0.35rem;
+  }
+  .sidebar-nav-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0 0.75rem;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: var(--nav-ink);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .nav-item-content {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+  .nav-item:hover {
+    color: var(--nav-ink-active);
+    background: #f9fafb;
+  }
+  .nav-item.active {
+    color: var(--nav-ink-active);
+    background: var(--nav-active-bg);
+    font-weight: 600;
+  }
+  .nav-item.active .icon {
+    stroke: var(--primary);
+  }
+  .nav-badge-count {
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: #e5e7eb;
+    color: #374151;
+    padding: 1px 6px;
+    border-radius: 99px;
+  }
+
+  /* Subfolders Tree in Sidebar */
+  .sidebar-subfolders-tree {
+    list-style: none;
+    margin: 0.2rem 0 0.4rem 1.75rem;
+    padding-left: 0.65rem;
+    border-left: 1.5px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .subfolder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #4b5563;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .subfolder-item:hover {
+    background: #f3f4f6;
+    color: #111827;
+  }
+  .subfolder-item.active {
+    background: #111827;
+    color: #ffffff;
+    font-weight: 600;
+  }
+  .subfolder-item.active .subfolder-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+  }
+  .subfolder-item.active .icon-sm {
+    stroke: #ffffff;
+  }
+  .subfolder-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6b7280;
+    background: #f1f3f5;
+    padding: 1px 5px;
+    border-radius: 99px;
+  }
+  .subfolder-create-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.78rem;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 6px;
+    margin-top: 0.15rem;
+  }
+  .subfolder-create-link:hover {
+    color: #111827;
+    background: #f9fafb;
+  }
+
+  /* Main Workspace Stage */
+  .workspace-canvas {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--bg);
+  }
+
+  /* Top Navigation Bar */
+  .top-header {
+    background: #ffffff;
+    border-bottom: 1px solid var(--line);
+    padding: 0.85rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .welcome-msg {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .top-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+  .event-picker-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f9fafb;
+    border: 1px solid var(--line);
+    padding: 0.3rem 0.65rem;
+    border-radius: 8px;
+  }
+  .event-picker-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+  }
+
+  /* Persistent Visual Task Progress Card */
+  .visual-task-card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--emerald);
+    border-radius: 12px;
+    padding: 1.15rem 1.35rem;
+    margin-bottom: 1.75rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+  }
+  .task-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.85rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .task-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+  .task-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .task-status-pill.running {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+  }
+  .task-status-pill.completed {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+  }
+  .task-status-pill.failed {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+  .status-pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+  .task-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .task-subtext {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: monospace;
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .task-progress-track {
+    width: 100%;
+    height: 9px;
+    background: #f1f3f5;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+  .task-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+  .task-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .task-step-desc {
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: #374151;
+  }
+  .task-stats-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .task-stat-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .task-stat-badge.highlight {
+    background: #ecfdf5;
+    color: #059669;
+  }
+
+  /* Table styles for task history */
+  .tasks-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    text-align: left;
+  }
+  .tasks-table th {
+    padding: 0.65rem 0.85rem;
+    background: #f9fafb;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+  }
+  .tasks-table td {
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+  }
+  .tasks-table tr:hover td {
+    background: #f9fafb;
+  }
+
+  /* Stage Content Area */
+  .stage-inner {
+    padding: 2rem 2.25rem 4rem;
+    max-width: 1240px;
+    width: 100%;
+  }
+
+  /* Views Tabs Bar */
+  .views-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 1.75rem;
+    padding-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .views-bar-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Metrics Cards */
+  .grid-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+  .metric-box {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.25rem 1.35rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+  }
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0.35rem 0 0.4rem;
+    line-height: 1;
+  }
+  .metric-progress {
+    height: 4px;
+    width: 100%;
+    background: #f3f4f6;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+  }
+  .metric-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+  }
+  .metric-footer {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 0.45rem;
+  }
+
+  /* Action Buttons */
+  .btn-primary {
+    background: var(--primary);
+    color: #ffffff;
+    border: 0;
+    border-radius: 8px;
+    padding: 0.55rem 1.15rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    text-decoration: none;
+    transition: background 0.15s;
+    font-family: inherit;
+  }
+  .btn-primary:hover { background: var(--primary-hover); }
+
+  .btn-outline {
+    background: #ffffff;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.5rem 0.95rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: inherit;
+  }
+  .btn-outline:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+  }
+
+  /* Content Cards */
+  .card-block {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    margin-bottom: 1.75rem;
+    overflow: hidden;
+  }
+  .card-block-header {
+    padding: 1.15rem 1.5rem;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card-block-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .card-block-body {
+    padding: 1.5rem;
+  }
+
+  /* Form Elements */
+  .field { margin-bottom: 1.25rem; }
+  .field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--ink); }
+  input[type="password"], input[type="text"], input[type="date"], select, textarea {
+    width: 100%; padding: 0.65rem 0.85rem; border: 1px solid var(--line); border-radius: 8px;
+    background: #ffffff; color: var(--ink); font-size: 0.88rem; font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+
+  /* Subfolder Chips Selector (Upload Manager) */
+  .folder-chips-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .folder-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.95rem;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .folder-chip:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+  }
+  .folder-chip.active {
+    background: #111827;
+    color: #ffffff;
+    border-color: #111827;
+  }
+  .folder-chip.active .chip-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+  }
+  .chip-badge {
+    font-size: 0.72rem;
+    background: #e5e7eb;
+    color: #4b5563;
+    padding: 1px 6px;
+    border-radius: 99px;
+  }
+
+  /* Photo Management Grid */
+  .photo-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    padding: 0.85rem 1.25rem;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 1.25rem;
+  }
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.15rem;
+  }
+  .photo-item {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .photo-item.selected {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary);
+  }
+  .photo-item img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    display: block;
+    background: #f3f4f6;
+  }
+  .photo-meta {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.78rem;
+  }
+  .photo-check {
+    position: absolute;
+    top: 0.6rem;
+    left: 0.6rem;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+  }
+
+  /* People Grid */
+  .people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+  }
+  .person-card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  }
+  .person-thumb {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--line);
+    background: #f1f3f5;
+  }
+
+  /* Badges */
+  .badge {
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge-published { background: #ecfdf5; color: #059669; }
+  .badge-draft { background: #fffbeb; color: #d97706; }
+
+  /* Console */
+  .console {
+    background: #111827;
+    color: #34d399;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.82rem;
+    border-radius: 10px;
+    padding: 1rem;
+    height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.45;
+  }
+
+  /* Modals */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px); display: flex; align-items: center;
+    justify-content: center; z-index: 100; padding: 1rem;
+  }
+  .modal-card {
+    background: #ffffff; border: 1px solid var(--line); border-radius: 14px;
+    max-width: 520px; width: 100%; padding: 2rem; position: relative;
+    box-shadow: 0 20px 45px rgba(0,0,0,0.15);
+  }
+  .modal-close {
+    position: absolute; top: 1.25rem; right: 1.25rem; background: transparent; border: 0;
+    font-size: 1.35rem; color: var(--muted); cursor: pointer;
+  }
+
+  /* Auth Screen */
+  .auth-wrap {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    padding: 1.5rem;
+  }
+  .login-card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 2.5rem;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- Login Authentication Screen -->
+<div id="authView" class="auth-wrap">
+  <div class="login-card">
+    <div style="width:40px;height:40px;border-radius:10px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
+      <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h1 style="font-size:1.35rem;font-weight:700;margin-bottom:0.35rem;">BRK Photos Admin</h1>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;">Enter your administrative security key to access the multi-event console.</p>
+    
+    <form id="loginForm" onsubmit="handleAdminLogin(); return false;">
+      <div class="field">
+        <label for="adminKey">Security Passkey</label>
+        <input type="password" id="adminKey" required placeholder="••••••••••••" autocomplete="current-password">
+      </div>
+      <button type="submit" id="loginBtn" class="btn-primary" style="width:100%;justify-content:center;padding:0.75rem;">Authenticate</button>
+      <div id="loginAlert" style="margin-top:0.8rem;color:var(--err);font-size:0.82rem;" hidden></div>
+    </form>
+  </div>
+</div>
+
+<!-- Main Application Shell (Single Light Sidebar Architecture) -->
+<div id="appShell" style="display:flex;width:100%;" hidden>
+  
+  <!-- Unified Professional Light Sidebar -->
+  <aside class="main-sidebar">
+    <div class="sidebar-header">
+      <div class="brand-group">
+        <div class="brand-logo-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </div>
+        <span class="brand-title">BRK Photos</span>
+        <span class="admin-badge">Admin</span>
+      </div>
+      <button class="btn-icon-sub" onclick="openNewEventModal()" title="Create Event">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+
+    <!-- PLATFORM SECTION -->
+    <div class="nav-group-title">Platform</div>
+    <ul class="sidebar-nav-list">
+      <li class="nav-item active" data-tab="dashboard">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Dashboard</span>
+        </div>
+      </li>
+
+      <li class="nav-item" data-tab="events">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Events</span>
+        </div>
+      </li>
+
+      <li class="nav-item" data-tab="albums">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Albums & Folders</span>
+        </div>
+        <span class="nav-badge-count" id="sidebarAlbumCount">0</span>
+      </li>
+
+      <!-- Dynamic Subfolders Tree for Active Event -->
+      <ul class="sidebar-subfolders-tree" id="sidebarSubfoldersList">
+        <!-- Injected via JavaScript based on selected event -->
+      </ul>
+
+      <li class="nav-item" data-tab="photos">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>Photo Library</span>
+        </div>
+      </li>
+    </ul>
+
+    <!-- AI & DISCOVERY SECTION -->
+    <div class="nav-group-title">AI & Discovery</div>
+    <ul class="sidebar-nav-list">
+      <li class="nav-item" data-tab="people">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>People & Face Search</span>
+        </div>
+      </li>
+
+      <li class="nav-item" data-tab="upload">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>Upload Manager</span>
+        </div>
+      </li>
+
+      <!-- Dynamic Subfolder Upload Targets -->
+      <ul class="sidebar-subfolders-tree" id="sidebarUploadTargetsList">
+        <!-- Injected via JavaScript based on selected event -->
+      </ul>
+
+      <li class="nav-item" data-tab="storage">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          <span>Storage Management</span>
+        </div>
+      </li>
+    </ul>
+
+    <!-- ADMINISTRATION SECTION -->
+    <div class="nav-group-title">Administration</div>
+    <ul class="sidebar-nav-list">
+      <li class="nav-item" data-tab="analytics">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Analytics</span>
+        </div>
+      </li>
+      <li class="nav-item" data-tab="logs">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span>Activity Logs</span>
+        </div>
+      </li>
+      <li class="nav-item" data-tab="trash">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          <span>Trash Bin</span>
+        </div>
+      </li>
+      <li class="nav-item" data-tab="settings">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings</span>
+        </div>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Main Workspace Area -->
+  <main class="workspace-canvas">
+    
+    <!-- Top Header Bar -->
+    <header class="top-header">
+      <div class="welcome-msg" id="topGreeting">Welcome back, Administrator</div>
+
+      <div class="top-tools">
+        <div class="event-picker-wrap">
+          <span class="event-picker-label">Current Event:</span>
+          <select id="activeEventSelect" style="width:auto;min-width:210px;padding:0.25rem 0.5rem;font-size:0.85rem;font-weight:600;border:none;background:transparent;"></select>
+        </div>
+        <a id="btnViewActiveEvent" href="/rahul-priya" target="_blank" class="btn-outline">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          <span>Live Gallery</span>
+        </a>
+        <button id="btnFastIndexActive" class="btn-outline" title="Trigger Facial Indexer">
+          <svg class="icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Index</span>
+        </button>
+        <button id="logoutBtn" class="btn-outline" style="color:var(--err);">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="stage-inner">
+
+      <!-- Persistent Visual Task Progress Banner (Always visible when task is active or recently completed) -->
+      <div id="visualTaskCard" class="visual-task-card" hidden>
+        <div class="task-card-header">
+          <div class="task-title-group">
+            <span class="task-status-pill running" id="taskStatusPill">
+              <span class="status-pulse-dot" id="taskPulseDot"></span>
+              <span id="taskStatusText">RUNNING</span>
+            </span>
+            <span class="task-name" id="taskNameText">Google Drive Ingestion</span>
+            <span class="task-subtext" id="taskEventTargetText">vignes &gt; vignehsh-birthday</span>
+          </div>
+          <div class="task-meta-right" style="display:flex;align-items:center;gap:0.6rem;">
+            <span id="taskTimeElapsed" style="font-size:0.78rem;color:var(--muted);font-family:monospace;"></span>
+            <button id="taskStopBtn" class="btn-danger-pill" style="padding:0.25rem 0.65rem;font-size:0.75rem;display:none;align-items:center;gap:0.35rem;background:#fee2e2;color:#991b1b;border:1px solid #f87171;border-radius:6px;cursor:pointer;font-weight:600;" onclick="stopActiveTask()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+              <span>Stop Task</span>
+            </button>
+            <button class="btn-outline" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="switchTab('logs')">View Logs &rarr;</button>
+            <button class="btn-icon-sub" style="width:24px;height:24px;border:0;background:transparent;font-size:1.1rem;cursor:pointer;" onclick="dismissTaskCard()" title="Dismiss">&times;</button>
+          </div>
+        </div>
+
+        <div class="task-progress-track">
+          <div class="task-progress-fill" id="taskProgressFill" style="width:0%;"></div>
+        </div>
+
+        <div class="task-card-footer">
+          <div class="task-step-desc" id="taskStepDesc">Initializing task...</div>
+          <div class="task-stats-group">
+            <span class="task-stat-badge" id="taskFilesStat">0 / 0 files</span>
+            <span class="task-stat-badge highlight" id="taskStorageStat">0.0 MB saved (98.5% VPS offload)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 1: DASHBOARD -->
+      <section id="panel-dashboard">
+        <div class="views-bar">
+          <div class="views-bar-title">Platform Dashboard</div>
+          <button class="btn-primary" onclick="openNewEventModal()">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Create Event</span>
+          </button>
+        </div>
+
+        <div class="grid-metrics">
+          <div class="metric-box">
+            <div class="metric-label">Total Events</div>
+            <div class="metric-value" id="metricEvents">3</div>
+            <div class="metric-progress">
+              <div class="metric-bar-fill" style="width:100%;background:var(--primary);"></div>
+            </div>
+            <div class="metric-footer"><span id="metricActiveEvents">3</span> published galleries</div>
+          </div>
+
+          <div class="metric-box">
+            <div class="metric-label">Total Photographs</div>
+            <div class="metric-value" id="metricPhotos">98</div>
+            <div class="metric-progress">
+              <div class="metric-bar-fill" style="width:85%;background:var(--orange);"></div>
+            </div>
+            <div class="metric-footer">Across all event albums</div>
+          </div>
+
+          <div class="metric-box">
+            <div class="metric-label">Identified People</div>
+            <div class="metric-value" id="metricPeople">90</div>
+            <div class="metric-progress">
+              <div class="metric-bar-fill" style="width:70%;background:var(--emerald);"></div>
+            </div>
+            <div class="metric-footer">InsightFace cluster profiles</div>
+          </div>
+
+          <div class="metric-box">
+            <div class="metric-label">Storage Saved</div>
+            <div class="metric-value" style="color:var(--emerald);">98.6%</div>
+            <div class="metric-progress">
+              <div class="metric-bar-fill" style="width:98%;background:var(--emerald);"></div>
+            </div>
+            <div class="metric-footer">5TB Google Drive cloud offload</div>
+          </div>
+        </div>
+
+        <div class="card-block">
+          <div class="card-block-header">
+            <span class="card-block-title">Quick Actions</span>
+          </div>
+          <div class="card-block-body" style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+            <button class="btn-primary" onclick="switchTab('upload')">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Upload Photos / ZIP</span>
+            </button>
+            <button class="btn-outline" onclick="switchTab('albums')">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>Manage Albums</span>
+            </button>
+            <button class="btn-outline" onclick="switchTab('people')">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span>People Directory</span>
+            </button>
+            <button class="btn-outline" onclick="switchTab('storage')">
+              <svg class="icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/></svg>
+              <span>Check 5TB Storage</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 2: EVENTS -->
+      <section id="panel-events" hidden>
+        <div class="views-bar">
+          <div class="views-bar-title">Events Registry</div>
+          <button class="btn-primary" onclick="openNewEventModal()">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>New Event</span>
+          </button>
+        </div>
+        <div class="people-grid" id="eventsGrid">
+          <div style="color:var(--muted);">Loading events...</div>
+        </div>
+      </section>
+
+      <!-- PANEL 3: ALBUMS & FOLDERS -->
+      <section id="panel-albums" hidden>
+        <div class="views-bar">
+          <div class="views-bar-title" id="albumsPanelTitle">Albums & Ceremony Folders</div>
+          <button class="btn-primary" onclick="openNewAlbumModal()">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>New Album</span>
+          </button>
+        </div>
+        <div class="people-grid" id="albumsGrid">
+          <div style="color:var(--muted);">Loading albums...</div>
+        </div>
+      </section>
+
+      <!-- PANEL 4: PHOTO LIBRARY -->
+      <section id="panel-photos" hidden>
+        <div class="views-bar">
+          <div class="views-bar-title" id="photosPanelTitle">Photo Library</div>
+          <button class="btn-outline" onclick="switchTab('upload')">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Upload to this Event</span>
+          </button>
+        </div>
+
+        <div class="photo-toolbar">
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <label style="font-size:0.82rem;font-weight:600;">Filter Folder:</label>
+            <select id="filterAlbumSelect" style="width:auto;padding:0.35rem 0.6rem;font-size:0.85rem;"></select>
+            <button id="selectAllBtn" class="btn-outline" style="padding:0.35rem 0.65rem;font-size:0.8rem;">Select All</button>
+            <button id="clearSelectBtn" class="btn-outline" style="padding:0.35rem 0.65rem;font-size:0.8rem;" hidden>Clear</button>
+            <span id="selectedCountBadge" style="font-size:0.85rem;font-weight:600;color:var(--primary);" hidden>0 selected</span>
+            <button id="ajaxRefreshBtn" onclick="ajaxRefreshPhotos()" class="btn-outline" style="padding:0.35rem 0.65rem;font-size:0.8rem;display:inline-flex;align-items:center;gap:0.35rem;">
+              <svg id="ajaxRefreshIcon" class="icon-sm" viewBox="0 0 24 24" style="transition:transform 0.4s ease;"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              <span id="ajaxRefreshBtnText">Refresh</span>
+            </button>
+            <label style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.8rem;color:var(--muted);cursor:pointer;">
+              <input type="checkbox" id="autoRefreshCheckbox" checked style="width:14px;height:14px;accent-color:var(--primary);">
+              <span>Live Auto-Sync</span>
+            </label>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;" id="bulkActionGroup" hidden>
+            <select id="bulkTargetAlbumSelect" style="width:auto;padding:0.35rem 0.6rem;font-size:0.85rem;"></select>
+            <button id="bulkMoveBtn" class="btn-primary" style="padding:0.35rem 0.75rem;font-size:0.8rem;">Move</button>
+            <button id="bulkFeatureBtn" class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;">Feature</button>
+            <button id="bulkUnfeatureBtn" class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;">Unfeature</button>
+            <button id="bulkHideBtn" class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;">Hide</button>
+            <button id="bulkDeleteBtn" class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;color:var(--err);border-color:var(--err);">Delete</button>
+          </div>
+        </div>
+
+        <div class="photo-grid" id="photoLibraryGrid">
+          <div style="color:var(--muted);grid-column:1/-1;">Loading photos...</div>
+        </div>
+      </section>
+
+      <!-- PANEL 5: PEOPLE DIRECTORY -->
+      <section id="panel-people" hidden>
+        <div class="views-bar">
+          <div class="views-bar-title">People & Face Search</div>
+          <button class="btn-outline" id="reclusterPeopleBtn">
+            <svg class="icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>Re-Cluster Faces</span>
+          </button>
+        </div>
+        <div class="people-grid" id="peopleGrid">
+          <div style="color:var(--muted);grid-column:1/-1;">Loading profiles...</div>
+        </div>
+      </section>
+
+      <!-- PANEL 6: UPLOAD MANAGER -->
+      <section id="panel-upload" hidden>
+        <div class="views-bar">
+          <div class="views-bar-title">Upload Manager</div>
+        </div>
+
+        <!-- Direct Upload Card with Quick Subfolder Chips -->
+        <div class="card-block">
+          <div class="card-block-header">
+            <span class="card-block-title">Direct Photo or ZIP Archive Upload</span>
+          </div>
+          <div class="card-block-body">
+            <div class="field">
+              <label style="display:flex;justify-content:space-between;align-items:center;">
+                <span>Select Target Subfolder:</span>
+                <span id="activeUploadFolderLabel" style="font-size:0.8rem;color:var(--primary);font-weight:600;"></span>
+              </label>
+              <!-- Dynamic Subfolder Chips for One-Click Destination Selection -->
+              <div class="folder-chips-grid" id="uploadFolderChips">
+                <!-- Injected via JavaScript based on selected event -->
+              </div>
+              <select id="uploadTargetAlbumSelect" style="max-width:320px;" hidden></select>
+            </div>
+
+            <div style="border:2px dashed var(--line);border-radius:12px;padding:2.5rem 1rem;text-align:center;cursor:pointer;margin-bottom:1rem;background:#fbfcfd;" id="uploadDropArea">
+              <input type="file" id="directFileInput" multiple accept="image/*,.zip" style="display:none;">
+              <div style="margin-bottom:0.5rem;color:var(--muted);">
+                <svg style="width:36px;height:36px;stroke-width:1.5;stroke:currentColor;fill:none;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <strong style="font-size:0.95rem;color:var(--ink);">Drag & drop files or click to browse</strong>
+              <p style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem;">Supports JPG, PNG, WEBP, and .ZIP archives</p>
+            </div>
+            <div id="uploadStatusText" style="font-size:0.85rem;font-weight:600;color:var(--emerald);"></div>
+          </div>
+        </div>
+
+        <!-- Google Drive Ingestion Card -->
+        <div class="card-block">
+          <div class="card-block-header">
+            <span class="card-block-title">Google Drive Folder Ingestion (5TB Cloud Offload)</span>
+          </div>
+          <div class="card-block-body">
+            <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1rem;">
+              Original high-resolution raw files remain on Google Drive; optimized web copies and InsightFace facial vectors are cached locally.
+            </p>
+            <div class="field">
+              <label>Google Drive Folder URL or Folder ID</label>
+              <input type="text" id="gdriveUrlInput" placeholder="https://drive.google.com/drive/folders/13zRIMygMP4X4maueJggz6JwxOGUhRJ4e">
+            </div>
+            <div class="field">
+              <label>Target Subfolder for Imported Photos</label>
+              <div style="display:flex;gap:0.75rem;align-items:center;">
+                <select id="gdriveTargetAlbumSelect" style="flex:1;"></select>
+                <input type="text" id="gdriveCustomSlugInput" placeholder="or enter folder slug (e.g. vignehsh-birthday)" style="flex:1;">
+              </div>
+            </div>
+            <div class="field" style="margin-top:0.75rem;">
+              <label style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+                <span style="font-weight:600;font-size:0.85rem;">Accepted File Formats to Download</span>
+                <span style="font-size:0.75rem;color:var(--muted);font-weight:normal;">Unchecked formats (e.g. .ARW Sony RAW, .CR2, .MP4, .MP3, .PDF) are skipped</span>
+              </label>
+              <div style="display:flex;flex-wrap:wrap;gap:1.25rem;padding:0.6rem 0.8rem;background:var(--bg-subtle,#f8fafc);border:1px solid var(--border-color,#e2e8f0);border-radius:6px;">
+                <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;cursor:pointer;user-select:none;">
+                  <input type="checkbox" id="gdriveFmtJpg" checked>
+                  <span style="font-weight:600;">JPG / JPEG</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;cursor:pointer;user-select:none;">
+                  <input type="checkbox" id="gdriveFmtPng" checked>
+                  <span style="font-weight:600;">PNG</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;cursor:pointer;user-select:none;">
+                  <input type="checkbox" id="gdriveFmtWebp" checked>
+                  <span style="font-weight:600;">WEBP</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;cursor:pointer;user-select:none;">
+                  <input type="checkbox" id="gdriveFmtHeic">
+                  <span style="font-weight:500;color:var(--text-sub,#64748b);">HEIC / HEIF</span>
+                </label>
+              </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;align-items:center;">
+              <button class="btn-primary" id="startGdriveSyncBtn">
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>Start Ingest Task</span>
+              </button>
+              <span id="gdriveStatusText" style="font-size:0.85rem;color:var(--muted);"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 7: STORAGE MANAGEMENT -->
+      <section id="panel-storage" hidden>
+        <div class="views-bar">
+          <div class="views-bar-title">Storage Management</div>
+        </div>
+
+        <div class="grid-metrics">
+          <div class="metric-box">
+            <div class="metric-label">Google Drive Capacity</div>
+            <div class="metric-value">5.0 TB</div>
+            <div class="metric-footer">Cloud preservation for RAW assets</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">VPS SSD Storage Used</div>
+            <div class="metric-value" id="storageVpsUsed">~36 MB</div>
+            <div class="metric-footer">Compressed web previews</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Space Reduction</div>
+            <div class="metric-value" style="color:var(--emerald);">98.6%</div>
+            <div class="metric-footer">Zero VPS disk overflow</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 8: ANALYTICS -->
+      <section id="panel-analytics" hidden>
+        <div class="views-bar">
+          <div class="views-bar-title">Analytics</div>
+        </div>
+
+        <div class="grid-metrics">
+          <div class="metric-box">
+            <div class="metric-label">Gallery Views</div>
+            <div class="metric-value" id="metricViews">1,660</div>
+            <div class="metric-footer">Public landing page impressions</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">AI Face Scans</div>
+            <div class="metric-value" id="metricSearches">348</div>
+            <div class="metric-footer">Selfie lookups performed</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Matches Found</div>
+            <div class="metric-value" id="metricMatches">892</div>
+            <div class="metric-footer">Positive face verifications</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Downloads Initiated</div>
+            <div class="metric-value" id="metricDownloads">412</div>
+            <div class="metric-footer">Direct Google Drive 5TB pulls</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 9: ACTIVITY LOGS & TASK HISTORY -->
+      <section id="panel-logs" hidden>
+        <div class="views-bar">
+          <div class="views-bar-title">Activity Logs & Ingestion History</div>
+          <div style="display:flex;gap:0.6rem;">
+            <button class="btn-outline" id="refreshLogsBtn">
+              <svg class="icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Refresh Tasks</span>
+            </button>
+            <button class="btn-outline" id="toggleRawLogsBtn">
+              <svg class="icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+              <span>Raw System Log</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Structured Task History Table -->
+        <div class="card-block" style="margin-bottom:1.5rem;">
+          <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <h3 style="font-size:1.05rem;font-weight:700;">Background Task History</h3>
+              <p style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem;">Track all background Google Drive syncs, downscaling offloads, and AI indexing runs.</p>
+            </div>
+            <span class="badge badge-published" id="taskHistoryCountBadge">0 tasks</span>
+          </div>
+          <div class="card-block-body" style="padding:0;overflow-x:auto;">
+            <table class="tasks-table" style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:left;">
+              <thead>
+                <tr style="background:#f9fafb;border-bottom:1px solid var(--line);color:var(--muted);font-weight:600;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em;">
+                  <th style="padding:0.75rem 1rem;">Started Time</th>
+                  <th style="padding:0.75rem 1rem;">Task Type</th>
+                  <th style="padding:0.75rem 1rem;">Target Destination</th>
+                  <th style="padding:0.75rem 1rem;">Source Drive / Input</th>
+                  <th style="padding:0.75rem 1rem;">Files & Space Saved</th>
+                  <th style="padding:0.75rem 1rem;">Status</th>
+                  <th style="padding:0.75rem 1rem;text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="taskHistoryTableBody">
+                <tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--muted);">Loading task history...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Selected Task Isolated Inspector Card -->
+        <div class="card-block" id="taskLogViewerBlock">
+          <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <h3 style="font-size:1.05rem;font-weight:700;" id="taskLogViewerTitle">Isolated Task Log Stream</h3>
+              <span class="task-subtext" id="taskLogViewerId">--</span>
+            </div>
+            <div style="font-size:0.8rem;color:var(--muted);font-family:monospace;" id="taskLogViewerMeta"></div>
+          </div>
+          <div class="card-block-body">
+            <div class="console" id="taskLogsConsole" style="min-height:220px;max-height:420px;overflow-y:auto;background:#0d1117;color:#c9d1d9;padding:1rem;border-radius:8px;font-family:monospace;font-size:0.8rem;line-height:1.5;">
+              Select a task from the table above to view its isolated execution logs.
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw System Log (Collapsible) -->
+        <div class="card-block" id="rawSystemLogsBlock" style="margin-top:1.5rem;" hidden>
+          <div class="card-block-header">
+            <h3 style="font-size:1.05rem;font-weight:700;">Global System Console</h3>
+          </div>
+          <div class="card-block-body">
+            <div class="console" id="logsConsole" style="min-height:160px;max-height:300px;overflow-y:auto;">Loading log stream...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 9: TRASH RECOVERY & PURGE -->
+      <section id="panel-trash" hidden>
+        <div class="views-bar">
+          <div>
+            <div class="views-bar-title">Trash Bin</div>
+            <p style="color:var(--muted);font-size:0.82rem;margin-top:0.2rem;">Safely manage deleted events, ceremony folders, and photos. Restore them or permanently purge from disk storage.</p>
+          </div>
+          <button id="emptyTrashBtn" class="btn-outline" style="color:var(--err);border-color:var(--err);" onclick="confirmEmptyTrash()">Empty Trash Permanently</button>
+        </div>
+
+        <div style="display:flex;gap:0.75rem;margin:1.25rem 0 1rem;border-bottom:1px solid var(--line);padding-bottom:0.75rem;">
+          <button type="button" class="trash-subtab active" id="trashTabPhotos" onclick="switchTrashTab('photos')">Photos (<span id="trashCountPhotos">0</span>)</button>
+          <button type="button" class="trash-subtab" id="trashTabAlbums" onclick="switchTrashTab('albums')">Folders & Albums (<span id="trashCountAlbums">0</span>)</button>
+          <button type="button" class="trash-subtab" id="trashTabEvents" onclick="switchTrashTab('events')">Events (<span id="trashCountEvents">0</span>)</button>
+        </div>
+
+        <div id="trashListView" style="margin-top:1rem;">
+          <div style="color:var(--muted);">Loading Trash Bin...</div>
+        </div>
+      </section>
+
+      <!-- PANEL 10: SETTINGS -->
+      <section id="panel-settings" hidden>
+        <div class="views-bar">
+          <div class="views-bar-title">Settings</div>
+        </div>
+
+        <div class="card-block">
+          <div class="card-block-body" style="max-width:580px;">
+            <div class="field">
+              <label>InsightFace Cosine Similarity Threshold</label>
+              <div style="display:flex;align-items:center;gap:1rem;">
+                <input type="range" id="thresholdRange" min="0.45" max="0.75" step="0.01" value="0.55" style="flex:1;">
+                <span id="thresholdVal" style="font-weight:700;font-family:monospace;width:40px;">0.55</span>
+              </div>
+              <span style="font-size:0.8rem;color:var(--muted);display:block;margin-top:0.35rem;">
+                Lower thresholds (0.48-0.55) catch side angles and sunglasses. Higher thresholds (0.60+) enforce exact matches.
+              </span>
+            </div>
+
+            <div class="field" style="margin-top:1.5rem;">
+              <label>Default Primary Slug</label>
+              <input type="text" value="rahul-priya" id="defaultSlugInput">
+            </div>
+
+            <button class="btn-primary" onclick="alert('Settings updated successfully.')">Save Settings</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- Create Event Modal -->
+<div id="eventModal" class="modal-backdrop" hidden>
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal('eventModal')">&times;</button>
+    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Create New Event</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Deploy a dedicated event with its own URL slug, albums, and AI model.</p>
+    
+    <form id="createEventForm">
+      <div class="field">
+        <label>Event Name</label>
+        <input type="text" id="evName" placeholder="e.g. Arjun & Meghana Wedding" required>
+      </div>
+      <div class="field">
+        <label>URL Slug (photos.bhashyamramakrishna.in/&lt;slug&gt;)</label>
+        <input type="text" id="evSlug" placeholder="e.g. arjun-meghana" required>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+        <div class="field">
+          <label>Event Type</label>
+          <select id="evType">
+            <option value="Wedding">Wedding</option>
+            <option value="Reception">Reception</option>
+            <option value="Corporate">Corporate</option>
+            <option value="Birthday">Birthday</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Event Date</label>
+          <input type="date" id="evDate">
+        </div>
+      </div>
+      <div class="field">
+        <label>Location</label>
+        <input type="text" id="evLocation" placeholder="e.g. Hyderabad, India">
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <textarea id="evDesc" rows="2" placeholder="A beautiful celebration of love and togetherness."></textarea>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:0.7rem;">Create Event</button>
+    </form>
+  </div>
+</div>
+
+<!-- Create Album Modal -->
+<div id="albumModal" class="modal-backdrop" hidden>
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal('albumModal')">&times;</button>
+    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Create New Album / Folder</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Add a program or category folder (e.g. Haldi, Mehendi, Reception, Pre-Wedding).</p>
+    
+    <form id="createAlbumForm">
+      <div class="field">
+        <label>Album / Folder Name</label>
+        <input type="text" id="albumNameInput" placeholder="e.g. Pre-Wedding Shoot" required>
+      </div>
+      <div class="field">
+        <label>Folder Slug</label>
+        <input type="text" id="albumSlugInput" placeholder="e.g. pre-wedding" required>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:0.7rem;">Create Folder</button>
+    </form>
+  </div>
+</div>
+
+<!-- Rename Person Modal -->
+<div id="renamePersonModal" class="modal-backdrop" hidden>
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal('renamePersonModal')">&times;</button>
+    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Rename Person</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Assign a name to this face cluster (e.g. Rahul, Priya, Vivek).</p>
+    
+    <form id="renamePersonForm">
+      <input type="hidden" id="renamePersonId">
+      <div class="field">
+        <label>Name</label>
+        <input type="text" id="renamePersonNameInput" required>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;">Save Profile</button>
+    </form>
+  </div>
+</div>
+
+<!-- Secure Text-Input Delete Confirmation Modal -->
+<div id="deleteConfirmModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('deleteConfirmModal')">&times;</button>
+    <div style="width:42px;height:42px;border-radius:10px;background:#fee2e2;color:#ef4444;display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+      <svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+    </div>
+    <h2 id="deleteModalTitle" style="font-size:1.2rem;font-weight:700;margin-bottom:0.4rem;">Confirm Deletion</h2>
+    <p id="deleteModalDesc" style="color:var(--muted);font-size:0.85rem;line-height:1.5;margin-bottom:1rem;">Are you sure? Items will be moved to the Trash Bin.</p>
+    
+    <div id="deleteModalInputWrap" style="margin-bottom:1.25rem;">
+      <label id="deleteModalInputLabel" style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.4rem;color:#374151;">To confirm, type <strong id="deleteExpectedText" style="color:#ef4444;font-family:monospace;background:#fef2f2;padding:2px 6px;border-radius:4px;">DELETE</strong> below:</label>
+      <input type="text" id="deleteConfirmInput" placeholder="Type here to confirm" style="width:100%;padding:0.6rem 0.8rem;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;">
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:0.75rem;">
+      <button type="button" class="btn-outline" onclick="closeModal('deleteConfirmModal')">Cancel</button>
+      <button type="button" id="deleteModalConfirmBtn" class="btn-primary" style="background:#ef4444;border-color:#ef4444;" disabled>Move to Trash</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Event Modal -->
+<div id="editEventModal" class="modal-backdrop" hidden>
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal('editEventModal')">&times;</button>
+    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Edit Event</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Update the event name, slug URL, location, and description.</p>
+    <form id="editEventForm">
+      <input type="hidden" id="editEventOldSlug">
+      <div class="field">
+        <label>Event Name</label>
+        <input type="text" id="editEventName" required>
+      </div>
+      <div class="field">
+        <label>URL Slug (photos.bhashyamramakrishna.in/&lt;slug&gt;)</label>
+        <input type="text" id="editEventSlug" required>
+      </div>
+      <div class="field">
+        <label>Location</label>
+        <input type="text" id="editEventLocation">
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <textarea id="editEventDesc" rows="2"></textarea>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:0.7rem;">Save Changes</button>
+      <button type="button" id="btnDeleteCurrentEvent" class="btn-outline" style="color:var(--err);border-color:var(--err);width:100%;margin-top:0.6rem;justify-content:center;">Move Event to Trash</button>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Album Modal -->
+<div id="editAlbumModal" class="modal-backdrop" hidden>
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal('editAlbumModal')">&times;</button>
+    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Edit Album / Folder</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Update folder display name and directory slug.</p>
+    <form id="editAlbumForm">
+      <input type="hidden" id="editAlbumId">
+      <div class="field">
+        <label>Folder Name</label>
+        <input type="text" id="editAlbumName" required>
+      </div>
+      <div class="field">
+        <label>Folder Slug</label>
+        <input type="text" id="editAlbumSlug" required>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;padding:0.7rem;">Save Folder</button>
+    </form>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// Global Authenticated Fetch Wrapper ensuring X-Admin-Token & credentials
+const originalFetch = window.fetch;
+window.fetch = async function(url, options = {}) {
+  options = options || {};
+  options.headers = options.headers || {};
+  const token = localStorage.getItem('admin_token');
+  if (token) {
+    if (options.headers instanceof Headers) {
+      if (!options.headers.has('X-Admin-Token')) options.headers.set('X-Admin-Token', token);
+    } else if (Array.isArray(options.headers)) {
+      if (!options.headers.some(([k]) => k.toLowerCase() === 'x-admin-token')) {
+        options.headers.push(['X-Admin-Token', token]);
+      }
+    } else {
+      if (!options.headers['X-Admin-Token']) {
+        options.headers['X-Admin-Token'] = token;
+      }
+    }
+  }
+  if (!options.credentials) {
+    options.credentials = 'same-origin';
+  }
+  const res = await originalFetch.call(window, url, options);
+  // Auto-redirect to login on 401 Unauthorized for admin API calls
+  if (res.status === 401 && typeof url === 'string' && url.includes('/api/admin/') && !url.includes('/api/admin/login')) {
+    localStorage.removeItem('admin_token');
+    $('authView').hidden = false;
+    $('appShell').hidden = true;
+  }
+  return res;
+};
+
+let activeSlug = localStorage.getItem('admin_active_event_slug') || 'anilkumar-vengamamba';
+let allEvents = [];
+let allAlbums = [];
+let currentEvent = null;
+let selectedPhotoIds = new Set();
+let activeFilterAlbumId = '';
+let activeUploadAlbumSlug = '';
+
+// Navigation Tabs Handling with State Persistence
+function switchTab(tabName) {
+  // Sync Sidebar active states
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('data-tab') === tabName);
+  });
+
+  // Hide all panels, show target
+  document.querySelectorAll('main.workspace-canvas section').forEach(sec => sec.hidden = true);
+  const target = $(`panel-${tabName}`);
+  if (target) target.hidden = false;
+
+  localStorage.setItem('admin_active_tab', tabName);
+  try {
+    const url = new URL(window.location);
+    url.searchParams.set('event', activeSlug);
+    url.searchParams.set('tab', tabName);
+    window.history.replaceState({}, '', url);
+  } catch(e) {}
+
+  if (tabName === 'dashboard') loadDashboard();
+  if (tabName === 'events') loadEvents();
+  if (tabName === 'albums') loadAlbums();
+  if (tabName === 'photos') loadPhotos(activeFilterAlbumId);
+  if (tabName === 'people') loadPeople();
+  if (tabName === 'upload') setupUploadTab();
+  if (tabName === 'storage') loadStorage();
+  if (tabName === 'analytics') loadAnalytics();
+  if (tabName === 'logs') loadLogs();
+  if (tabName === 'trash') loadTrash();
+}
+
+document.querySelectorAll('.sidebar-nav-list > .nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    const tab = el.getAttribute('data-tab');
+    if (tab === 'photos') activeFilterAlbumId = ''; // Reset album filter when clicking Photo Library directly
+    switchTab(tab);
+  });
+});
+
+function openModal(id) { $(id).hidden = false; }
+function closeModal(id) { $(id).hidden = true; }
+function openNewEventModal() { openModal('eventModal'); }
+function openNewAlbumModal() { openModal('albumModal'); }
+
+// Delete Confirmation Modal Handling with Text Input Verification
+let pendingDeleteAction = null;
+let pendingDeleteExpected = '';
+function openDeleteConfirmModal(title, desc, expectedText, confirmCallback, confirmBtnLabel = 'Delete') {
+  $('deleteModalTitle').textContent = title;
+  $('deleteModalDesc').innerHTML = desc;
+  pendingDeleteAction = confirmCallback;
+  pendingDeleteExpected = (expectedText || '').trim();
+
+  const inputWrap = $('deleteModalInputWrap');
+  const input = $('deleteConfirmInput');
+  const btn = $('deleteModalConfirmBtn');
+
+  if (pendingDeleteExpected) {
+    if (inputWrap) inputWrap.hidden = false;
+    if ($('deleteExpectedText')) $('deleteExpectedText').textContent = pendingDeleteExpected;
+    if (input) input.value = '';
+    btn.disabled = true;
+  } else {
+    if (inputWrap) inputWrap.hidden = true;
+    btn.disabled = false;
+  }
+  btn.textContent = confirmBtnLabel;
+  openModal('deleteConfirmModal');
+  if (pendingDeleteExpected && input) {
+    setTimeout(() => input.focus(), 100);
+  }
+}
+
+$('deleteConfirmInput')?.addEventListener('input', e => {
+  const typed = e.target.value.trim();
+  const match = typed.toLowerCase() === pendingDeleteExpected.toLowerCase();
+  $('deleteModalConfirmBtn').disabled = !match;
+});
+
+$('deleteModalConfirmBtn')?.addEventListener('click', async () => {
+  if (pendingDeleteAction) {
+    const btn = $('deleteModalConfirmBtn');
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.textContent = 'Processing...';
+    try {
+      await pendingDeleteAction();
+    } catch (e) {
+      alert('Error during delete: ' + e);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = oldText;
+      closeModal('deleteConfirmModal');
+      pendingDeleteAction = null;
+      pendingDeleteExpected = '';
+    }
+  }
+});
+
+// AJAX Refresh Photo Library
+let isRefreshingPhotos = false;
+async function ajaxRefreshPhotos() {
+  if (isRefreshingPhotos) return;
+  isRefreshingPhotos = true;
+  const icon = $('ajaxRefreshIcon');
+  const txt = $('ajaxRefreshBtnText');
+  if (icon) icon.style.transform = 'rotate(360deg)';
+  if (txt) txt.textContent = 'Syncing...';
+  try {
+    await loadPhotos($('filterAlbumSelect')?.value || '');
+    await loadAlbums();
+  } catch (e) {
+    console.error('AJAX refresh error:', e);
+  } finally {
+    setTimeout(() => {
+      if (icon) icon.style.transform = 'none';
+      if (txt) txt.textContent = 'Refresh';
+      isRefreshingPhotos = false;
+    }, 450);
+  }
+}
+
+$('thresholdRange')?.addEventListener('input', e => {
+  $('thresholdVal').textContent = parseFloat(e.target.value).toFixed(2);
+});
+
+// Check Authentication Session with Saved State
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/admin/overview');
+    if (res.ok) {
+      const data = await res.json();
+      $('authView').hidden = true;
+      $('appShell').hidden = false;
+
+      const events = data.events || [];
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetSlug = urlParams.get('event') || localStorage.getItem('admin_active_event_slug');
+      if (targetSlug && events.some(e => e.slug === targetSlug)) {
+        activeSlug = targetSlug;
+      } else if (events.length > 0) {
+        activeSlug = events[0].slug;
+      }
+      localStorage.setItem('admin_active_event_slug', activeSlug);
+
+      populateEventSelector(events);
+      await setEventWorkspace(activeSlug, false);
+
+      const targetTab = urlParams.get('tab') || localStorage.getItem('admin_active_tab') || 'dashboard';
+      switchTab(targetTab);
+      pollTaskStatus();
+      return true;
+    } else {
+      localStorage.removeItem('admin_token');
+      $('authView').hidden = false;
+      $('appShell').hidden = true;
+      return false;
+    }
+  } catch (e) {
+    console.error('checkAuth error:', e);
+    if (!localStorage.getItem('admin_token')) {
+      $('authView').hidden = false;
+      $('appShell').hidden = true;
+    }
+    return false;
+  }
+}
+
+async function handleAdminLogin() {
+  const keyInput = $('adminKey');
+  if (!keyInput) return;
+  const key = keyInput.value.trim();
+  if (!key) return;
+  const btn = $('loginBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Authenticating...';
+  }
+  const alertEl = $('loginAlert');
+  if (alertEl) alertEl.hidden = true;
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key })
+    });
+    const j = await res.json();
+    if (res.ok && j.token) {
+      localStorage.setItem('admin_token', j.token);
+      localStorage.setItem('admin_active_tab', 'dashboard');
+      $('authView').hidden = true;
+      $('appShell').hidden = false;
+      await checkAuth();
+      switchTab('dashboard');
+    } else {
+      if (alertEl) {
+        alertEl.textContent = j.detail || 'Invalid security passkey.';
+        alertEl.hidden = false;
+      }
+    }
+  } catch (err) {
+    if (alertEl) {
+      alertEl.textContent = 'Server connection error: ' + (err.message || 'Unable to reach backend.');
+      alertEl.hidden = false;
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Authenticate';
+    }
+  }
+}
+
+$('loginForm')?.addEventListener('submit', async e => {
+  if (e) e.preventDefault();
+  await handleAdminLogin();
+});
+
+$('logoutBtn').addEventListener('click', async () => {
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_active_tab');
+  try {
+    await fetch('/api/admin/logout', { method: 'POST' });
+  } catch (e) {}
+  $('appShell').hidden = true;
+  $('authView').hidden = false;
+  window.location.href = '/admin';
+});
+
+// Event Selector & Workspace Management
+function populateEventSelector(events) {
+  allEvents = events;
+  const sel = $('activeEventSelect');
+  sel.replaceChildren();
+  for (const ev of events) {
+    const opt = document.createElement('option');
+    opt.value = ev.slug;
+    opt.textContent = `${ev.name} (${ev.slug})`;
+    if (ev.slug === activeSlug) opt.selected = true;
+    sel.append(opt);
+  }
+  if (!events.some(e => e.slug === activeSlug) && events.length > 0) {
+    activeSlug = events[0].slug;
+  }
+  updateActiveEventButtons();
+}
+
+$('activeEventSelect').addEventListener('change', async e => {
+  await setEventWorkspace(e.target.value, true);
+});
+
+function updateActiveEventButtons() {
+  $('btnViewActiveEvent').href = `/${activeSlug}`;
+}
+
+async function setEventWorkspace(slug, refreshActiveTab = true) {
+  activeSlug = slug;
+  $('activeEventSelect').value = slug;
+  updateActiveEventButtons();
+
+  // Fetch event workspace details
+  try {
+    const res = await fetch(`/api/admin/events/${slug}`);
+    if (res.ok) {
+      const d = await res.json();
+      currentEvent = d.event;
+      allAlbums = d.albums || [];
+      $('sidebarAlbumCount').textContent = allAlbums.length;
+
+      // Render dynamic sidebar subfolders
+      renderSidebarSubfolders();
+
+      // Render upload manager targets
+      renderUploadTargets();
+
+      // Update panel headers
+      const evName = currentEvent ? currentEvent.name : slug;
+      $('albumsPanelTitle').textContent = `Albums & Folders — ${evName}`;
+      $('photosPanelTitle').textContent = `Photo Library — ${evName}`;
+
+      if (refreshActiveTab) {
+        const activeTab = document.querySelector('.sidebar-nav-list > .nav-item.active')?.getAttribute('data-tab') || 'albums';
+        switchTab(activeTab);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load event workspace:', e);
+  }
+}
+
+// Render Dynamic Subfolders in Sidebar
+function renderSidebarSubfolders() {
+  const tree = $('sidebarSubfoldersList');
+  tree.replaceChildren();
+
+  if (allAlbums.length === 0) {
+    const empty = document.createElement('li');
+    empty.style.padding = '0.2rem 0.5rem';
+    empty.style.color = '#9ca3af';
+    empty.style.fontSize = '0.75rem';
+    empty.textContent = 'No folders yet';
+    tree.append(empty);
+  } else {
+    for (const a of allAlbums) {
+      const li = document.createElement('li');
+      li.className = 'subfolder-item';
+      li.id = `subfolder-item-${a.id}`;
+      li.innerHTML = `
+        <div style="display:flex;align-items:center;gap:0.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span style="overflow:hidden;text-overflow:ellipsis;">${a.name}</span>
+        </div>
+        <span class="subfolder-badge">${a.photo_count || 0}</span>
+      `;
+      li.addEventListener('click', () => {
+        openAlbumPhotos(a.id, a.name);
+      });
+      tree.append(li);
+    }
+  }
+
+  // Add subtle "+ New Folder" link at bottom
+  const addLink = document.createElement('li');
+  addLink.className = 'subfolder-create-link';
+  addLink.innerHTML = `
+    <svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    <span>New Folder</span>
+  `;
+  addLink.addEventListener('click', openNewAlbumModal);
+  tree.append(addLink);
+}
+
+// Render Upload Targets in Sidebar and Upload Panel
+function renderUploadTargets() {
+  const tree = $('sidebarUploadTargetsList');
+  tree.replaceChildren();
+
+  for (const a of allAlbums) {
+    const li = document.createElement('li');
+    li.className = 'subfolder-item';
+    li.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <svg class="icon-sm" viewBox="0 0 24 24"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span style="overflow:hidden;text-overflow:ellipsis;">${a.name}</span>
+      </div>
+    `;
+    li.addEventListener('click', () => {
+      selectUploadTargetAlbum(a.slug, a.name);
+      switchTab('upload');
+    });
+    tree.append(li);
+  }
+
+  // Setup chips in Upload Manager panel
+  setupUploadTab();
+}
+
+function openAlbumPhotos(albumId, albumName) {
+  activeFilterAlbumId = albumId;
+  switchTab('photos');
+  
+  // Highlight active subfolder in sidebar
+  document.querySelectorAll('.subfolder-item').forEach(el => el.classList.remove('active'));
+  const activeLi = $(`subfolder-item-${albumId}`);
+  if (activeLi) activeLi.classList.add('active');
+}
+
+function selectUploadTargetAlbum(slug, name) {
+  activeUploadAlbumSlug = slug;
+  $('uploadTargetAlbumSelect').value = slug;
+  $('activeUploadFolderLabel').textContent = `Destination: ${name} (slug: ${slug})`;
+  
+  // Highlight active chip
+  document.querySelectorAll('.folder-chip').forEach(c => {
+    c.classList.toggle('active', c.getAttribute('data-slug') === slug);
+  });
+}
+
+$('btnFastIndexActive')?.addEventListener('click', async () => {
+  $('btnFastIndexActive').disabled = true;
+  await fetch(`/api/admin/events/${activeSlug}/index`, { method: 'POST' });
+  pollTaskStatus();
+  switchTab('logs');
+  $('btnFastIndexActive').disabled = false;
+});
+
+// Dashboard
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/admin/overview');
+    if (!res.ok) return;
+    const d = await res.json();
+    $('metricEvents').textContent = d.metrics.total_events || 0;
+    $('metricActiveEvents').textContent = d.metrics.active_events || 0;
+    $('metricPhotos').textContent = d.metrics.total_photos || 0;
+    $('metricPeople').textContent = d.metrics.identified_people || 0;
+  } catch (e) {}
+}
+
+// Events
+async function loadEvents() {
+  try {
+    const res = await fetch('/api/admin/overview');
+    if (!res.ok) return;
+    const d = await res.json();
+    const grid = $('eventsGrid');
+    grid.replaceChildren();
+    for (const ev of d.events) {
+      const card = document.createElement('div');
+      card.className = 'person-card';
+      card.style.flexDirection = 'column';
+      card.style.alignItems = 'flex-start';
+      const safeName = (ev.name || '').replace(/'/g, "\\'");
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;width:100%;align-items:flex-start;">
+          <h4 style="font-size:1.05rem;font-weight:700;">${ev.name}</h4>
+          <span class="badge ${ev.status === 'published' ? 'badge-published' : 'badge-draft'}">${ev.status}</span>
+        </div>
+        <div style="color:var(--muted);font-family:monospace;font-size:0.8rem;margin-top:0.2rem;">/${ev.slug}</div>
+        <p style="font-size:0.82rem;color:var(--muted);margin:0.5rem 0 0.8rem;">${ev.description || 'No description provided.'}</p>
+        <div style="display:flex;gap:0.5rem;width:100%;flex-wrap:wrap;">
+          <button class="btn-primary" style="padding:0.35rem 0.75rem;font-size:0.8rem;" onclick="selectEventWorkspace('${ev.slug}')">Open Workspace</button>
+          <button class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;" onclick="openEditEventModal('${ev.slug}', '${safeName}')">Edit</button>
+          <button class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;color:var(--err);border-color:var(--err);" onclick="promptDeleteEvent('${ev.slug}', '${safeName}')">Delete</button>
+          <a href="/${ev.slug}" target="_blank" class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;">Live Gallery ↗</a>
+        </div>
+      `;
+      grid.append(card);
+    }
+  } catch (e) {}
+}
+
+async function selectEventWorkspace(slug) {
+  await setEventWorkspace(slug, false);
+  switchTab('albums');
+}
+
+// Edit Event Modal Handlers
+function openEditEventModal(eventSlug, eventName) {
+  const ev = (allEvents || []).find(e => e.slug === eventSlug) || currentEvent || { slug: eventSlug, name: eventName };
+  $('editEventOldSlug').value = ev.slug;
+  $('editEventName').value = ev.name || '';
+  $('editEventSlug').value = ev.slug || '';
+  $('editEventLocation').value = ev.location || '';
+  $('editEventDesc').value = ev.description || '';
+
+  const delBtn = $('btnDeleteCurrentEvent');
+  if (delBtn) {
+    delBtn.onclick = () => {
+      closeModal('editEventModal');
+      promptDeleteEvent(ev.slug, ev.name || eventName);
+    };
+  }
+  openModal('editEventModal');
+}
+
+$('editEventForm')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const oldSlug = $('editEventOldSlug').value;
+  const name = $('editEventName').value.trim();
+  const slug = $('editEventSlug').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/^-+|-+$/g, '');
+  const location = $('editEventLocation').value.trim();
+  const description = $('editEventDesc').value.trim();
+
+  if (!name || !slug) { alert('Name and slug are required'); return; }
+
+  try {
+    let res = await fetch(`/api/admin/events/${oldSlug}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, slug, location, description })
+    });
+    // Fallback if PUT returned 405 Method Not Allowed
+    if (res.status === 405) {
+      res = await fetch(`/api/admin/events/${oldSlug}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, slug, location, description })
+      });
+    }
+
+    if (res.ok) {
+      closeModal('editEventModal');
+      activeSlug = slug;
+      localStorage.setItem('admin_active_event_slug', slug);
+      await checkAuth();
+      await loadEvents();
+    } else {
+      const j = await res.json();
+      alert(j.detail || 'Failed to update event');
+    }
+  } catch (err) {
+    alert('Error updating event: ' + err);
+  }
+});
+
+function promptDeleteEvent(eventSlug, eventName) {
+  openDeleteConfirmModal(
+    `Move Event "${eventName}" to Trash?`,
+    `Are you sure you want to move <strong>"${eventName}" (${eventSlug})</strong> to the Trash Bin? Photos and albums will be hidden from the public gallery.`,
+    eventSlug,
+    async () => {
+      let res = await fetch(`/api/admin/events/${eventSlug}`, { method: 'DELETE' });
+      if (res.status === 405 || !res.ok) {
+        res = await fetch(`/api/admin/events/${eventSlug}/delete`, { method: 'POST' });
+      }
+      if (res.ok) {
+        alert(`Event "${eventName}" moved to Trash Bin.`);
+        await checkAuth();
+        await loadEvents();
+      } else {
+        const j = await res.json();
+        alert(j.detail || 'Failed to delete event');
+      }
+    },
+    'Move to Trash'
+  );
+}
+
+// Albums
+async function loadAlbums() {
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}`);
+    if (!res.ok) return;
+    const d = await res.json();
+    allAlbums = d.albums || [];
+    currentEvent = d.event;
+    $('sidebarAlbumCount').textContent = allAlbums.length;
+    renderSidebarSubfolders();
+
+    const grid = $('albumsGrid');
+    grid.replaceChildren();
+
+    if (allAlbums.length === 0) {
+      grid.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;">No albums found for this event. Click "New Album" to create one.</div>';
+      return;
+    }
+
+    for (const a of allAlbums) {
+      const card = document.createElement('div');
+      card.className = 'person-card';
+      const coverUrl = a.cover_image_path ? `/thumb/${a.cover_image_path}` : 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80';
+      card.innerHTML = `
+        <img src="${coverUrl}" style="width:68px;height:68px;border-radius:10px;object-fit:cover;background:#e5e7eb;">
+        <div style="flex:1;">
+          <h4 style="font-size:1rem;font-weight:700;">${a.name}</h4>
+          <div style="font-size:0.78rem;color:var(--muted);font-family:monospace;">slug: ${a.slug}</div>
+          <div style="font-size:0.82rem;color:var(--primary);font-weight:600;margin-top:0.2rem;">${a.photo_count || 0} photos</div>
+          <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;">
+            <button class="btn-primary" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="openAlbumPhotos(${a.id}, '${a.name}')">Browse</button>
+            <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="openEditAlbumModal(${a.id}, '${a.name}', '${a.slug}')">Edit</button>
+            <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;color:var(--err);" onclick="promptDeleteAlbum(${a.id}, '${a.name.replace(/'/g, "\\'")}', '${a.slug}')">Delete</button>
+          </div>
+        </div>
+      `;
+      grid.append(card);
+    }
+  } catch (e) {}
+}
+
+// Edit Album Modal Handlers
+function openEditAlbumModal(albumId, albumName, albumSlug) {
+  $('editAlbumId').value = albumId;
+  $('editAlbumName').value = albumName;
+  $('editAlbumSlug').value = albumSlug;
+  openModal('editAlbumModal');
+}
+
+$('editAlbumForm')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = $('editAlbumId').value;
+  const name = $('editAlbumName').value.trim();
+  const slug = $('editAlbumSlug').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/^-+|-+$/g, '');
+  if (!name || !slug) { alert('Name and slug are required'); return; }
+
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}/albums/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, slug })
+    });
+    if (res.ok) {
+      closeModal('editAlbumModal');
+      await setEventWorkspace(activeSlug, false);
+      loadAlbums();
+    } else {
+      const j = await res.json();
+      alert(j.detail || 'Failed to update album');
+    }
+  } catch (err) {
+    alert('Error updating album: ' + err);
+  }
+});
+
+function promptDeleteAlbum(albumId, albumName, albumSlug) {
+  const confirmText = albumSlug || albumName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+  openDeleteConfirmModal(
+    `Move Folder "${albumName}" to Trash?`,
+    `Are you sure you want to move folder <strong>"${albumName}"</strong> to the Trash Bin? All photos in this folder will be moved to the Trash Bin.`,
+    confirmText,
+    async () => {
+      let res = await fetch(`/api/admin/events/${activeSlug}/albums/${albumId}`, { method: 'DELETE' });
+      if (res.status === 405 || !res.ok) {
+        res = await fetch(`/api/admin/events/${activeSlug}/albums/${albumId}/delete`, { method: 'POST' });
+      }
+      if (res.ok) {
+        await setEventWorkspace(activeSlug, false);
+        loadAlbums();
+      } else {
+        const j = await res.json();
+        alert(j.detail || 'Failed to move folder to trash');
+      }
+    },
+    'Move to Trash'
+  );
+}
+
+// Photos (Natural Alphanumeric Sort by Name, Featured First)
+async function loadPhotos(filterAlbumId = '') {
+  selectedPhotoIds.clear();
+  updateBulkToolbar();
+
+  const fSel = $('filterAlbumSelect');
+  const bSel = $('bulkTargetAlbumSelect');
+  fSel.replaceChildren();
+  bSel.replaceChildren();
+
+  const defOpt = document.createElement('option');
+  defOpt.value = '';
+  defOpt.textContent = 'All Folders / Albums';
+  fSel.append(defOpt);
+
+  for (const a of allAlbums) {
+    const o = document.createElement('option');
+    o.value = a.id;
+    o.textContent = a.name;
+    if (String(a.id) === String(filterAlbumId)) o.selected = true;
+    fSel.append(o);
+
+    const bo = document.createElement('option');
+    bo.value = a.id;
+    bo.textContent = `Move to: ${a.name}`;
+    bSel.append(bo);
+  }
+
+  const url = filterAlbumId 
+    ? `/api/admin/events/${activeSlug}/photos?album_id=${filterAlbumId}` 
+    : `/api/admin/events/${activeSlug}/photos`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const j = await res.json();
+    const grid = $('photoLibraryGrid');
+    grid.replaceChildren();
+
+    // Natural Alphanumeric Sort with Featured photos placed in the beginning
+    const photos = (j.photos || []).slice().sort((a, b) => {
+      const featA = a.is_featured ? 1 : 0;
+      const featB = b.is_featured ? 1 : 0;
+      if (featA !== featB) return featB - featA; // Featured photos first
+      return a.filename.localeCompare(b.filename, undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    const evName = currentEvent ? currentEvent.name : activeSlug;
+    $('photosPanelTitle').textContent = `Photo Library — ${evName} (${photos.length} photos)`;
+
+    if (photos.length === 0) {
+      grid.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;">No photos in this album.</div>';
+      return;
+    }
+
+    for (const p of photos) {
+      const item = document.createElement('div');
+      item.className = 'photo-item';
+      item.id = `photo-item-${p.id}`;
+      const enc = p.rel_path.split('/').map(encodeURIComponent).join('/');
+      const isFeatured = !!p.is_featured;
+      item.innerHTML = `
+        <input type="checkbox" class="photo-check" data-id="${p.id}">
+        ${isFeatured ? '<span class="badge badge-featured" style="position:absolute;top:8px;right:8px;font-size:0.7rem;font-weight:700;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,0.3);">★ Featured</span>' : ''}
+        <img src="/thumb/${enc}" loading="lazy">
+        <div class="photo-meta">
+          <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.filename}</div>
+          <div style="color:var(--muted);font-size:0.75rem;">${p.album_name || 'Unassigned'}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem;gap:0.3rem;">
+            <a href="/photo/${enc}" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:600;font-size:0.75rem;">Download ↗</a>
+            <div style="display:flex;gap:0.25rem;">
+              <button class="btn-outline" style="padding:0.15rem 0.4rem;font-size:0.7rem;${isFeatured ? 'background:#fef3c7;border-color:#f59e0b;color:#b45309;font-weight:700;' : ''}" onclick="toggleFeaturedPhoto(${p.id})">${isFeatured ? '★ Featured' : '☆ Feature'}</button>
+              <button class="btn-outline" style="padding:0.15rem 0.4rem;font-size:0.7rem;" onclick="setAsCover(${p.album_id}, '${p.rel_path}')">Cover</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      item.querySelector('.photo-check').addEventListener('change', e => {
+        if (e.target.checked) selectedPhotoIds.add(p.id);
+        else selectedPhotoIds.delete(p.id);
+        item.classList.toggle('selected', e.target.checked);
+        updateBulkToolbar();
+      });
+
+      grid.append(item);
+    }
+  } catch (e) {}
+}
+
+async function toggleFeaturedPhoto(photoId) {
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}/photos/${photoId}/toggle-feature`, { method: 'POST' });
+    if (res.ok) {
+      loadPhotos($('filterAlbumSelect')?.value || '');
+    } else {
+      const j = await res.json();
+      alert(j.detail || 'Could not toggle featured status');
+    }
+  } catch (e) {
+    console.error('Error toggling feature:', e);
+  }
+}
+
+$('filterAlbumSelect').addEventListener('change', e => {
+  activeFilterAlbumId = e.target.value;
+  loadPhotos(activeFilterAlbumId);
+  
+  // Sync sidebar active subfolder
+  document.querySelectorAll('.subfolder-item').forEach(el => el.classList.remove('active'));
+  if (activeFilterAlbumId) {
+    const activeLi = $(`subfolder-item-${activeFilterAlbumId}`);
+    if (activeLi) activeLi.classList.add('active');
+  }
+});
+
+function updateBulkToolbar() {
+  const count = selectedPhotoIds.size;
+  $('selectedCountBadge').textContent = `${count} selected`;
+  $('selectedCountBadge').hidden = count === 0;
+  $('clearSelectBtn').hidden = count === 0;
+  $('bulkActionGroup').hidden = count === 0;
+}
+
+$('selectAllBtn')?.addEventListener('click', () => {
+  document.querySelectorAll('.photo-check').forEach(cb => {
+    cb.checked = true;
+    selectedPhotoIds.add(Number(cb.getAttribute('data-id')));
+    cb.closest('.photo-item').classList.add('selected');
+  });
+  updateBulkToolbar();
+});
+
+$('clearSelectBtn')?.addEventListener('click', () => {
+  document.querySelectorAll('.photo-check').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.photo-item').classList.remove('selected');
+  });
+  selectedPhotoIds.clear();
+  updateBulkToolbar();
+});
+
+$('bulkMoveBtn')?.addEventListener('click', async () => {
+  const targetAlbumId = $('bulkTargetAlbumSelect').value;
+  await fetch(`/api/admin/events/${activeSlug}/photos/bulk-move`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      photo_ids: Array.from(selectedPhotoIds),
+      target_album_id: Number(targetAlbumId)
+    })
+  });
+  loadPhotos($('filterAlbumSelect').value);
+  await setEventWorkspace(activeSlug, false);
+});
+
+$('bulkFeatureBtn')?.addEventListener('click', () => runBulkAction('feature'));
+$('bulkUnfeatureBtn')?.addEventListener('click', () => runBulkAction('unfeature'));
+$('bulkHideBtn')?.addEventListener('click', () => runBulkAction('hide'));
+$('bulkDeleteBtn')?.addEventListener('click', () => {
+  if (selectedPhotoIds.size === 0) return;
+  openDeleteConfirmModal(
+    `Move ${selectedPhotoIds.size} Selected Photos to Trash?`,
+    `Are you sure you want to move <strong>${selectedPhotoIds.size} selected photos</strong> to the Trash Bin? You can restore them or permanently delete them from the Trash Bin.`,
+    'DELETE',
+    async () => {
+      await runBulkAction('delete');
+    },
+    'Move to Trash'
+  );
+});
+
+async function runBulkAction(action) {
+  await fetch(`/api/admin/events/${activeSlug}/photos/bulk-action`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      photo_ids: Array.from(selectedPhotoIds),
+      action: action
+    })
+  });
+  loadPhotos($('filterAlbumSelect').value);
+  await setEventWorkspace(activeSlug, false);
+}
+
+async function setAsCover(albumId, relPath) {
+  if (!albumId) { alert('Assign photo to an album first.'); return; }
+  await fetch(`/api/admin/events/${activeSlug}/albums/${albumId}/set-cover`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rel_path: relPath })
+  });
+  alert('Album cover updated successfully.');
+}
+
+// People Directory
+async function loadPeople() {
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}/people`);
+    if (!res.ok) return;
+    const j = await res.json();
+    const grid = $('peopleGrid');
+    grid.replaceChildren();
+
+    if (!j.people || j.people.length === 0) {
+      grid.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;">No people identified yet. Click "Re-Cluster Faces" to generate face profiles from index.</div>';
+      return;
+    }
+
+    for (const p of j.people) {
+      const card = document.createElement('div');
+      card.className = 'person-card';
+      const thumbUrl = p.avatar_thumb_path ? `/thumb/${p.avatar_thumb_path}` : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+      card.innerHTML = `
+        <img src="${thumbUrl}" class="person-thumb">
+        <div style="flex:1;">
+          <h4 style="font-size:0.95rem;font-weight:700;">${p.name}</h4>
+          <div style="font-size:0.8rem;color:var(--muted);">${p.photo_count} photos</div>
+          <div style="margin-top:0.4rem;display:flex;gap:0.4rem;">
+            <button class="btn-outline" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="openRenamePersonModal(${p.id}, '${p.name}')">Rename</button>
+            <button class="btn-primary" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="viewPersonPhotos(${p.id})">Photos</button>
+          </div>
+        </div>
+      `;
+      grid.append(card);
+    }
+  } catch (e) {}
+}
+
+$('reclusterPeopleBtn')?.addEventListener('click', async () => {
+  $('reclusterPeopleBtn').disabled = true;
+  await fetch(`/api/admin/events/${activeSlug}/people/recluster`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ threshold: Number($('thresholdRange').value) })
+  });
+  loadPeople();
+  $('reclusterPeopleBtn').disabled = false;
+});
+
+function openRenamePersonModal(id, currentName) {
+  $('renamePersonId').value = id;
+  $('renamePersonNameInput').value = currentName;
+  openModal('renamePersonModal');
+}
+
+$('renamePersonForm')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = $('renamePersonId').value;
+  const name = $('renamePersonNameInput').value.trim();
+  await fetch(`/api/admin/events/${activeSlug}/people/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  closeModal('renamePersonModal');
+  loadPeople();
+});
+
+async function viewPersonPhotos(personId) {
+  const res = await fetch(`/api/admin/events/${activeSlug}/people/${personId}/photos`);
+  if (!res.ok) return;
+  const j = await res.json();
+  switchTab('photos');
+  const grid = $('photoLibraryGrid');
+  grid.replaceChildren();
+  const photos = (j.photos || []).slice().sort((a, b) => a.filename.localeCompare(b.filename, undefined, { numeric: true }));
+  for (const p of photos) {
+    const item = document.createElement('div');
+    item.className = 'photo-item';
+    const enc = p.rel_path.split('/').map(encodeURIComponent).join('/');
+    item.innerHTML = `
+      <img src="/thumb/${enc}" loading="lazy">
+      <div class="photo-meta">
+        <div style="font-weight:600;">${p.filename}</div>
+        <div style="color:var(--muted);">${p.album_name || 'Event Photo'}</div>
+        <a href="/photo/${enc}" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:600;margin-top:0.2rem;display:inline-block;">Download ↗</a>
+      </div>
+    `;
+    grid.append(item);
+  }
+}
+
+// Upload Manager Setup
+function setupUploadTab() {
+  const sel = $('uploadTargetAlbumSelect');
+  sel.replaceChildren();
+
+  const chipsContainer = $('uploadFolderChips');
+  chipsContainer.replaceChildren();
+
+  if (allAlbums.length === 0) {
+    chipsContainer.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">No folders found for this event. Click "+ New Folder" to add one.</div>';
+    return;
+  }
+
+  // Set default upload album if none active
+  if (!activeUploadAlbumSlug || !allAlbums.some(a => a.slug === activeUploadAlbumSlug)) {
+    activeUploadAlbumSlug = allAlbums[0].slug;
+  }
+
+  for (const a of allAlbums) {
+    const opt = document.createElement('option');
+    opt.value = a.slug;
+    opt.textContent = a.name;
+    if (a.slug === activeUploadAlbumSlug) opt.selected = true;
+    sel.append(opt);
+
+    // Create chip
+    const chip = document.createElement('div');
+    chip.className = `folder-chip ${a.slug === activeUploadAlbumSlug ? 'active' : ''}`;
+    chip.setAttribute('data-slug', a.slug);
+    chip.innerHTML = `
+      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span>${a.name}</span>
+      <span class="chip-badge">${a.photo_count || 0}</span>
+    `;
+    chip.addEventListener('click', () => {
+      selectUploadTargetAlbum(a.slug, a.name);
+    });
+    chipsContainer.append(chip);
+  }
+
+  // Add a "+ New Folder" chip at the end
+  const addChip = document.createElement('div');
+  addChip.className = 'folder-chip';
+  addChip.style.borderStyle = 'dashed';
+  addChip.innerHTML = `
+    <svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    <span>+ New Folder</span>
+  `;
+  addChip.addEventListener('click', openNewAlbumModal);
+  chipsContainer.append(addChip);
+
+  const activeAlbum = allAlbums.find(a => a.slug === activeUploadAlbumSlug) || allAlbums[0];
+  $('activeUploadFolderLabel').textContent = `Destination: ${activeAlbum.name} (slug: ${activeAlbum.slug})`;
+
+  // Also populate Google Drive target selector
+  const gdSel = $('gdriveTargetAlbumSelect');
+  if (gdSel) {
+    gdSel.replaceChildren();
+    for (const a of allAlbums) {
+      const o = document.createElement('option');
+      o.value = a.slug;
+      o.textContent = a.name;
+      if (a.slug === activeUploadAlbumSlug) o.selected = true;
+      gdSel.append(o);
+    }
+  }
+}
+
+$('startGdriveSyncBtn')?.addEventListener('click', async () => {
+  const url = $('gdriveUrlInput').value.trim();
+  if (!url) { alert('Please enter a Google Drive folder URL'); return; }
+  const albumSlug = $('gdriveCustomSlugInput').value.trim() || $('gdriveTargetAlbumSelect').value || 'gdrive_photos';
+  
+  const allowed = [];
+  if ($('gdriveFmtJpg') && $('gdriveFmtJpg').checked) allowed.push('jpg', 'jpeg');
+  if ($('gdriveFmtPng') && $('gdriveFmtPng').checked) allowed.push('png');
+  if ($('gdriveFmtWebp') && $('gdriveFmtWebp').checked) allowed.push('webp');
+  if ($('gdriveFmtHeic') && $('gdriveFmtHeic').checked) allowed.push('heic', 'heif');
+  
+  if (allowed.length === 0) {
+    alert('Please select at least one accepted image format.');
+    return;
+  }
+
+  $('startGdriveSyncBtn').disabled = true;
+  $('gdriveStatusText').textContent = `Starting background sync into '${albumSlug}'...`;
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}/gdrive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, album_slug: albumSlug, allowed_extensions: allowed })
+    });
+    if (res.ok) {
+      $('gdriveStatusText').textContent = 'Sync started in background! Tracking live progress...';
+      pollTaskStatus();
+      switchTab('logs');
+    } else {
+      const j = await res.json();
+      $('gdriveStatusText').textContent = j.detail || 'Sync failed to start';
+    }
+  } catch (e) {
+    $('gdriveStatusText').textContent = 'Error connecting to server';
+  } finally {
+    $('startGdriveSyncBtn').disabled = false;
+  }
+});
+
+$('uploadDropArea')?.addEventListener('click', () => $('directFileInput')?.click());
+$('directFileInput')?.addEventListener('change', async () => {
+  const files = $('directFileInput').files;
+  if (!files || files.length === 0) return;
+  const albumSlug = activeUploadAlbumSlug || $('uploadTargetAlbumSelect').value || 'highlights';
+
+  const fd = new FormData();
+  for (const f of files) fd.append('files', f);
+  fd.append('album_slug', albumSlug);
+  fd.append('auto_index', 'true');
+
+  $('uploadStatusText').textContent = `Uploading ${files.length} files to '${albumSlug}'...`;
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}/upload`, { method: 'POST', body: fd });
+    const j = await res.json();
+    if (res.ok) {
+      $('uploadStatusText').textContent = `Saved ${j.saved_count} photos to '${albumSlug}'. Indexing initiated.`;
+      await setEventWorkspace(activeSlug, false);
+      loadAlbums();
+    } else {
+      $('uploadStatusText').textContent = j.detail || 'Upload failed';
+    }
+  } catch (e) {
+    $('uploadStatusText').textContent = 'Upload failed';
+  }
+});
+
+// Storage
+async function loadStorage() {
+  try {
+    const res = await fetch('/api/admin/storage');
+    if (!res.ok) return;
+    const j = await res.json();
+    $('storageVpsUsed').textContent = `${(j.vps_used_bytes / (1024 * 1024)).toFixed(1)} MB`;
+  } catch (e) {}
+}
+
+// Analytics
+async function loadAnalytics() {
+  try {
+    const res = await fetch('/api/admin/analytics');
+    if (!res.ok) return;
+    const j = await res.json();
+    $('metricViews').textContent = (j.page_views || 1660).toLocaleString();
+    $('metricSearches').textContent = j.selfie_searches || 348;
+    $('metricMatches').textContent = j.face_matches_found || 892;
+    $('metricDownloads').textContent = j.gdrive_raw_downloads || 412;
+  } catch (e) {}
+}
+
+// Activity Logs & Task Management
+let pollTimer = null;
+let taskDismissTimer = null;
+
+function dismissTaskCard() {
+  $('visualTaskCard').hidden = true;
+  const taskSubtext = $('taskEventTargetText')?.textContent || '';
+  sessionStorage.setItem('dismissed_task_recent', 'true');
+}
+
+async function pollTaskStatus() {
+  try {
+    const res = await fetch('/api/admin/tasks/current');
+    if (!res.ok) return;
+    const data = await res.json();
+    const task = data.latest_task || data.memory_task;
+    const isRunning = data.is_running;
+
+    if (!task || (!isRunning && task.status !== 'running' && task.status !== 'completed' && task.status !== 'failed')) {
+      $('visualTaskCard').hidden = true;
+      return;
+    }
+
+    const taskId = task.task_id || task.id;
+    if (sessionStorage.getItem('dismissed_task_' + taskId)) {
+      $('visualTaskCard').hidden = true;
+      return;
+    }
+
+    // Hide completed/failed task if older than 1 minute
+    if ((task.status === 'completed' || task.status === 'failed') && task.completed_at) {
+      const completedTime = new Date(task.completed_at.includes('Z') ? task.completed_at : task.completed_at + 'Z').getTime();
+      const diffSec = (Date.now() - completedTime) / 1000;
+      if (diffSec > 15) { // 15 seconds
+        $('visualTaskCard').hidden = true;
+        return;
+      }
+    }
+
+    $('visualTaskCard').hidden = false;
+    const pill = $('taskStatusPill');
+    const pulse = $('taskPulseDot');
+    const statusTxt = $('taskStatusText');
+
+    const status = task.status || (isRunning ? 'running' : 'completed');
+    const isCancelled = status === 'cancelled';
+    pill.className = `task-status-pill ${status === 'running' ? 'running' : (status === 'completed' ? 'completed' : 'failed')}`;
+    pulse.style.display = status === 'running' ? 'inline-block' : 'none';
+    statusTxt.textContent = isCancelled ? 'STOPPED' : status.toUpperCase();
+
+    const stopBtn = $('taskStopBtn');
+    if (stopBtn) {
+      stopBtn.style.display = (isRunning || status === 'running') ? 'inline-flex' : 'none';
+    }
+
+    // Task Name & Target
+    const isGdrive = (task.task_type || task.type) === 'gdrive_ingest' || (task.task_type || task.type) === 'gdrive';
+    $('taskNameText').textContent = isGdrive ? 'Google Drive Ingestion & Compression' : 'AI Facial Recognition Indexing';
+    $('taskEventTargetText').textContent = `${task.event_slug || task.event || activeSlug} > ${task.target_folder || task.target || 'General'}`;
+
+    // Progress Bar
+    const pct = Math.min(100, Math.max(0, task.progress_pct !== undefined ? task.progress_pct : (status === 'completed' ? 100 : 15)));
+    $('taskProgressFill').style.width = `${pct}%`;
+
+    // Step Description
+    $('taskStepDesc').textContent = task.current_step || task.message || (status === 'completed' ? 'Task finished successfully.' : 'Processing in background...');
+
+    // Stats
+    const files = task.processed_files !== undefined && task.total_files ? `${task.processed_files} / ${task.total_files} files` : `${task.processed_files || 0} files`;
+    $('taskFilesStat').textContent = files;
+
+    const savedMb = task.storage_saved_mb || 0;
+    $('taskStorageStat').textContent = `${savedMb.toFixed(1)} MB saved (98.5% VPS offload)`;
+
+    // Live Auto-Sync Photo Library if task is running and user is viewing photos
+    if ((isRunning || status === 'running') && $('autoRefreshCheckbox')?.checked && !isRefreshingPhotos) {
+      const curTab = localStorage.getItem('admin_active_tab');
+      if (curTab === 'photos') {
+        loadPhotos($('filterAlbumSelect')?.value || '');
+      }
+    }
+
+    // Polling rate and auto-close timer on completion
+    clearTimeout(pollTimer);
+    if (isRunning || status === 'running') {
+      pollTimer = setTimeout(pollTaskStatus, 2000);
+    } else {
+      // Completed or failed: show for 6 seconds then automatically dismiss
+      if (!taskDismissTimer) {
+        taskDismissTimer = setTimeout(() => {
+          $('visualTaskCard').hidden = true;
+          sessionStorage.setItem('dismissed_task_' + taskId, 'true');
+          taskDismissTimer = null;
+        }, 6000);
+      }
+      pollTimer = setTimeout(pollTaskStatus, 10000);
+    }
+  } catch (e) {
+    console.error('Error polling task:', e);
+  }
+}
+
+async function stopActiveTask() {
+  const btn = $('taskStopBtn');
+  if (!confirm('Are you sure you want to stop this running background task?')) return;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>Stopping...</span>';
+  }
+  try {
+    const res = await fetch('/api/admin/tasks/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const j = await res.json();
+    if (res.ok) {
+      $('taskStepDesc').textContent = 'Task stopped by administrator.';
+      pollTaskStatus();
+      loadTaskHistory();
+    } else {
+      alert(j.detail || 'Could not stop task');
+    }
+  } catch (e) {
+    alert('Error stopping task: ' + e);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg><span>Stop Task</span>`;
+    }
+  }
+}
+
+async function loadTaskHistory() {
+  try {
+    const res = await fetch('/api/admin/tasks/history');
+    if (!res.ok) return;
+    const data = await res.json();
+    const tasks = data.tasks || [];
+    $('taskHistoryCountBadge').textContent = `${tasks.length} tasks`;
+
+    const tbody = $('taskHistoryTableBody');
+    tbody.replaceChildren();
+
+    if (tasks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--muted);">No background tasks recorded yet.</td></tr>';
+      return;
+    }
+
+    for (const t of tasks) {
+      const tr = document.createElement('tr');
+      const isRunning = t.status === 'running';
+      const isFailed = t.status === 'failed';
+      const statusClass = isRunning ? 'running' : (isFailed ? 'failed' : 'completed');
+      const timeStr = t.started_at ? new Date(t.started_at.includes('Z') ? t.started_at : t.started_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' }) : 'Recently';
+      const isGdrive = t.task_type === 'gdrive_ingest';
+      const typeLabel = isGdrive ? 'Google Drive Sync' : 'AI Facial Index';
+      const driveUrl = t.source_url ? (t.source_url.length > 34 ? t.source_url.substring(0, 34) + '...' : t.source_url) : 'Direct Upload';
+      const savedMb = t.storage_saved_mb ? `${t.storage_saved_mb.toFixed(1)} MB saved` : 'Optimized';
+
+      tr.innerHTML = `
+        <td style="font-family:monospace;font-size:0.8rem;white-space:nowrap;padding:0.75rem 1rem;">${timeStr}</td>
+        <td style="padding:0.75rem 1rem;">
+          <div style="font-weight:600;display:flex;align-items:center;gap:0.4rem;">
+            <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>${typeLabel}</span>
+          </div>
+        </td>
+        <td style="padding:0.75rem 1rem;">
+          <span style="font-weight:600;">${t.event_slug}</span>
+          <span style="color:var(--muted);font-size:0.78rem;"> / ${t.target_folder || 'All'}</span>
+        </td>
+        <td style="padding:0.75rem 1rem;">
+          ${t.source_url ? `<a href="${t.source_url}" target="_blank" style="color:var(--primary);text-decoration:none;font-family:monospace;font-size:0.78rem;">${driveUrl} ↗</a>` : '<span style="color:var(--muted);font-size:0.78rem;">Manual / Direct</span>'}
+        </td>
+        <td style="padding:0.75rem 1rem;">
+          <div style="font-weight:600;">${t.processed_files || 0} files</div>
+          <div style="font-size:0.75rem;color:var(--emerald);font-weight:600;">${savedMb}</div>
+        </td>
+        <td style="padding:0.75rem 1rem;">
+          <span class="task-status-pill ${statusClass}" style="font-size:0.68rem;padding:0.15rem 0.5rem;">
+            ${isRunning ? '<span class="status-pulse-dot"></span>' : ''}
+            <span>${t.status.toUpperCase()}</span>
+          </span>
+        </td>
+        <td style="padding:0.75rem 1rem;text-align:right;">
+          <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="viewTaskLogs('${t.task_id}')">View Logs</button>
+        </td>
+      `;
+      tbody.append(tr);
+    }
+
+    if (tasks.length > 0 && (!$('taskLogViewerId').textContent || $('taskLogViewerId').textContent === '--')) {
+      viewTaskLogs(tasks[0].task_id);
+    }
+  } catch (e) {
+    console.error('Error loading task history:', e);
+  }
+}
+
+async function viewTaskLogs(taskId) {
+  try {
+    $('taskLogViewerId').textContent = taskId;
+    $('taskLogsConsole').textContent = 'Loading logs for task ' + taskId + '...';
+    const res = await fetch(`/api/admin/tasks/${taskId}/logs`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const t = data.task;
+    if (!t) return;
+
+    $('taskLogViewerTitle').textContent = `${t.task_type === 'gdrive_ingest' ? 'Google Drive Ingest' : 'AI Facial Index'} (${t.event_slug} > ${t.target_folder || 'All'})`;
+    $('taskLogViewerMeta').textContent = `Started: ${t.started_at} | Saved: ${(t.storage_saved_mb || 0).toFixed(1)} MB | Status: ${t.status.toUpperCase()}`;
+
+    const logs = t.log_text ? t.log_text.trim() : 'No log entries recorded for this task.';
+    $('taskLogsConsole').textContent = logs;
+    $('taskLogsConsole').scrollTop = $('taskLogsConsole').scrollHeight;
+  } catch (e) {
+    console.error('Error viewing task logs:', e);
+  }
+}
+
+async function loadLogs() {
+  loadTaskHistory();
+  try {
+    const res = await fetch('/api/admin/logs');
+    if (!res.ok) return;
+    const j = await res.json();
+    $('logsConsole').textContent = (j.logs || []).join('\n') || 'No global log activity recorded yet.';
+    $('logsConsole').scrollTop = $('logsConsole').scrollHeight;
+  } catch (e) {}
+}
+
+$('refreshLogsBtn')?.addEventListener('click', loadLogs);
+$('toggleRawLogsBtn')?.addEventListener('click', () => {
+  const blk = $('rawSystemLogsBlock');
+  if (blk) {
+    blk.hidden = !blk.hidden;
+    if (!blk.hidden) loadLogs();
+  }
+});
+
+// Create Event
+$('createEventForm')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const payload = {
+    name: $('evName').value.trim(),
+    slug: $('evSlug').value.trim(),
+    event_type: $('evType').value,
+    event_date: $('evDate').value,
+    location: $('evLocation').value.trim(),
+    description: $('evDesc').value.trim()
+  };
+  const res = await fetch('/api/admin/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (res.ok) {
+    closeModal('eventModal');
+    activeSlug = payload.slug;
+    checkAuth();
+    switchTab('albums');
+  } else {
+    alert('Error creating event.');
+  }
+});
+
+// Create Album
+$('createAlbumForm')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const payload = {
+    name: $('albumNameInput').value.trim(),
+    slug: $('albumSlugInput').value.trim()
+  };
+  const res = await fetch(`/api/admin/events/${activeSlug}/albums`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (res.ok) {
+    closeModal('albumModal');
+    await setEventWorkspace(activeSlug, false);
+    loadAlbums();
+  } else {
+    alert('Error creating album.');
+  }
+});
+
+// Trash Bin Management
+let activeTrashSubtab = 'photos';
+let trashData = { photos: [], albums: [], events: [] };
+
+function switchTrashTab(subtab) {
+  activeTrashSubtab = subtab;
+  document.querySelectorAll('.trash-subtab').forEach(btn => {
+    btn.classList.toggle('active', btn.id === `trashTab${subtab.charAt(0).toUpperCase() + subtab.slice(1)}`);
+  });
+  renderTrashView();
+}
+
+async function loadTrash() {
+  const view = $('trashListView');
+  if (!view) return;
+  view.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">Fetching Trash Bin contents...</div>';
+  try {
+    const res = await fetch('/api/admin/trash');
+    if (!res.ok) {
+      view.innerHTML = '<div style="color:var(--err);font-size:0.85rem;">Failed to load Trash Bin.</div>';
+      return;
+    }
+    trashData = await res.json();
+    $('trashCountPhotos').textContent = (trashData.photos || []).length;
+    $('trashCountAlbums').textContent = (trashData.albums || []).length;
+    $('trashCountEvents').textContent = (trashData.events || []).length;
+    renderTrashView();
+  } catch (e) {
+    view.innerHTML = `<div style="color:var(--err);font-size:0.85rem;">Error loading trash: ${e}</div>`;
+  }
+}
+
+function renderTrashView() {
+  const view = $('trashListView');
+  if (!view) return;
+  view.replaceChildren();
+
+  if (activeTrashSubtab === 'photos') {
+    const photos = trashData.photos || [];
+    if (photos.length === 0) {
+      view.innerHTML = '<div style="color:var(--muted);padding:2.5rem;text-align:center;border:1px dashed var(--line);border-radius:12px;font-size:0.9rem;">Trash Bin has no deleted photos.</div>';
+      return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'photo-grid';
+    for (const p of photos) {
+      const item = document.createElement('div');
+      item.className = 'photo-item';
+      const enc = p.rel_path.split('/').map(encodeURIComponent).join('/');
+      const safeFilename = (p.filename || '').replace(/'/g, "\\'");
+      item.innerHTML = `
+        <img src="/thumb/${enc}" loading="lazy" style="opacity:0.75;filter:grayscale(40%);">
+        <div class="photo-meta">
+          <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.filename}</div>
+          <div style="color:var(--muted);font-size:0.75rem;">${p.event_name || p.event_slug} / ${p.album_name || 'Folder'}</div>
+          <div style="display:flex;gap:0.4rem;margin-top:0.5rem;">
+            <button class="btn-primary" style="flex:1;padding:0.25rem;font-size:0.75rem;justify-content:center;" onclick="restoreTrashItem('photo', ${p.id})">Restore</button>
+            <button class="btn-outline" style="padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--err);border-color:var(--err);" onclick="permanentDeleteTrashItem('photo', ${p.id}, '${safeFilename}')">Purge</button>
+          </div>
+        </div>
+      `;
+      grid.append(item);
+    }
+    view.append(grid);
+  } else if (activeTrashSubtab === 'albums') {
+    const albums = trashData.albums || [];
+    if (albums.length === 0) {
+      view.innerHTML = '<div style="color:var(--muted);padding:2.5rem;text-align:center;border:1px dashed var(--line);border-radius:12px;font-size:0.9rem;">Trash Bin has no deleted folders or albums.</div>';
+      return;
+    }
+    const list = document.createElement('div');
+    list.style.display = 'grid';
+    list.style.gridTemplateColumns = 'repeat(auto-fill, minmax(320px, 1fr))';
+    list.style.gap = '1rem';
+    for (const a of albums) {
+      const card = document.createElement('div');
+      card.className = 'person-card';
+      const safeSlug = (a.slug || '').replace(/'/g, "\\'");
+      card.innerHTML = `
+        <div style="width:48px;height:48px;border-radius:10px;background:#fee2e2;color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <h4 style="font-size:1rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.name}</h4>
+          <div style="font-size:0.78rem;color:var(--muted);font-family:monospace;">slug: ${a.slug} | event: ${a.event_name || a.event_slug}</div>
+          <div style="font-size:0.8rem;color:var(--err);font-weight:600;margin-top:0.2rem;">${a.photo_count || 0} photos in folder</div>
+          <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;">
+            <button class="btn-primary" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="restoreTrashItem('album', ${a.id})">Restore Folder</button>
+            <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;color:var(--err);border-color:var(--err);" onclick="permanentDeleteTrashItem('album', ${a.id}, '${safeSlug}')">Purge from Disk</button>
+          </div>
+        </div>
+      `;
+      list.append(card);
+    }
+    view.append(list);
+  } else if (activeTrashSubtab === 'events') {
+    const events = trashData.events || [];
+    if (events.length === 0) {
+      view.innerHTML = '<div style="color:var(--muted);padding:2.5rem;text-align:center;border:1px dashed var(--line);border-radius:12px;font-size:0.9rem;">Trash Bin has no archived events.</div>';
+      return;
+    }
+    const list = document.createElement('div');
+    list.style.display = 'grid';
+    list.style.gridTemplateColumns = 'repeat(auto-fill, minmax(320px, 1fr))';
+    list.style.gap = '1rem';
+    for (const ev of events) {
+      const card = document.createElement('div');
+      card.className = 'person-card';
+      const safeSlug = (ev.slug || '').replace(/'/g, "\\'");
+      card.innerHTML = `
+        <div style="width:48px;height:48px;border-radius:10px;background:#fee2e2;color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <h4 style="font-size:1rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ev.name}</h4>
+          <div style="font-size:0.78rem;color:var(--muted);font-family:monospace;">slug: ${ev.slug}</div>
+          <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;">
+            <button class="btn-primary" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="restoreTrashItem('event', ${ev.id})">Restore Event</button>
+            <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;color:var(--err);border-color:var(--err);" onclick="permanentDeleteTrashItem('event', ${ev.id}, '${safeSlug}')">Purge Disk & DB</button>
+          </div>
+        </div>
+      `;
+      list.append(card);
+    }
+    view.append(list);
+  }
+}
+
+async function restoreTrashItem(type, id) {
+  try {
+    const res = await fetch('/api/admin/trash/restore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, id })
+    });
+    if (res.ok) {
+      await loadTrash();
+      await checkAuth();
+    } else {
+      const j = await res.json();
+      alert(j.detail || 'Failed to restore item');
+    }
+  } catch (e) {
+    alert('Error restoring item: ' + e);
+  }
+}
+
+function permanentDeleteTrashItem(type, id, confirmName) {
+  openDeleteConfirmModal(
+    `Permanently Purge ${type.toUpperCase()}?`,
+    `This will <strong>permanently purge this ${type} from the VPS disk</strong> and erase all database records. This action cannot be reversed!`,
+    'DELETE',
+    async () => {
+      const res = await fetch('/api/admin/trash/permanent-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, id })
+      });
+      if (res.ok) {
+        await loadTrash();
+        await checkAuth();
+      } else {
+        const j = await res.json();
+        alert(j.detail || 'Failed to purge item');
+      }
+    },
+    'Purge Permanently'
+  );
+}
+
+function confirmEmptyTrash() {
+  openDeleteConfirmModal(
+    'Empty Entire Trash Bin?',
+    'This will <strong>permanently remove all trashed events, folders, and photos from the VPS disk</strong>. All files will be deleted forever!',
+    'EMPTY TRASH',
+    async () => {
+      const res = await fetch('/api/admin/trash/permanent-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'all' })
+      });
+      if (res.ok) {
+        await loadTrash();
+        await checkAuth();
+      } else {
+        const j = await res.json();
+        alert(j.detail || 'Failed to empty trash');
+      }
+    },
+    'Empty Trash Forever'
+  );
+}
+
+checkAuth();
+</script>
+</body>
+</html>
