@@ -22,6 +22,12 @@ def get_db():
         conn.commit()
     except Exception:
         pass
+    try:
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_event_rel ON photos(event_id, rel_path);")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_rel_unique ON photos(rel_path);")
+        conn.commit()
+    except Exception:
+        pass
     return conn
 
 def init_db():
@@ -113,6 +119,8 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_events_slug ON events(slug);
         CREATE INDEX IF NOT EXISTS idx_albums_event ON albums(event_id);
         CREATE INDEX IF NOT EXISTS idx_photos_event_album ON photos(event_id, album_id);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_event_rel ON photos(event_id, rel_path);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_rel_unique ON photos(rel_path);
         CREATE INDEX IF NOT EXISTS idx_photos_deleted ON photos(is_deleted);
         CREATE INDEX IF NOT EXISTS idx_task_history_id ON task_history(task_id);
         """)

@@ -1,4 +1,5 @@
-import os, sys, threading, subprocess, secrets, shutil, zipfile, io, re, time
+import os, sys, threading, subprocess, secrets, shutil, zipfile, io, re, time, base64
+from typing import Optional
 
 # Limit CPU threads to prevent memory and CPU spikes on VPS
 os.environ["OMP_NUM_THREADS"] = "2"
@@ -502,7 +503,8 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
                     cursor.execute("""
                         INSERT INTO photos (event_id, album_id, filename, rel_path, drive_file_id, file_size_bytes, is_deleted)
                         VALUES (?, ?, ?, ?, ?, ?, 0)
-                        ON CONFLICT(event_id, rel_path) DO UPDATE SET
+                        ON CONFLICT(rel_path) DO UPDATE SET
+                            event_id = excluded.event_id,
                             album_id = excluded.album_id,
                             drive_file_id = COALESCE(excluded.drive_file_id, photos.drive_file_id),
                             file_size_bytes = excluded.file_size_bytes,
@@ -544,7 +546,23 @@ app = FastAPI()
 
 # --- Search & Public Delivery APIs ---
 
-def perform_face_search(selfie: UploadFile, event_slug: str = "wedding"):
+def crop_face_thumb(img, bbox, target_size=(160, 160)):
+    h_img, w_img = img.shape[:2]
+    x1, y1, x2, y2 = [int(v) for v in bbox]
+    bw, bh = max(1, x2 - x1), max(1, y2 - y1)
+    pad = int(max(bw, bh) * 0.3)
+    cx1 = max(0, x1 - pad)
+    cy1 = max(0, y1 - pad)
+    cx2 = min(w_img, x2 + pad)
+    cy2 = min(h_img, y2 + pad)
+    crop = img[cy1:cy2, cx1:cx2]
+    if crop.size == 0:
+        return ""
+    crop_resized = cv2.resize(crop, target_size, interpolation=cv2.INTER_AREA)
+    _, buf = cv2.imencode(".jpg", crop_resized, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
+    return "data:image/jpeg;base64," + base64.b64encode(buf).decode("utf-8")
+
+def perform_face_search(selfie: UploadFile, event_slug: str = "wedding", face_index: Optional[int] = None):
     embs, names, known = get_event_index(event_slug)
     if len(names) == 0:
         raise HTTPException(503, "Photos are still being prepared for this event. Please check back soon.")
@@ -562,7 +580,35 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "wedding"):
         faces = face_app.get(img)
     if not faces:
         raise HTTPException(422, "No face found. Try a clear, front-facing photo in good light.")
-    face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
+
+    # Sort faces left-to-right based on bounding box
+    faces = sorted(faces, key=lambda f: f.bbox[0])
+
+    # If multiple people are detected in the uploaded photo and no specific face was chosen yet:
+    if len(faces) > 1 and face_index is None:
+        detected_list = []
+        for idx, f in enumerate(faces):
+            thumb = crop_face_thumb(img, f.bbox)
+            detected_list.append({
+                "face_index": idx,
+                "thumb": thumb,
+                "box": [int(v) for v in f.bbox]
+            })
+        return {
+            "multiple_faces": True,
+            "total_faces": len(faces),
+            "faces": detected_list
+        }
+
+    # Select the requested face (or default to the largest one)
+    if face_index is not None and 0 <= face_index < len(faces):
+        face = faces[face_index]
+        selected_idx = face_index
+    else:
+        face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
+        selected_idx = faces.index(face)
+
+    selected_face_thumb = crop_face_thumb(img, face.bbox)
     sims = embs @ face.normed_embedding
 
     # Deduplicate matching photos by unique filename, keeping the highest confidence match
@@ -606,17 +652,25 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "wedding"):
             "event_name": info.get("event_name", ""),
             "event_slug": info.get("event_slug", event_slug)
         })
-    return {"count": len(photos_data), "photos": photos_data, "legacy_photos": [p["rel_path"] for p in photos_data]}
+    return {
+        "multiple_faces": False,
+        "count": len(photos_data),
+        "photos": photos_data,
+        "legacy_photos": [p["rel_path"] for p in photos_data],
+        "face_thumb": selected_face_thumb,
+        "total_faces_in_query": len(faces),
+        "selected_face_index": selected_idx
+    }
 
 @app.post("/api/search")
-def default_search(selfie: UploadFile = File(...)):
+def default_search(selfie: UploadFile = File(...), face_index: Optional[int] = Form(None)):
     """Search for matching photos using face recognition."""
-    return perform_face_search(selfie, "wedding")
+    return perform_face_search(selfie, "wedding", face_index=face_index)
 
 @app.post("/api/{slug}/search")
-def event_search(slug: str, selfie: UploadFile = File(...)):
+def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[int] = Form(None)):
     """Search for matching photos using face recognition."""
-    return perform_face_search(selfie, slug)
+    return perform_face_search(selfie, slug, face_index=face_index)
 
 @app.get("/thumb/{name:path}")
 def thumb(name: str):
@@ -1125,9 +1179,11 @@ def sync_event_folders_and_photos(slug: str):
                     cursor.execute("""
                         INSERT INTO photos (event_id, album_id, filename, rel_path, file_size_bytes, is_deleted)
                         VALUES (?, ?, ?, ?, ?, 0)
-                        ON CONFLICT(event_id, rel_path) DO UPDATE SET
+                        ON CONFLICT(rel_path) DO UPDATE SET
+                            event_id = excluded.event_id,
                             album_id = excluded.album_id,
-                            file_size_bytes = excluded.file_size_bytes
+                            file_size_bytes = excluded.file_size_bytes,
+                            is_deleted = 0
                     """, (eid, album_id, f.name, rel, fsize))
 
         # Direct files in event root

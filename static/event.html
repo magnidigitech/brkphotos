@@ -382,6 +382,247 @@
       transform: none;
     }
 
+    /* Saved Profile Badge (Local Storage Cache) */
+    .saved-profile-card {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1.5px solid rgba(255, 255, 255, 0.95);
+      border-radius: 22px;
+      padding: 0.65rem 0.95rem;
+      margin: 0 auto 1.4rem;
+      max-width: 440px;
+      box-shadow: 0 6px 20px -4px rgba(15, 92, 77, 0.12), inset 0 1px 1px #fff;
+      text-align: left;
+      animation: fadeInSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .saved-avatar-wrap {
+      position: relative;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .saved-avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    .saved-avatar-badge {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 16px;
+      height: 16px;
+      background: #10b981;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .saved-profile-info {
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .saved-profile-title {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #0f5c4d;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .saved-profile-subtitle {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #1f2937;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .saved-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn-saved-view {
+      background: linear-gradient(135deg, #0f5c4d 0%, #0a4539 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      padding: 0.45rem 0.85rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-saved-view:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15, 92, 77, 0.35);
+    }
+
+    .btn-saved-clear {
+      background: rgba(0, 0, 0, 0.06);
+      border: none;
+      color: #6b7280;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-saved-clear:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    /* Multi-Face Picker (Group Photos) */
+    .multi-face-container {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1.5px solid rgba(255, 255, 255, 0.95);
+      border-radius: 26px;
+      padding: 1.3rem 1.1rem;
+      margin: 1rem auto 1.4rem;
+      box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.12), inset 0 1px 1px #fff;
+      animation: fadeInSlide 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeInSlide {
+      from { opacity: 0; transform: translateY(10px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .multi-face-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #0f5c4d;
+      background: rgba(16, 185, 129, 0.15);
+      padding: 0.25rem 0.65rem;
+      border-radius: 99px;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .multi-face-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 0.3rem;
+    }
+
+    .multi-face-subtitle {
+      font-size: 0.88rem;
+      color: #4b5563;
+      margin: 0 0 1.1rem;
+    }
+
+    .multi-face-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.85rem;
+      margin-bottom: 1.1rem;
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .multi-face-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(0, 0, 0, 0.08);
+      border-radius: 18px;
+      padding: 0.5rem;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .multi-face-item:hover {
+      transform: translateY(-3px) scale(1.05);
+      border-color: #0f5c4d;
+      box-shadow: 0 8px 24px rgba(15, 92, 77, 0.22);
+      background: #ffffff;
+    }
+
+    .multi-face-item.active {
+      border-color: #0f5c4d;
+      box-shadow: 0 0 0 3px rgba(15, 92, 77, 0.25);
+      background: #ffffff;
+    }
+
+    .multi-face-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 14px;
+      object-fit: cover;
+      display: block;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .multi-face-btn-label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .btn-cancel-picker {
+      background: none;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      color: #4b5563;
+      border-radius: 12px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-cancel-picker:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: #111827;
+    }
+
     .search-status-text {
       font-size: 0.95rem;
       font-weight: 600;
@@ -1164,11 +1405,44 @@
         Take a selfie or upload a photo to find all pictures taken with sir
       </p>
 
+      <!-- Saved Profile Badge (Local Storage Quick Access) -->
+      <div id="savedProfileBadge" class="saved-profile-card" hidden>
+        <div class="saved-avatar-wrap" id="savedAvatarClickWrap" title="Click to view your saved photos">
+          <img id="savedAvatarImg" class="saved-avatar-img" src="" alt="Saved Face">
+          <span class="saved-avatar-badge">✓</span>
+        </div>
+        <div class="saved-profile-info" id="savedInfoClickWrap" title="Click to view your saved photos">
+          <div class="saved-profile-title">Welcome back!</div>
+          <div class="saved-profile-subtitle" id="savedPhotosCountText">View your photos with BRK Sir</div>
+        </div>
+        <div class="saved-actions-group">
+          <button type="button" class="btn-saved-view" id="viewSavedPhotosBtn" title="Show your matching photos">
+            <span>View Photos</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button type="button" class="btn-saved-clear" id="clearSavedBtn" title="Clear saved photo">✕</button>
+        </div>
+      </div>
+
+      <!-- Multi-Face Selection Box (Appears when group photo is uploaded) -->
+      <div id="multiFacePicker" class="multi-face-container" hidden>
+        <div class="multi-face-header">
+          <div class="multi-face-badge">👥 Multiple People Detected</div>
+          <h3 class="multi-face-title">Who are you looking for?</h3>
+          <p class="multi-face-subtitle">Tap on your face below to find all photos with BRK Sir:</p>
+        </div>
+        <div id="multiFaceList" class="multi-face-grid"></div>
+        <button type="button" id="cancelMultiFaceBtn" class="btn-cancel-picker">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span>Choose another photo</span>
+        </button>
+      </div>
+
       <!-- Hidden native inputs -->
       <input type="file" id="selfieCameraInput" accept="image/*" capture="user" style="display:none;">
       <input type="file" id="selfieFileInput" accept="image/*" style="display:none;">
 
-      <div class="finder-actions-row">
+      <div class="finder-actions-row" id="finderActionsRow">
         <button class="btn-find-photos" id="cameraBtn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
             stroke-linecap="round" stroke-linejoin="round">
@@ -2139,20 +2413,134 @@
       }
     }
 
-    async function processAndSearchSelfie(file) {
+    let currentSearchFile = null;
+
+    // --- Local Storage Saved Photos Cache ---
+    function checkSavedProfile() {
+      const badge = $('savedProfileBadge');
+      if (!badge) return;
+
+      const savedThumb = localStorage.getItem('brk_saved_face_thumb');
+      const savedPhotosJson = localStorage.getItem('brk_saved_photos');
+      const savedCount = parseInt(localStorage.getItem('brk_saved_count') || '0', 10);
+
+      if (savedThumb && savedPhotosJson && savedCount > 0) {
+        try {
+          const photos = JSON.parse(savedPhotosJson);
+          if (Array.isArray(photos) && photos.length > 0) {
+            const avatarImg = $('savedAvatarImg');
+            if (avatarImg) avatarImg.src = savedThumb;
+            const countText = $('savedPhotosCountText');
+            if (countText) {
+              countText.textContent = `Found ${savedCount} photo${savedCount === 1 ? '' : 's'} with BRK Sir`;
+            }
+            badge.hidden = false;
+            return;
+          }
+        } catch (e) {
+          console.warn('Error reading saved photos from localStorage:', e);
+        }
+      }
+      badge.hidden = true;
+    }
+
+    function viewSavedPhotos(e) {
+      if (e) e.preventDefault();
+      const savedPhotosJson = localStorage.getItem('brk_saved_photos');
+      const savedCount = parseInt(localStorage.getItem('brk_saved_count') || '0', 10);
+      if (!savedPhotosJson) return;
+
+      try {
+        const photos = JSON.parse(savedPhotosJson);
+        if (Array.isArray(photos) && photos.length > 0) {
+          const statusEl = $('searchStatus');
+          if (statusEl) {
+            statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ Restored ${savedCount} saved photo${savedCount === 1 ? '' : 's'} with BRK Sir!</span>`;
+          }
+          $('photosSectionTitle').textContent = 'Photos with Bhashyam Ramakrishna Sir';
+          $('photosSectionSubtitle').textContent = savedCount === 1 ? '1 photograph found featuring your face' : `${savedCount} unique photographs found featuring your face`;
+          renderPhotos(photos);
+          $('photosSection').hidden = false;
+          $('photosSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } catch (err) {
+        console.error('Error rendering saved photos from storage:', err);
+      }
+    }
+
+    function clearSavedProfile(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      localStorage.removeItem('brk_saved_face_thumb');
+      localStorage.removeItem('brk_saved_photos');
+      localStorage.removeItem('brk_saved_count');
+      localStorage.removeItem('brk_saved_time');
+      const badge = $('savedProfileBadge');
+      if (badge) badge.hidden = true;
+    }
+
+    // --- Multi-Face Detection & Group Photo Handling ---
+    function showMultiFacePicker(faces) {
+      const picker = $('multiFacePicker');
+      const list = $('multiFaceList');
+      const actionsRow = $('finderActionsRow');
+      if (!picker || !list) return;
+
+      list.replaceChildren();
+      faces.forEach((f, idx) => {
+        const item = document.createElement('div');
+        item.className = 'multi-face-item';
+        item.title = `Search photos for Person ${idx + 1}`;
+        item.innerHTML = `
+          <img src="${f.thumb || ''}" class="multi-face-avatar" alt="Person ${idx + 1}">
+          <span class="multi-face-btn-label">Person ${idx + 1}</span>
+        `;
+        item.addEventListener('click', () => {
+          // Highlight active choice
+          picker.querySelectorAll('.multi-face-item').forEach(el => el.classList.remove('active'));
+          item.classList.add('active');
+          if (currentSearchFile) {
+            processAndSearchSelfie(currentSearchFile, f.face_index);
+          }
+        });
+        list.appendChild(item);
+      });
+
+      if (actionsRow) actionsRow.hidden = true;
+      picker.hidden = false;
+      picker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideMultiFacePicker() {
+      const picker = $('multiFacePicker');
+      const actionsRow = $('finderActionsRow');
+      if (picker) picker.hidden = true;
+      if (actionsRow) actionsRow.hidden = false;
+    }
+
+    async function processAndSearchSelfie(file, faceIndex = null) {
       if (!file) return;
+      currentSearchFile = file;
 
       const statusEl = $('searchStatus');
       if (statusEl) {
+        const text = faceIndex !== null
+          ? 'Searching photographs for selected person with BRK Sir...'
+          : 'Analyzing faces with AI and searching photographs with BRK Sir...';
         statusEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px;color:var(--accent,#0f5c4d);font-weight:600;">
-      <svg class="icon-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-      Scanning face with AI and searching photographs with BRK Sir...
-    </span>`;
+          <svg class="icon-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          ${text}
+        </span>`;
         statusEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
 
       const fd = new FormData();
       fd.append('selfie', file);
+      if (faceIndex !== null) {
+        fd.append('face_index', faceIndex);
+      }
 
       try {
         let res = await fetch('/api/search', { method: 'POST', body: fd });
@@ -2162,7 +2550,32 @@
         const j = await res.json();
         if (!res.ok) throw new Error(j.detail || 'Search could not be completed.');
 
+        // Check if multiple people were detected in group photo
+        if (j.multiple_faces === true && j.faces && j.faces.length > 1) {
+          if (statusEl) {
+            statusEl.innerHTML = `<span style="color:#0f5c4d;font-weight:700;">👥 Found ${j.total_faces} people in this photo. Select who to find:</span>`;
+          }
+          showMultiFacePicker(j.faces);
+          return;
+        }
+
+        // Single face or face index search completed
+        hideMultiFacePicker();
+
         if (j.photos && j.photos.length > 0) {
+          // Save result & face thumbnail in localStorage for 1-click return access
+          try {
+            if (j.face_thumb) {
+              localStorage.setItem('brk_saved_face_thumb', j.face_thumb);
+            }
+            localStorage.setItem('brk_saved_photos', JSON.stringify(j.photos));
+            localStorage.setItem('brk_saved_count', j.count);
+            localStorage.setItem('brk_saved_time', new Date().toISOString());
+            checkSavedProfile();
+          } catch (e) {
+            console.warn('LocalStorage save failed:', e);
+          }
+
           if (statusEl) {
             statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ Found ${j.count} photo${j.count === 1 ? '' : 's'} with BRK Sir!</span>`;
           }
@@ -2173,7 +2586,7 @@
           $('photosSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
           if (statusEl) {
-            statusEl.innerHTML = `<span style="color:#d97706;font-weight:600;">No matching photos found with your face. Please try another clear selfie with good lighting.</span>`;
+            statusEl.innerHTML = `<span style="color:#d97706;font-weight:600;">No matching photos found with your face. Please try another clear photo with good lighting.</span>`;
           }
           $('photosSection').hidden = true;
         }
@@ -2204,6 +2617,22 @@
     $('cancelWebcamBtn')?.addEventListener('click', stopWebcam);
     $('closeWebcamModalBtn')?.addEventListener('click', stopWebcam);
 
+    // Saved Profile Listeners
+    $('viewSavedPhotosBtn')?.addEventListener('click', viewSavedPhotos);
+    $('savedAvatarClickWrap')?.addEventListener('click', viewSavedPhotos);
+    $('savedInfoClickWrap')?.addEventListener('click', viewSavedPhotos);
+    $('clearSavedBtn')?.addEventListener('click', clearSavedProfile);
+
+    // Multi-Face Cancel / Reset
+    $('cancelMultiFaceBtn')?.addEventListener('click', () => {
+      hideMultiFacePicker();
+      const statusEl = $('searchStatus');
+      if (statusEl) statusEl.innerHTML = '';
+      $('selfieFileInput').click();
+    });
+
+    // Check for saved profile on startup
+    checkSavedProfile();
     loadEvent();
   </script>
 </body>
