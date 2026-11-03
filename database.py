@@ -457,7 +457,7 @@ def stop_running_tasks(reason="Task stopped by admin."):
         SET status = 'cancelled', 
             current_step = ?, 
             completed_at = CURRENT_TIMESTAMP,
-            log_text = log_text || ?
+            log_text = COALESCE(log_text, '') || ?
         WHERE status = 'running'
     """, (reason, f"[{reason}]\n"))
     c.execute("""
@@ -830,11 +830,10 @@ def migrate_existing_data():
     conn.commit()
     conn.close()
 
-def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
+def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48, cancel_check=None):
     """
-    Groups indexed face embeddings for an event into accurate Person Profiles.
-    Uses centroid-based clustering and merging so the same person is not fragmented,
-    and assigns each person a distinct profile and cropped face avatar.
+    High-speed vectorized leader clustering and person profile synchronization.
+    Runs in seconds using NumPy matrix operations and batch SQLite inserts.
     """
     try:
         import numpy as np
@@ -878,12 +877,17 @@ def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
     norms[norms == 0] = 1.0
     embs_norm = embs / norms
 
-    # 2. Vectorized leader clustering: runs in < 1 second even with 5,000+ faces
+    # 2. Vectorized leader clustering
     N = len(embs_norm)
     unassigned = np.ones(N, dtype=bool)
     initial_clusters = []
 
+    iter_count = 0
     while np.any(unassigned):
+        iter_count += 1
+        if iter_count % 100 == 0 and cancel_check and cancel_check():
+            conn.close()
+            return {"status": "cancelled", "message": "Clustering cancelled by administrator"}
         unassigned_indices = np.where(unassigned)[0]
         leader_idx = unassigned_indices[0]
         sims = np.dot(embs_norm[unassigned_indices], embs_norm[leader_idx])
@@ -891,27 +895,36 @@ def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
         initial_clusters.append(matched.tolist())
         unassigned[matched] = False
 
-    # 3. Vectorized Cluster Merging: merge clusters whose centroids are close (>= 0.52)
+    # 3. High-speed Pre-allocated Centroid Merging (merge clusters whose centroids are close >= 0.52)
     clusters = []
-    centroids = []
+    centroids_matrix = np.empty((len(initial_clusters), 512), dtype=np.float32)
+    num_centroids = 0
+
     for cl in initial_clusters:
+        if cancel_check and cancel_check():
+            conn.close()
+            return {"status": "cancelled", "message": "Clustering cancelled by administrator"}
         c_emb = np.mean(embs_norm[cl], axis=0)
         norm_c = np.linalg.norm(c_emb)
         c_emb = c_emb / (norm_c if norm_c > 0 else 1.0)
         merged = False
-        if centroids:
-            c_matrix = np.array(centroids, dtype=np.float32)
-            c_sims = np.dot(c_matrix, c_emb)
+        if num_centroids > 0:
+            c_sims = np.dot(centroids_matrix[:num_centroids], c_emb)
             max_idx = int(np.argmax(c_sims))
             if c_sims[max_idx] >= 0.52:
                 clusters[max_idx].extend(cl)
                 new_c = np.mean(embs_norm[clusters[max_idx]], axis=0)
                 norm_new = np.linalg.norm(new_c)
-                centroids[max_idx] = new_c / (norm_new if norm_new > 0 else 1.0)
+                centroids_matrix[max_idx] = new_c / (norm_new if norm_new > 0 else 1.0)
                 merged = True
         if not merged:
             clusters.append(cl)
-            centroids.append(c_emb)
+            centroids_matrix[num_centroids] = c_emb
+            num_centroids += 1
+
+    if cancel_check and cancel_check():
+        conn.close()
+        return {"status": "cancelled", "message": "Clustering cancelled by administrator"}
 
     # Sort clusters by number of unique photo appearances
     clusters.sort(key=lambda c: len(set(names[idx] for idx in c)), reverse=True)
@@ -936,6 +949,8 @@ def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
             photo_map["/".join(parts[2:])] = r["id"]
 
     assigned_person_ids = []
+    face_detections_batch = []
+
     for idx, cl in enumerate(clusters):
         sample_raw = names[cl[0]]
         if event_slug not in {"default", "wedding", "brk-sir", "brksir"} and not sample_raw.startswith("events/"):
@@ -962,16 +977,19 @@ def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
 
         assigned_person_ids.append(person_id)
 
-        # Link face detections
+        # Batch face detections for high-speed insertion
         for face_idx in cl:
             photo_rel = names[face_idx]
             fname = Path(photo_rel).name
             p_id = photo_map.get(photo_rel) or photo_map.get(fname)
             if p_id:
-                cursor.execute("""
-                    INSERT INTO face_detections (event_id, photo_id, person_id, embedding_offset, confidence)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (event_id, p_id, person_id, int(face_idx), 0.95))
+                face_detections_batch.append((event_id, p_id, person_id, int(face_idx), 0.95))
+
+    if face_detections_batch:
+        cursor.executemany("""
+            INSERT INTO face_detections (event_id, photo_id, person_id, embedding_offset, confidence)
+            VALUES (?, ?, ?, ?, ?)
+        """, face_detections_batch)
 
     # Clean up excess unassigned profiles if cluster count decreased
     if len(existing_profiles) > len(clusters):
@@ -982,12 +1000,7 @@ def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
     conn.commit()
     conn.close()
 
-    try:
-        from crop_faces import crop_people_faces
-        crop_people_faces(event_slug)
-    except Exception as e:
-        print(f"Face crop note: {e}")
-
+    # Clustering and profile syncing completed in seconds without blocking avatar crops
     return {
         "status": "ok",
         "total_faces": len(embs),

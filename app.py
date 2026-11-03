@@ -455,10 +455,10 @@ def run_reclustering_task(event_slug="brk-sir", threshold=0.48, task_id=None):
         append_log(f"[{now_ts}] Clustering in progress: computing centroid merges and face-to-person relationships...")
         update_task_progress(task_id, progress_pct=65, current_step="Merging cluster centroids and syncing database...", log_line="Clustering in progress...")
 
-        res = cluster_and_sync_people(event_slug, threshold=threshold)
+        res = cluster_and_sync_people(event_slug, threshold=threshold, cancel_check=lambda: task_cancel_event.is_set())
 
-        if task_cancel_event.is_set():
-            append_log("Reclustering cancelled by administrator.")
+        if task_cancel_event.is_set() or res.get("status") == "cancelled":
+            append_log(f"[{now_ist().strftime('%H:%M:%S')}] Reclustering cancelled by administrator.")
             with task_lock:
                 current_task["status"] = "cancelled"
                 current_task["message"] = "Task stopped by admin."
@@ -2813,7 +2813,7 @@ def admin_stop_task(token: str = Depends(get_auth_token)):
     if active_process and active_process.poll() is None:
         try:
             active_process.terminate()
-            time.sleep(0.5)
+            time.sleep(0.3)
             if active_process.poll() is None:
                 active_process.kill()
         except Exception:
@@ -2822,9 +2822,14 @@ def admin_stop_task(token: str = Depends(get_auth_token)):
     with task_lock:
         current_task["status"] = "cancelled"
         current_task["message"] = "Task stopped by admin."
-    
-    stop_running_tasks("Task stopped by administrator.")
-    append_log("--- Active background task was stopped by administrator ---")
+        current_task["current_step"] = "Task stopped by admin."
+
+    try:
+        stop_running_tasks("Task stopped by administrator.")
+    except Exception as e:
+        print(f"Note on stop_running_tasks: {e}")
+
+    append_log(f"[{now_ist().strftime('%H:%M:%S')}] Active background task was stopped by administrator.")
     trigger_queue_worker()
     return {"status": "stopped", "message": "Background task successfully terminated."}
 

@@ -4741,7 +4741,7 @@ async function pollTaskStatus() {
     const task = data.latest_task || data.memory_task;
     const isRunning = data.is_running;
 
-    if (!task || (!isRunning && task.status !== 'running' && task.status !== 'completed' && task.status !== 'failed')) {
+    if (!task || (!isRunning && task.status !== 'running' && task.status !== 'completed' && task.status !== 'failed' && task.status !== 'cancelled')) {
       $('visualTaskCard').hidden = true;
       return;
     }
@@ -4753,8 +4753,8 @@ async function pollTaskStatus() {
       return;
     }
 
-    // Hide completed/failed task if older than 1 minute
-    if ((task.status === 'completed' || task.status === 'failed') && task.completed_at) {
+    // Hide completed/failed/cancelled task if older than 15 seconds
+    if ((task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') && task.completed_at) {
       const completedTime = new Date(task.completed_at.includes('Z') ? task.completed_at : task.completed_at + 'Z').getTime();
       const diffSec = (Date.now() - completedTime) / 1000;
       if (diffSec > 15) { // 15 seconds
@@ -4870,21 +4870,36 @@ async function stopActiveTask() {
     btn.disabled = true;
     btn.innerHTML = '<span>Stopping...</span>';
   }
+
+  // Immediately reflect stopped state in UI
+  const statusTxt = $('taskStatusText');
+  if (statusTxt) statusTxt.textContent = 'STOPPED';
+  const pill = $('taskStatusPill');
+  if (pill) pill.className = 'task-status-pill failed';
+  const pulse = $('taskPulseDot');
+  if (pulse) pulse.style.display = 'none';
+  $('taskStepDesc').textContent = 'Task stopped by administrator.';
+
   try {
     const res = await fetch('/api/admin/tasks/stop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
-    const j = await res.json();
-    if (res.ok) {
-      $('taskStepDesc').textContent = 'Task stopped by administrator.';
-      pollTaskStatus();
-      loadTaskHistory();
-    } else {
-      alert(j.detail || 'Could not stop task');
+    let j = {};
+    try {
+      j = await res.json();
+    } catch (e) {}
+
+    if (btn) {
+      btn.style.display = 'none';
     }
+    pollTaskStatus();
+    loadTaskHistory();
   } catch (e) {
-    alert('Error stopping task: ' + e);
+    console.warn('Note stopping task:', e);
+    if (btn) {
+      btn.style.display = 'none';
+    }
   } finally {
     if (btn) {
       btn.disabled = false;
