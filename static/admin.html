@@ -1197,6 +1197,284 @@
     background: rgba(255,255,255,0.1);
   }
 
+  /* --- Mobile Responsive & Hamburger Navigation Architecture --- */
+  .mobile-hamburger-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #ffffff;
+    color: var(--ink);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-hamburger-btn:active {
+    transform: scale(0.95);
+    background: #f3f4f6;
+  }
+  .mobile-sidebar-close {
+    display: none;
+  }
+  .header-left-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .data-table, .tasks-table {
+    min-width: 620px;
+  }
+
+  /* Tablet & Mobile Screens (<= 992px) */
+  @media (max-width: 992px) {
+    .mobile-hamburger-btn {
+      display: inline-flex;
+    }
+    .mobile-sidebar-close {
+      display: inline-flex;
+    }
+    .sidebar-backdrop {
+      display: block;
+    }
+    .main-sidebar {
+      position: fixed !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      width: 280px !important;
+      max-width: 86vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      z-index: 1000 !important;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.33, 1, 0.68, 1), box-shadow 0.28s ease;
+      box-shadow: none;
+    }
+    .main-sidebar.mobile-open {
+      transform: translateX(0) !important;
+      box-shadow: 10px 0 35px rgba(0, 0, 0, 0.3) !important;
+    }
+    .workspace-canvas {
+      width: 100%;
+      min-width: 0;
+      overflow-x: hidden;
+    }
+    .top-header {
+      padding: 0.75rem 1.25rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .welcome-msg {
+      font-size: 1.05rem;
+    }
+    .stage-inner {
+      padding: 1.25rem 1.25rem 3.5rem;
+    }
+  }
+
+  /* Standard Mobile Viewports (<= 768px) */
+  @media (max-width: 768px) {
+    .top-header {
+      padding: 0.65rem 0.85rem;
+    }
+    .welcome-msg {
+      font-size: 0.95rem;
+    }
+    .top-tools {
+      gap: 0.45rem;
+    }
+    .top-tools .btn-outline {
+      padding: 0.4rem 0.65rem;
+      font-size: 0.78rem;
+    }
+    .stage-inner {
+      padding: 1rem 0.75rem 3.5rem;
+    }
+    .views-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.65rem;
+      margin-bottom: 1.25rem;
+    }
+    .views-bar-title {
+      font-size: 1.05rem;
+    }
+    .grid-metrics {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .metric-box {
+      padding: 1rem 0.85rem;
+      border-radius: 12px;
+    }
+    .metric-value {
+      font-size: 1.45rem;
+    }
+    .metric-label {
+      font-size: 0.68rem;
+    }
+    .metric-footer {
+      font-size: 0.72rem;
+    }
+    .month-accordion-header {
+      padding: 0.9rem 1rem;
+    }
+    .albums-grid {
+      grid-template-columns: 1fr;
+      gap: 0.85rem;
+    }
+    .album-search-bar-wrap {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+    .album-search-input-box {
+      max-width: 100%;
+    }
+    .album-search-results-box {
+      grid-template-columns: 1fr;
+      padding: 1rem;
+    }
+    .person-card {
+      padding: 0.85rem 1rem;
+      gap: 0.75rem;
+    }
+    .person-thumb {
+      width: 50px;
+      height: 50px;
+    }
+    .people-grid {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.75rem;
+    }
+    .photo-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.65rem;
+      padding: 0.75rem;
+    }
+    .photo-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 0.85rem;
+    }
+    .photo-item {
+      border-radius: 6px;
+    }
+    .floating-bulk-pill {
+      bottom: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      width: calc(100% - 20px);
+      max-width: 460px;
+      padding: 8px 10px;
+      gap: 6px;
+      border-radius: 16px;
+    }
+    .pill-select {
+      max-width: 125px;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+    }
+    .pill-btn {
+      font-size: 0.75rem;
+      padding: 5px 9px;
+    }
+    .modal-backdrop {
+      padding: 0.75rem;
+      align-items: center;
+    }
+    .modal-card {
+      padding: 1.35rem 1.15rem;
+      border-radius: 14px;
+      max-width: 95vw;
+      max-height: 90vh;
+      max-height: 90dvh;
+      overflow-y: auto;
+    }
+    .modal-card [style*="grid-template-columns:1fr 1fr"],
+    .modal-card [style*="grid-template-columns: 1fr 1fr"] {
+      grid-template-columns: 1fr !important;
+      gap: 0.65rem !important;
+    }
+    .visual-task-card {
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
+      margin-bottom: 1.25rem;
+    }
+    .task-card-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .card-block-header {
+      padding: 1rem 1rem 0.75rem;
+    }
+    .card-block-body {
+      padding: 1rem;
+    }
+    .login-card {
+      padding: 1.75rem 1.25rem;
+      border-radius: 14px;
+      max-width: 92vw;
+    }
+  }
+
+  /* Extra Small Mobile Devices (<= 480px) */
+  @media (max-width: 480px) {
+    .grid-metrics {
+      grid-template-columns: 1fr;
+    }
+    .photo-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    .top-tools .btn-text {
+      display: none;
+    }
+    .top-tools .btn-outline {
+      padding: 0.45rem 0.55rem;
+    }
+    .welcome-msg {
+      font-size: 0.9rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 170px;
+    }
+    .floating-bulk-pill {
+      border-radius: 14px;
+      padding: 6px 8px;
+    }
+  }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -1225,8 +1503,11 @@
 <!-- Main Application Shell (Single Light Sidebar Architecture) -->
 <div id="appShell" style="display:flex;width:100%;" hidden>
   
+  <!-- Backdrop for Mobile Sidebar -->
+  <div id="sidebarBackdrop" class="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
+
   <!-- Unified Professional Light Sidebar -->
-  <aside class="main-sidebar">
+  <aside class="main-sidebar" id="mainSidebar">
     <div class="sidebar-header">
       <div class="brand-group">
         <div class="brand-logo-box">
@@ -1238,9 +1519,14 @@
         <span class="brand-title">BRK Photos</span>
         <span class="admin-badge">Admin</span>
       </div>
-      <button class="btn-icon-sub" onclick="openNewAlbumModal()" title="Create Album">
-        <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button class="btn-icon-sub" onclick="openNewAlbumModal()" title="Create Album">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <button class="btn-icon-sub mobile-sidebar-close" id="mobileSidebarCloseBtn" onclick="closeMobileSidebar()" title="Close menu" aria-label="Close menu">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
     </div>
 
     <!-- PLATFORM SECTION -->
@@ -1338,22 +1624,31 @@
   <!-- Main Workspace Area -->
   <main class="workspace-canvas">
     
-    <!-- Top Header Bar -->
+    <!-- Top Header Bar with Mobile Hamburger -->
     <header class="top-header">
-      <div class="welcome-msg" id="topGreeting">BRK Photos Admin Console</div>
+      <div class="header-left-group">
+        <button type="button" class="mobile-hamburger-btn" id="mobileHamburgerBtn" onclick="toggleMobileSidebar()" aria-label="Open navigation menu" title="Open navigation menu">
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <div class="welcome-msg" id="topGreeting">BRK Photos Admin Console</div>
+      </div>
 
       <div class="top-tools">
         <a id="btnViewActiveEvent" href="/" target="_blank" class="btn-outline">
           <svg class="icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          <span>Live Gallery</span>
+          <span class="btn-text">Live Gallery</span>
         </a>
         <button id="btnFastIndexActive" class="btn-outline" title="Trigger Facial Indexer">
           <svg class="icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          <span>Index</span>
+          <span class="btn-text">Index</span>
         </button>
         <button id="logoutBtn" class="btn-outline" style="color:var(--err);">
           <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span>Sign Out</span>
+          <span class="btn-text">Sign Out</span>
         </button>
       </div>
     </header>
@@ -2243,8 +2538,51 @@ let lastSidebarAutoSyncTime = 0;
 let lastQueueRefreshTime = 0;
 let hasActiveQueueTasks = false;
 
+// Mobile Sidebar Off-Canvas Navigation Controls
+function openMobileSidebar() {
+  const sb = $('mainSidebar');
+  const bd = $('sidebarBackdrop');
+  if (sb) sb.classList.add('mobile-open');
+  if (bd) bd.classList.add('active');
+  if (window.innerWidth <= 992) {
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeMobileSidebar() {
+  const sb = $('mainSidebar');
+  const bd = $('sidebarBackdrop');
+  if (sb) sb.classList.remove('mobile-open');
+  if (bd) bd.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function toggleMobileSidebar() {
+  const sb = $('mainSidebar');
+  if (sb && sb.classList.contains('mobile-open')) {
+    closeMobileSidebar();
+  } else {
+    openMobileSidebar();
+  }
+}
+
+// Close sidebar on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeMobileSidebar();
+  }
+});
+
+// Close sidebar when window is resized past mobile breakpoint
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 992) {
+    closeMobileSidebar();
+  }
+});
+
 // Navigation Tabs Handling with State Persistence
 function switchTab(tabName) {
+  closeMobileSidebar();
   // Sync Sidebar active states (photos tab maps to albums in sidebar)
   const sidebarTab = tabName === 'photos' ? 'albums' : tabName;
   document.querySelectorAll('.nav-item').forEach(item => {
@@ -2277,6 +2615,7 @@ function switchTab(tabName) {
 }
 
 function openAllPhotos() {
+  closeMobileSidebar();
   activeFilterAlbumId = '';
   const filterSelect = $('filterAlbumSelect');
   if (filterSelect) filterSelect.value = '';
@@ -2286,13 +2625,17 @@ function openAllPhotos() {
 
 document.querySelectorAll('.sidebar-nav-list > .nav-item').forEach(el => {
   el.addEventListener('click', () => {
+    closeMobileSidebar();
     const tab = el.getAttribute('data-tab');
     if (tab === 'photos') activeFilterAlbumId = ''; // Reset album filter when clicking Photo Library directly
     switchTab(tab);
   });
 });
 
-function openModal(id) { $(id).hidden = false; }
+function openModal(id) {
+  closeMobileSidebar();
+  $(id).hidden = false;
+}
 function closeModal(id) { $(id).hidden = true; }
 
 function formatDateDDMMYYYY(d) {
@@ -2687,6 +3030,7 @@ function renderSidebarSubfolders() {
         <span class="subfolder-badge">${a.photo_count || 0}</span>
       `;
       li.addEventListener('click', () => {
+        closeMobileSidebar();
         openAlbumPhotos(a.id, a.name);
       });
       tree.append(li);
@@ -2700,7 +3044,10 @@ function renderSidebarSubfolders() {
     <svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     <span>New Folder</span>
   `;
-  addLink.addEventListener('click', openNewAlbumModal);
+  addLink.addEventListener('click', () => {
+    closeMobileSidebar();
+    openNewAlbumModal();
+  });
   tree.append(addLink);
 
   const albumsCollapsed = localStorage.getItem('admin_albums_tree_collapsed') === 'true';
@@ -2725,6 +3072,7 @@ function renderUploadTargets() {
       </div>
     `;
     li.addEventListener('click', () => {
+      closeMobileSidebar();
       selectUploadTargetAlbum(a.slug, a.name);
       switchTab('upload');
     });
