@@ -1537,6 +1537,8 @@ let currentEvent = null;
 let selectedPhotoIds = new Set();
 let activeFilterAlbumId = '';
 let activeUploadAlbumSlug = '';
+let lastHistoryRefreshTime = 0;
+let lastSidebarAutoSyncTime = 0;
 
 // Navigation Tabs Handling with State Persistence
 function switchTab(tabName) {
@@ -2598,6 +2600,29 @@ async function pollTaskStatus() {
       }
     }
 
+    // Auto-update task history table, log viewer console, and sidebar albums live without manual refresh
+    const nowMs = Date.now();
+    if (isRunning || status === 'running') {
+      if (nowMs - lastHistoryRefreshTime > 3000) {
+        lastHistoryRefreshTime = nowMs;
+        loadTaskHistory(true);
+      }
+      const curViewingId = $('taskLogViewerId')?.textContent?.trim();
+      if (curViewingId && curViewingId !== '--') {
+        viewTaskLogs(curViewingId, true);
+      }
+      if (nowMs - lastSidebarAutoSyncTime > 15000) {
+        lastSidebarAutoSyncTime = nowMs;
+        loadAlbums();
+      }
+    } else {
+      if (nowMs - lastHistoryRefreshTime > 12000) {
+        lastHistoryRefreshTime = nowMs;
+        loadTaskHistory(true);
+        loadAlbums();
+      }
+    }
+
     // Polling rate and auto-close timer on completion
     clearTimeout(pollTimer);
     if (isRunning || status === 'running') {
@@ -2648,7 +2673,7 @@ async function stopActiveTask() {
   }
 }
 
-async function loadTaskHistory() {
+async function loadTaskHistory(isLiveUpdate = false) {
   try {
     const res = await fetch('/api/admin/tasks/history');
     if (!res.ok) return;
@@ -2691,7 +2716,7 @@ async function loadTaskHistory() {
           ${t.source_url ? `<a href="${t.source_url}" target="_blank" style="color:var(--primary);text-decoration:none;font-family:monospace;font-size:0.78rem;">${driveUrl} ↗</a>` : '<span style="color:var(--muted);font-size:0.78rem;">Manual / Direct</span>'}
         </td>
         <td style="padding:0.75rem 1rem;">
-          <div style="font-weight:600;">${t.processed_files || 0} files</div>
+          <div style="font-weight:600;">${t.processed_files || 0} / ${t.total_files || '?'} files</div>
           <div style="font-size:0.75rem;color:var(--emerald);font-weight:600;">${savedMb}</div>
         </td>
         <td style="padding:0.75rem 1rem;">
@@ -2707,7 +2732,7 @@ async function loadTaskHistory() {
       tbody.append(tr);
     }
 
-    if (tasks.length > 0 && (!$('taskLogViewerId').textContent || $('taskLogViewerId').textContent === '--')) {
+    if (!isLiveUpdate && tasks.length > 0 && (!$('taskLogViewerId').textContent || $('taskLogViewerId').textContent === '--')) {
       viewTaskLogs(tasks[0].task_id);
     }
   } catch (e) {
@@ -2715,10 +2740,12 @@ async function loadTaskHistory() {
   }
 }
 
-async function viewTaskLogs(taskId) {
+async function viewTaskLogs(taskId, isLiveUpdate = false) {
   try {
     $('taskLogViewerId').textContent = taskId;
-    $('taskLogsConsole').textContent = 'Loading logs for task ' + taskId + '...';
+    if (!isLiveUpdate) {
+      $('taskLogsConsole').textContent = 'Loading logs for task ' + taskId + '...';
+    }
     const res = await fetch(`/api/admin/tasks/${taskId}/logs`);
     if (!res.ok) return;
     const data = await res.json();
@@ -2727,11 +2754,17 @@ async function viewTaskLogs(taskId) {
 
     const evDisp = ['wedding', 'default', 'brk-sir', 'brksir'].includes(t.event_slug) ? 'BRK Sir' : t.event_slug;
     $('taskLogViewerTitle').textContent = `${t.task_type === 'gdrive_ingest' ? 'Google Drive Ingest' : 'AI Facial Index'} (${evDisp} > ${t.target_folder || 'All'})`;
-    $('taskLogViewerMeta').textContent = `Started: ${t.started_at} | Saved: ${(t.storage_saved_mb || 0).toFixed(1)} MB | Status: ${t.status.toUpperCase()}`;
+    $('taskLogViewerMeta').textContent = `Started: ${t.started_at} | Processed: ${t.processed_files || 0} / ${t.total_files || '?'} files | Saved: ${(t.storage_saved_mb || 0).toFixed(1)} MB | Status: ${t.status.toUpperCase()}`;
 
     const logs = t.log_text ? t.log_text.trim() : 'No log entries recorded for this task.';
-    $('taskLogsConsole').textContent = logs;
-    $('taskLogsConsole').scrollTop = $('taskLogsConsole').scrollHeight;
+    const prevLogs = $('taskLogsConsole').textContent;
+    if (logs !== prevLogs) {
+      const isScrolledToBottom = ($('taskLogsConsole').scrollHeight - $('taskLogsConsole').clientHeight) <= ($('taskLogsConsole').scrollTop + 80);
+      $('taskLogsConsole').textContent = logs;
+      if (isScrolledToBottom || !isLiveUpdate) {
+        $('taskLogsConsole').scrollTop = $('taskLogsConsole').scrollHeight;
+      }
+    }
   } catch (e) {
     console.error('Error viewing task logs:', e);
   }

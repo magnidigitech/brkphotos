@@ -171,8 +171,9 @@ def update_task_progress(task_id: str, progress_pct: int = None, current_step: s
         if status in {"completed", "failed", "cancelled"}:
             fields.append("completed_at = CURRENT_TIMESTAMP")
     if log_line:
-        fields.append("log_text = log_text || ?")
-        vals.append(f"[{log_line}]\n")
+        clean_line = log_line if log_line.strip().startswith("[") else f"[{log_line.strip()}]"
+        fields.append("log_text = COALESCE(log_text, '') || ?")
+        vals.append(f"{clean_line}\n")
     if fields:
         vals.append(task_id)
         c.execute(f"UPDATE task_history SET {', '.join(fields)} WHERE task_id = ?", vals)

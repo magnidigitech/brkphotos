@@ -252,6 +252,80 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
             current_task["message"] = f"Error: {e}"
         update_task_progress(task_id, status="failed", current_step=f"Error: {e}", log_line=f"ERROR: {e}")
 
+def sync_photos_to_database(dest_dir: Path, event_slug: str, drive_map: dict, allowed_set: set) -> int:
+    """
+    Progressively scans downloaded photos on disk, auto-creates/matches subfolder albums,
+    and upserts photo records into SQLite. Can be safely called periodically during long imports.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM events WHERE slug = ? OR ? IN ('wedding', 'default', 'brk-sir', 'brksir')", (event_slug, event_slug))
+    erow = cursor.fetchone()
+    if not erow:
+        conn.close()
+        return 0
+    eid = erow["id"]
+    album_cache = {}
+
+    # Pre-cache existing albums
+    cursor.execute("SELECT id, slug, name FROM albums WHERE event_id = ?", (eid,))
+    for a in cursor.fetchall():
+        album_cache[a["slug"]] = a["id"]
+        album_cache[a["name"]] = a["id"]
+
+    registered_count = 0
+    for img_path in dest_dir.rglob("*"):
+        if img_path.is_file() and img_path.suffix.lower().strip(".") in allowed_set and not img_path.name.startswith("."):
+            rel_to_dest = img_path.relative_to(dest_dir)
+            sub_parts = rel_to_dest.parent.parts
+            if sub_parts:
+                album_name = sub_parts[-1]
+            else:
+                album_name = dest_dir.name if dest_dir != PHOTOS else "BRK Photos"
+
+            album_slug = re.sub(r"[^a-zA-Z0-9_-]", "-", album_name.lower()).strip("-")
+            if not album_slug:
+                album_slug = "brk-photos"
+
+            if album_slug not in album_cache:
+                cursor.execute("SELECT id FROM albums WHERE event_id = ? AND (slug = ? OR name = ?)", (eid, album_slug, album_name))
+                arow = cursor.fetchone()
+                if not arow:
+                    cursor.execute("""
+                        INSERT INTO albums (event_id, slug, name, sort_order)
+                        VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM albums WHERE event_id = ?))
+                    """, (eid, album_slug, album_name, eid))
+                    aid = cursor.lastrowid
+                else:
+                    aid = arow["id"]
+                album_cache[album_slug] = aid
+                album_cache[album_name] = aid
+
+            album_id = album_cache[album_slug]
+            rel = str(img_path.relative_to(PHOTOS))
+            fsize = img_path.stat().st_size
+            did = drive_map.get(rel) or drive_map.get(img_path.name)
+            if not did:
+                for k, v in drive_map.items():
+                    if k.endswith(img_path.name):
+                        did = v
+                        break
+            cursor.execute("""
+                INSERT INTO photos (event_id, album_id, filename, rel_path, drive_file_id, file_size_bytes, is_deleted)
+                VALUES (?, ?, ?, ?, ?, ?, 0)
+                ON CONFLICT(rel_path) DO UPDATE SET
+                    event_id = excluded.event_id,
+                    album_id = excluded.album_id,
+                    drive_file_id = COALESCE(excluded.drive_file_id, photos.drive_file_id),
+                    file_size_bytes = excluded.file_size_bytes,
+                    is_deleted = 0
+            """, (eid, album_id, img_path.name, rel, did, fsize))
+            registered_count += 1
+            
+    conn.commit()
+    conn.close()
+    return registered_count
+
 def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: str, allowed_exts: list = None):
     global current_task, drive_map, active_process
     display_title = "BRK Sir" if event_slug in {"default", "wedding", "brk-sir", "brksir"} else event_slug
@@ -331,6 +405,10 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
 
             # Step 3: Stream download each valid photo directly
             skipped_existing_count = 0
+            last_log_time = time.time()
+            last_db_sync_time = time.time()
+            pending_db_sync = False
+
             for idx, item in enumerate(valid_items):
                 if task_cancel_event.is_set():
                     append_log("Download cancelled by administrator.")
@@ -361,69 +439,105 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
                         drive_map[fname] = fid
                     processed_count += 1
                     skipped_existing_count += 1
-                    continue
-
-                # Download with retry
-                success = False
-                err_msg = ""
-                for attempt in range(3):
-                    if task_cancel_event.is_set():
-                        break
-                    success, err_msg = download_gdrive_file(furl, dest_file)
-                    if success:
-                        break
-                    time.sleep(1.5 * (attempt + 1))
-
-                if task_cancel_event.is_set():
-                    if dest_file.exists():
-                        try: dest_file.unlink()
-                        except Exception: pass
-                    break
-
-                if success and dest_file.exists():
-                    orig_size = dest_file.stat().st_size
-                    optimize_photo_inplace(dest_file)
-                    new_size = dest_file.stat().st_size
-                    saved_bytes_total += max(0, orig_size - new_size)
-
-                    # Pre-generate web thumbnail immediately to avoid browser stampede
-                    try:
-                        rel = str(dest_file.relative_to(PHOTOS))
-                        t_path = DATA / "thumbs" / (rel.replace("/", "__") + ".jpg")
-                        t_path.parent.mkdir(parents=True, exist_ok=True)
-                        with Image.open(dest_file) as timg:
-                            try: timg.draft("RGB", (480, 480))
-                            except Exception: pass
-                            timg = ImageOps.exif_transpose(timg).convert("RGB")
-                            timg.thumbnail((480, 480))
-                            timg.save(t_path, "JPEG", quality=80, optimize=True)
-                    except Exception:
-                        pass
-                    
-                    rel = str(dest_file.relative_to(PHOTOS))
-                    if fid:
-                        drive_map[rel] = fid
-                        drive_map[fname] = fid
-                        
-                    processed_count += 1
-                    pct = min(75, 10 + int((processed_count / max(1, total_photos)) * 65))
-                    saved_mb = round(saved_bytes_total / (1024 * 1024), 1)
-
-                    with task_lock:
-                        current_task["progress_pct"] = pct
-                        current_task["processed_files"] = processed_count
-                        current_task["total_files"] = total_photos
-                        current_task["storage_saved_mb"] = saved_mb
-                        current_task["message"] = f"Processed {fname} ({processed_count}/{total_photos})"
-
-                    if processed_count % 5 == 0 or processed_count == total_photos:
-                        update_task_progress(task_id, progress_pct=pct,
-                                             current_step=f"Processed {fname} ({processed_count}/{total_photos}, skipped {skipped_existing_count} existing)",
-                                             processed_files=processed_count, total_files=total_photos,
-                                             storage_saved_mb=saved_mb)
-                    time.sleep(0.04) # Keep CPU cool
+                    pending_db_sync = True
                 else:
-                    append_log(f"Skipping {fname}: could not download ({err_msg})")
+                    # Download with retry
+                    success = False
+                    err_msg = ""
+                    for attempt in range(3):
+                        if task_cancel_event.is_set():
+                            break
+                        success, err_msg = download_gdrive_file(furl, dest_file)
+                        if success:
+                            break
+                        time.sleep(1.5 * (attempt + 1))
+
+                    if task_cancel_event.is_set():
+                        if dest_file.exists():
+                            try: dest_file.unlink()
+                            except Exception: pass
+                        break
+
+                    if success and dest_file.exists():
+                        orig_size = dest_file.stat().st_size
+                        optimize_photo_inplace(dest_file)
+                        new_size = dest_file.stat().st_size
+                        saved_bytes_total += max(0, orig_size - new_size)
+
+                        # Pre-generate web thumbnail immediately to avoid browser stampede
+                        try:
+                            rel = str(dest_file.relative_to(PHOTOS))
+                            t_path = DATA / "thumbs" / (rel.replace("/", "__") + ".jpg")
+                            t_path.parent.mkdir(parents=True, exist_ok=True)
+                            with Image.open(dest_file) as timg:
+                                try: timg.draft("RGB", (480, 480))
+                                except Exception: pass
+                                timg = ImageOps.exif_transpose(timg).convert("RGB")
+                                timg.thumbnail((480, 480))
+                                timg.save(t_path, "JPEG", quality=80, optimize=True)
+                        except Exception:
+                            pass
+                        
+                        rel = str(dest_file.relative_to(PHOTOS))
+                        if fid:
+                            drive_map[rel] = fid
+                            drive_map[fname] = fid
+                            
+                        processed_count += 1
+                        pending_db_sync = True
+                        time.sleep(0.04) # Keep CPU cool
+                    else:
+                        append_log(f"Skipping {fname}: could not download ({err_msg})")
+
+                # Progress calculations
+                pct = min(75, 10 + int((processed_count / max(1, total_photos)) * 65))
+                saved_mb = round(saved_bytes_total / (1024 * 1024), 1)
+
+                with task_lock:
+                    current_task["progress_pct"] = pct
+                    current_task["processed_files"] = processed_count
+                    current_task["total_files"] = total_photos
+                    current_task["storage_saved_mb"] = saved_mb
+                    current_task["message"] = f"Processed {fname} ({processed_count}/{total_photos})"
+
+                now = time.time()
+                time_since_log = now - last_log_time
+                time_since_sync = now - last_db_sync_time
+
+                # 1. Update task log every 25 seconds OR every 25 files OR on final file
+                should_log = (time_since_log >= 25.0 and processed_count > 0) or (processed_count % 25 == 0) or (processed_count == total_photos)
+                if should_log:
+                    last_log_time = now
+                    now_str = datetime.now().strftime("%H:%M:%S")
+                    log_line = f"[{now_str}] Progress: {processed_count}/{total_photos} photos ({pct}%) | Saved: {saved_mb} MB | Current: {fname} (Skipped {skipped_existing_count} existing)"
+                    append_log(log_line)
+                    update_task_progress(task_id, progress_pct=pct,
+                                         current_step=f"Processed {fname} ({processed_count}/{total_photos}, skipped {skipped_existing_count} existing)",
+                                         processed_files=processed_count, total_files=total_photos,
+                                         storage_saved_mb=saved_mb, log_line=log_line)
+                elif processed_count % 5 == 0 or processed_count == total_photos:
+                    update_task_progress(task_id, progress_pct=pct,
+                                         current_step=f"Processed {fname} ({processed_count}/{total_photos}, skipped {skipped_existing_count} existing)",
+                                         processed_files=processed_count, total_files=total_photos,
+                                         storage_saved_mb=saved_mb)
+
+                # 2. Live Progressive Sync newly downloaded photos into albums & database every 35-45 seconds or every 50 photos
+                should_sync_db = (time_since_sync >= 35.0 and pending_db_sync) or (processed_count % 50 == 0 and pending_db_sync) or (processed_count == total_photos and pending_db_sync)
+                if should_sync_db:
+                    last_db_sync_time = now
+                    pending_db_sync = False
+                    try:
+                        reg_count = sync_photos_to_database(dest_dir, event_slug, drive_map, allowed_set)
+                        try:
+                            map_file.write_text(json.dumps(drive_map, indent=2))
+                        except Exception:
+                            pass
+                        now_str = datetime.now().strftime("%H:%M:%S")
+                        sync_log = f"[{now_str}] Live Albums Sync: {reg_count} photos registered across albums in database"
+                        append_log(sync_log)
+                        update_task_progress(task_id, current_step=f"Live Albums Sync: {reg_count} photos ready", log_line=sync_log)
+                    except Exception as e:
+                        append_log(f"Warning during intermediate DB sync: {e}")
 
             if skipped_existing_count > 0:
                 append_log(f"Skipped {skipped_existing_count} already downloaded photos.")
@@ -472,66 +586,11 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
         except Exception:
             pass
 
-        # Register photos into SQLite database
-        update_task_progress(task_id, progress_pct=78, current_step="Registering photos in database...")
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM events WHERE slug = ? OR ? IN ('wedding', 'default', 'brk-sir', 'brksir')", (event_slug, event_slug))
-        erow = cursor.fetchone()
-        if erow:
-            eid = erow["id"]
-            album_cache = {}
-
-            for img_path in dest_dir.rglob("*"):
-                if img_path.is_file() and img_path.suffix.lower().strip(".") in allowed_set and not img_path.name.startswith("."):
-                    rel_to_dest = img_path.relative_to(dest_dir)
-                    sub_parts = rel_to_dest.parent.parts
-                    if sub_parts:
-                        # Auto-detect album name from subfolders (e.g. "01-10-26" or "05 OCT - 01-10-26")
-                        if len(sub_parts) > 1:
-                            album_name = f"{sub_parts[0]} - {sub_parts[-1]}"
-                        else:
-                            album_name = sub_parts[0]
-                    else:
-                        album_name = dest_dir.name
-
-                    album_slug = re.sub(r"[^a-zA-Z0-9_-]", "-", album_name.lower()).strip("-")
-                    if not album_slug:
-                        album_slug = "brk-photos"
-
-                    if album_slug not in album_cache:
-                        cursor.execute("SELECT id FROM albums WHERE event_id = ? AND (slug = ? OR name = ?)", (eid, album_slug, album_name))
-                        arow = cursor.fetchone()
-                        if not arow:
-                            cursor.execute("""
-                                INSERT INTO albums (event_id, slug, name, sort_order)
-                                VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM albums WHERE event_id = ?))
-                            """, (eid, album_slug, album_name, eid))
-                            album_cache[album_slug] = cursor.lastrowid
-                        else:
-                            album_cache[album_slug] = arow["id"]
-
-                    album_id = album_cache[album_slug]
-                    rel = str(img_path.relative_to(PHOTOS))
-                    fsize = img_path.stat().st_size
-                    did = drive_map.get(rel) or drive_map.get(img_path.name)
-                    if not did:
-                        for k, v in drive_map.items():
-                            if k.endswith(img_path.name):
-                                did = v
-                                break
-                    cursor.execute("""
-                        INSERT INTO photos (event_id, album_id, filename, rel_path, drive_file_id, file_size_bytes, is_deleted)
-                        VALUES (?, ?, ?, ?, ?, ?, 0)
-                        ON CONFLICT(rel_path) DO UPDATE SET
-                            event_id = excluded.event_id,
-                            album_id = excluded.album_id,
-                            drive_file_id = COALESCE(excluded.drive_file_id, photos.drive_file_id),
-                            file_size_bytes = excluded.file_size_bytes,
-                            is_deleted = 0
-                    """, (eid, album_id, img_path.name, rel, did, fsize))
-            conn.commit()
-        conn.close()
+        # Final pass: Ensure 100% of downloaded photos and albums are synchronized in SQLite
+        update_task_progress(task_id, progress_pct=78, current_step="Finalizing albums and photo database...",
+                             log_line="Finalizing albums and photo database...")
+        final_count = sync_photos_to_database(dest_dir, event_slug, drive_map, allowed_set)
+        append_log(f"Database sync complete: {final_count} photos active in albums.")
 
         if task_cancel_event.is_set():
             return
