@@ -778,6 +778,170 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.06);
   }
 
+  /* Month Accordion for Albums */
+  .month-accordion {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #ffffff;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  }
+  .month-accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.25rem;
+    background: #f8fafc;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+    border-bottom: 1px solid transparent;
+  }
+  .month-accordion-header:hover {
+    background: #f1f5f9;
+  }
+  .month-accordion.open .month-accordion-header {
+    border-bottom-color: var(--line);
+  }
+  .month-accordion-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .month-accordion-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .month-badge {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    background: #e2e8f0;
+    color: #334155;
+  }
+  .month-accordion-chevron {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.25s ease;
+    color: #64748b;
+  }
+  .month-accordion.open .month-accordion-chevron {
+    transform: rotate(180deg);
+  }
+  .month-accordion-body {
+    padding: 1.25rem;
+    display: none;
+  }
+  .month-accordion.open .month-accordion-body {
+    display: block;
+  }
+
+  /* Floating Bulk Actions Pill */
+  .floating-bulk-pill {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 9999px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.2);
+    color: #ffffff;
+    animation: pillSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    max-width: 95vw;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  @keyframes pillSlideUp {
+    from { opacity: 0; transform: translate(-50%, 20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .pill-count-badge {
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+  .pill-select {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    border-radius: 9999px;
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    outline: none;
+    cursor: pointer;
+    max-width: 180px;
+  }
+  .pill-select option {
+    background: #1e293b;
+    color: #ffffff;
+  }
+  .pill-btn {
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .pill-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+  }
+  .pill-btn-primary {
+    background: #2563eb;
+    border-color: #3b82f6;
+  }
+  .pill-btn-primary:hover {
+    background: #1d4ed8;
+  }
+  .pill-btn-danger {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #ef4444;
+    color: #fca5a5;
+  }
+  .pill-btn-danger:hover {
+    background: #ef4444;
+    color: #ffffff;
+  }
+  .pill-btn-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    padding: 4px 8px;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .pill-btn-close:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.1);
+  }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -1105,6 +1269,18 @@
 
         <div class="photo-grid" id="photoLibraryGrid">
           <div style="color:var(--muted);grid-column:1/-1;">Loading photos...</div>
+        </div>
+
+        <!-- Floating Bulk Selection Pill Bar (Apple / Glassmorphism Style) -->
+        <div id="floatingBulkPill" class="floating-bulk-pill" hidden>
+          <span class="pill-count-badge" id="floatingCountBadge">0 selected</span>
+          <select id="floatingTargetAlbumSelect" class="pill-select" title="Target Folder"></select>
+          <button id="floatingBulkMoveBtn" class="pill-btn pill-btn-primary">Move</button>
+          <button id="floatingBulkFeatureBtn" class="pill-btn">★ Feature</button>
+          <button id="floatingBulkUnfeatureBtn" class="pill-btn">Unfeature</button>
+          <button id="floatingBulkHideBtn" class="pill-btn">Hide</button>
+          <button id="floatingBulkDeleteBtn" class="pill-btn pill-btn-danger">🗑 Delete</button>
+          <button id="floatingClearSelectBtn" class="pill-btn-close" title="Clear Selection">✕ Cancel</button>
         </div>
       </section>
 
@@ -1490,6 +1666,29 @@
   </div>
 </div>
 
+<!-- HD Lightbox Modal (Studio-Quality VPS Preview) -->
+<div id="hdLightboxModal" class="modal-backdrop" style="background:rgba(0,0,0,0.92);backdrop-filter:blur(10px);z-index:99999;" hidden>
+  <button class="modal-close" onclick="closeModal('hdLightboxModal')" style="color:#ffffff;font-size:2rem;top:1.25rem;right:1.5rem;z-index:10;background:rgba(0,0,0,0.4);border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;">&times;</button>
+  <div style="max-width:94vw;max-height:94vh;display:flex;flex-direction:column;align-items:center;position:relative;">
+    <div style="position:relative;display:flex;justify-content:center;align-items:center;max-height:80vh;width:auto;overflow:hidden;border-radius:12px;">
+      <img id="hdLightboxImg" src="" style="max-width:100%;max-height:80vh;object-fit:contain;border-radius:12px;box-shadow:0 25px 60px rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.12);">
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;max-width:850px;margin-top:1rem;padding:0 0.5rem;color:#ffffff;flex-wrap:wrap;gap:0.75rem;">
+      <div>
+        <div id="hdLightboxTitle" style="font-weight:700;font-size:1.05rem;color:#f8fafc;">BRK_1234.JPG</div>
+        <div id="hdLightboxSub" style="font-size:0.82rem;color:#94a3b8;margin-top:2px;">Folder: 04-10-26</div>
+      </div>
+      <div style="display:flex;gap:0.6rem;align-items:center;">
+        <a id="hdLightboxDownloadBtn" href="" download class="btn-primary" style="padding:0.5rem 1.1rem;font-size:0.85rem;display:inline-flex;align-items:center;gap:0.4rem;text-decoration:none;">
+          <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Download HD</span>
+        </a>
+        <button class="btn-outline" style="padding:0.5rem 0.9rem;font-size:0.85rem;color:#ffffff;border-color:rgba(255,255,255,0.25);" onclick="closeModal('hdLightboxModal')">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
 
@@ -1859,7 +2058,73 @@ async function setEventWorkspace(slug, refreshActiveTab = true) {
   }
 }
 
-// Render Dynamic Subfolders in Sidebar
+// Date Parser for Albums & Months
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+const MONTH_ABBRS = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+};
+
+function parseAlbumDate(name, slug = '') {
+  const str = `${name} ${slug}`.toLowerCase();
+  
+  // 1. Check DD-MM-YYYY or DD-MM-YY or DD/MM/YYYY or DD.MM.YY or DD MM YY
+  const dmyMatch = str.match(/\b(\d{1,2})[-/.\s](\d{1,2})[-/.\s](\d{2,4})\b/);
+  if (dmyMatch) {
+    let day = parseInt(dmyMatch[1], 10);
+    let month = parseInt(dmyMatch[2], 10);
+    let year = parseInt(dmyMatch[3], 10);
+    if (year < 100) year += 2000;
+    if (month > 12 && day <= 12) {
+      const tmp = day; day = month; month = tmp;
+    }
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+      const monthLabel = `${MONTH_NAMES[month - 1]} ${year}`;
+      const sortVal = year * 10000 + month * 100 + day;
+      return { year, month, day, monthKey, monthLabel, sortVal, hasDate: true };
+    }
+  }
+
+  // 2. Check YYYY-MM-DD
+  const ymdMatch = str.match(/\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
+  if (ymdMatch) {
+    let year = parseInt(ymdMatch[1], 10);
+    let month = parseInt(ymdMatch[2], 10);
+    let day = parseInt(ymdMatch[3], 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+      const monthLabel = `${MONTH_NAMES[month - 1]} ${year}`;
+      const sortVal = year * 10000 + month * 100 + day;
+      return { year, month, day, monthKey, monthLabel, sortVal, hasDate: true };
+    }
+  }
+
+  // 3. Text month e.g. "01 JUN 2026" or "JUN 2026" or "01 JUN"
+  const textMonthMatch = str.match(/\b(\d{1,2})?[-/\s.]*([a-z]{3,9})[-/\s.]*(\d{2,4})?\b/);
+  if (textMonthMatch) {
+    const dStr = textMonthMatch[1];
+    const mStr = textMonthMatch[2].slice(0, 3);
+    const yStr = textMonthMatch[3];
+    if (MONTH_ABBRS[mStr]) {
+      const month = MONTH_ABBRS[mStr];
+      let day = dStr ? parseInt(dStr, 10) : 1;
+      let year = yStr ? parseInt(yStr, 10) : new Date().getFullYear();
+      if (year < 100) year += 2000;
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+      const monthLabel = `${MONTH_NAMES[month - 1]} ${year}`;
+      const sortVal = year * 10000 + month * 100 + day;
+      return { year, month, day, monthKey, monthLabel, sortVal, hasDate: true };
+    }
+  }
+
+  return { year: 0, month: 0, day: 0, monthKey: 'other', monthLabel: 'Other Collections', sortVal: 0, hasDate: false };
+}
+
+// Render Dynamic Subfolders in Sidebar (Sorted Latest Date First)
 function renderSidebarSubfolders() {
   const tree = $('sidebarSubfoldersList');
   tree.replaceChildren();
@@ -1872,7 +2137,15 @@ function renderSidebarSubfolders() {
     empty.textContent = 'No folders yet';
     tree.append(empty);
   } else {
-    for (const a of allAlbums) {
+    // Sort subfolders latest date first
+    const sortedSidebarAlbums = allAlbums.slice().sort((a, b) => {
+      const aVal = a._date ? a._date.sortVal : parseAlbumDate(a.name, a.slug).sortVal;
+      const bVal = b._date ? b._date.sortVal : parseAlbumDate(b.name, b.slug).sortVal;
+      if (bVal !== aVal) return bVal - aVal;
+      return b.name.localeCompare(a.name, undefined, { numeric: true });
+    });
+
+    for (const a of sortedSidebarAlbums) {
       const li = document.createElement('li');
       li.className = 'subfolder-item';
       li.id = `subfolder-item-${a.id}`;
@@ -1968,7 +2241,7 @@ async function loadDashboard() {
   } catch (e) {}
 }
 
-// Albums
+// Albums (Grouped by Month, Latest Date First, Collapsible Accordions)
 async function loadAlbums() {
   try {
     let res = await fetch('/api/admin/albums');
@@ -1980,34 +2253,100 @@ async function loadAlbums() {
     $('sidebarAlbumCount').textContent = allAlbums.length;
     renderSidebarSubfolders();
 
-    const grid = $('albumsGrid');
-    grid.replaceChildren();
+    const container = $('albumsGrid');
+    container.replaceChildren();
 
     if (allAlbums.length === 0) {
-      grid.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;">No albums found. Click "+ New Album" to create one.</div>';
+      container.innerHTML = '<div style="color:var(--muted);padding:1.5rem;text-align:center;">No albums found. Click "+ New Album" to create one.</div>';
       return;
     }
 
+    // 1. Parse dates and group albums by month
+    const monthGroups = {};
     for (const a of allAlbums) {
-      const card = document.createElement('div');
-      card.className = 'person-card';
-      const coverUrl = a.cover_image_path ? `/thumb/${a.cover_image_path}` : 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80';
-      card.innerHTML = `
-        <img src="${coverUrl}" style="width:68px;height:68px;border-radius:10px;object-fit:cover;background:#e5e7eb;">
-        <div style="flex:1;">
-          <h4 style="font-size:1rem;font-weight:700;">${a.name}</h4>
-          <div style="font-size:0.78rem;color:var(--muted);font-family:monospace;">slug: ${a.slug}</div>
-          <div style="font-size:0.82rem;color:var(--primary);font-weight:600;margin-top:0.2rem;">${a.photo_count || 0} photos</div>
-          <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;">
-            <button class="btn-primary" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="openAlbumPhotos(${a.id}, '${a.name}')">Browse</button>
-            <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="openEditAlbumModal(${a.id}, '${a.name}', '${a.slug}')">Edit</button>
-            <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;color:var(--err);" onclick="promptDeleteAlbum(${a.id}, '${a.name.replace(/'/g, "\\'")}', '${a.slug}')">Delete</button>
-          </div>
+      a._date = parseAlbumDate(a.name, a.slug);
+      const mKey = a._date.monthKey;
+      if (!monthGroups[mKey]) {
+        monthGroups[mKey] = {
+          key: mKey,
+          label: a._date.monthLabel,
+          sortVal: a._date.hasDate ? (a._date.year * 100 + a._date.month) : -1,
+          albums: []
+        };
+      }
+      monthGroups[mKey].albums.push(a);
+    }
+
+    // 2. Sort month groups descending (latest month first)
+    const sortedGroups = Object.values(monthGroups).sort((g1, g2) => g2.sortVal - g1.sortVal);
+
+    // 3. Within each month, sort albums descending: latest date first, old date past
+    for (const grp of sortedGroups) {
+      grp.albums.sort((a, b) => {
+        if (b._date.sortVal !== a._date.sortVal) {
+          return b._date.sortVal - a._date.sortVal; // Latest date first
+        }
+        return b.name.localeCompare(a.name, undefined, { numeric: true });
+      });
+    }
+
+    // 4. Render collapsible accordion for each month
+    for (const grp of sortedGroups) {
+      const accordion = document.createElement('div');
+      accordion.className = 'month-accordion open';
+      accordion.id = `accordion-${grp.key}`;
+
+      const totalPhotosInMonth = grp.albums.reduce((acc, al) => acc + (al.photo_count || 0), 0);
+
+      const header = document.createElement('div');
+      header.className = 'month-accordion-header';
+      header.innerHTML = `
+        <div class="month-accordion-title">
+          <svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>${grp.label}</span>
+        </div>
+        <div class="month-accordion-meta">
+          <span class="month-badge">${grp.albums.length} albums • ${totalPhotosInMonth.toLocaleString()} photos</span>
+          <svg class="month-accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       `;
-      grid.append(card);
+      header.addEventListener('click', () => {
+        accordion.classList.toggle('open');
+      });
+
+      const body = document.createElement('div');
+      body.className = 'month-accordion-body';
+
+      const grid = document.createElement('div');
+      grid.className = 'people-grid';
+
+      for (const a of grp.albums) {
+        const card = document.createElement('div');
+        card.className = 'person-card';
+        const coverUrl = a.cover_image_path ? `/thumb/${a.cover_image_path}` : 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80';
+        card.innerHTML = `
+          <img src="${coverUrl}" style="width:68px;height:68px;border-radius:10px;object-fit:cover;background:#e5e7eb;">
+          <div style="flex:1;">
+            <h4 style="font-size:1rem;font-weight:700;">${a.name}</h4>
+            <div style="font-size:0.78rem;color:var(--muted);font-family:monospace;">slug: ${a.slug}</div>
+            <div style="font-size:0.82rem;color:var(--primary);font-weight:600;margin-top:0.2rem;">${a.photo_count || 0} photos</div>
+            <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;">
+              <button class="btn-primary" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="openAlbumPhotos(${a.id}, '${a.name.replace(/'/g, "\\'")}')">Browse</button>
+              <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="openEditAlbumModal(${a.id}, '${a.name.replace(/'/g, "\\'")}', '${a.slug}')">Edit</button>
+              <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;color:var(--err);" onclick="promptDeleteAlbum(${a.id}, '${a.name.replace(/'/g, "\\'")}', '${a.slug}')">Delete</button>
+            </div>
+          </div>
+        `;
+        grid.append(card);
+      }
+
+      body.append(grid);
+      accordion.append(header, body);
+      container.append(accordion);
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Error loading albums:', e);
+  }
 }
 
 // Edit Album Modal Handlers
@@ -2071,15 +2410,19 @@ function promptDeleteAlbum(albumId, albumName, albumSlug) {
   );
 }
 
-// Photos (Natural Alphanumeric Sort by Name, Featured First)
-async function loadPhotos(filterAlbumId = '') {
-  selectedPhotoIds.clear();
+// Photos (Natural Alphanumeric Sort by Name, Featured First, HD Lightbox Preview)
+async function loadPhotos(filterAlbumId = '', preserveSelection = false) {
+  if (!preserveSelection) {
+    selectedPhotoIds.clear();
+  }
   updateBulkToolbar();
 
   const fSel = $('filterAlbumSelect');
   const bSel = $('bulkTargetAlbumSelect');
+  const floatSel = $('floatingTargetAlbumSelect');
   fSel.replaceChildren();
   bSel.replaceChildren();
+  if (floatSel) floatSel.replaceChildren();
 
   const defOpt = document.createElement('option');
   defOpt.value = '';
@@ -2097,6 +2440,13 @@ async function loadPhotos(filterAlbumId = '') {
     bo.value = a.id;
     bo.textContent = `Move to: ${a.name}`;
     bSel.append(bo);
+
+    if (floatSel) {
+      const fo = document.createElement('option');
+      fo.value = a.id;
+      fo.textContent = `Move to: ${a.name}`;
+      floatSel.append(fo);
+    }
   }
 
   const url = filterAlbumId 
@@ -2132,15 +2482,21 @@ async function loadPhotos(filterAlbumId = '') {
       item.id = `photo-item-${p.id}`;
       const enc = p.rel_path.split('/').map(encodeURIComponent).join('/');
       const isFeatured = !!p.is_featured;
+      const isChecked = selectedPhotoIds.has(p.id);
+      if (isChecked) item.classList.add('selected');
+
+      const safeFilename = (p.filename || '').replace(/'/g, "\\'");
+      const safeAlbumName = (p.album_name || '').replace(/'/g, "\\'");
+
       item.innerHTML = `
-        <input type="checkbox" class="photo-check" data-id="${p.id}">
+        <input type="checkbox" class="photo-check" data-id="${p.id}" ${isChecked ? 'checked' : ''}>
         ${isFeatured ? '<span class="badge badge-featured" style="position:absolute;top:8px;right:8px;font-size:0.7rem;font-weight:700;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,0.3);">★ Featured</span>' : ''}
-        <img src="/thumb/${enc}" loading="lazy">
+        <img src="/thumb/${enc}" loading="lazy" style="cursor:zoom-in;" title="Click to view HD Resolution" onclick="openHdLightbox('/preview/${enc}', '${safeFilename}', '${safeAlbumName}', '/download/hd/${enc}')">
         <div class="photo-meta">
-          <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.filename}</div>
+          <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;" title="Click to view HD Resolution" onclick="openHdLightbox('/preview/${enc}', '${safeFilename}', '${safeAlbumName}', '/download/hd/${enc}')">${p.filename}</div>
           <div style="color:var(--muted);font-size:0.75rem;">${p.album_name || 'Unassigned'}</div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem;gap:0.3rem;">
-            <a href="/photo/${enc}" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:600;font-size:0.75rem;">Download ↗</a>
+            <a href="/download/hd/${enc}" download="${p.filename}" style="color:var(--primary);text-decoration:none;font-weight:600;font-size:0.75rem;display:inline-flex;align-items:center;gap:2px;">Download HD ↗</a>
             <div style="display:flex;gap:0.25rem;">
               <button class="btn-outline" style="padding:0.15rem 0.4rem;font-size:0.7rem;${isFeatured ? 'background:#fef3c7;border-color:#f59e0b;color:#b45309;font-weight:700;' : ''}" onclick="toggleFeaturedPhoto(${p.id})">${isFeatured ? '★ Featured' : '☆ Feature'}</button>
               <button class="btn-outline" style="padding:0.15rem 0.4rem;font-size:0.7rem;" onclick="setAsCover(${p.album_id}, '${p.rel_path}')">Cover</button>
@@ -2150,6 +2506,7 @@ async function loadPhotos(filterAlbumId = '') {
       `;
 
       item.querySelector('.photo-check').addEventListener('change', e => {
+        e.stopPropagation();
         if (e.target.checked) selectedPhotoIds.add(p.id);
         else selectedPhotoIds.delete(p.id);
         item.classList.toggle('selected', e.target.checked);
@@ -2161,11 +2518,35 @@ async function loadPhotos(filterAlbumId = '') {
   } catch (e) {}
 }
 
+// HD Lightbox Viewer
+function openHdLightbox(previewUrl, filename, albumName, downloadUrl) {
+  if ($('hdLightboxImg')) $('hdLightboxImg').src = previewUrl;
+  if ($('hdLightboxTitle')) $('hdLightboxTitle').textContent = filename;
+  if ($('hdLightboxSub')) $('hdLightboxSub').textContent = `Folder: ${albumName || 'BRK Photos'}`;
+  if ($('hdLightboxDownloadBtn')) {
+    $('hdLightboxDownloadBtn').href = downloadUrl;
+    $('hdLightboxDownloadBtn').setAttribute('download', filename);
+  }
+  openModal('hdLightboxModal');
+}
+
+$('hdLightboxModal')?.addEventListener('click', e => {
+  if (e.target.id === 'hdLightboxModal') {
+    closeModal('hdLightboxModal');
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal('hdLightboxModal');
+  }
+});
+
 async function toggleFeaturedPhoto(photoId) {
   try {
     const res = await fetch(`/api/admin/events/${activeSlug}/photos/${photoId}/toggle-feature`, { method: 'POST' });
     if (res.ok) {
-      loadPhotos($('filterAlbumSelect')?.value || '');
+      loadPhotos($('filterAlbumSelect')?.value || '', selectedPhotoIds.size > 0);
     } else {
       const j = await res.json();
       alert(j.detail || 'Could not toggle featured status');
@@ -2177,7 +2558,7 @@ async function toggleFeaturedPhoto(photoId) {
 
 $('filterAlbumSelect').addEventListener('change', e => {
   activeFilterAlbumId = e.target.value;
-  loadPhotos(activeFilterAlbumId);
+  loadPhotos(activeFilterAlbumId, false);
   
   // Sync sidebar active subfolder
   document.querySelectorAll('.subfolder-item').forEach(el => el.classList.remove('active'));
@@ -2189,17 +2570,26 @@ $('filterAlbumSelect').addEventListener('change', e => {
 
 function updateBulkToolbar() {
   const count = selectedPhotoIds.size;
-  $('selectedCountBadge').textContent = `${count} selected`;
-  $('selectedCountBadge').hidden = count === 0;
-  $('clearSelectBtn').hidden = count === 0;
-  $('bulkActionGroup').hidden = count === 0;
+  if ($('selectedCountBadge')) {
+    $('selectedCountBadge').textContent = `${count} selected`;
+    $('selectedCountBadge').hidden = count === 0;
+  }
+  if ($('clearSelectBtn')) $('clearSelectBtn').hidden = count === 0;
+  if ($('bulkActionGroup')) $('bulkActionGroup').hidden = count === 0;
+
+  // Floating bottom pill bar (stays visible regardless of scroll position)
+  const pill = $('floatingBulkPill');
+  if (pill) {
+    pill.hidden = count === 0;
+    if ($('floatingCountBadge')) $('floatingCountBadge').textContent = `${count} selected`;
+  }
 }
 
 $('selectAllBtn')?.addEventListener('click', () => {
   document.querySelectorAll('.photo-check').forEach(cb => {
     cb.checked = true;
     selectedPhotoIds.add(Number(cb.getAttribute('data-id')));
-    cb.closest('.photo-item').classList.add('selected');
+    cb.closest('.photo-item')?.classList.add('selected');
   });
   updateBulkToolbar();
 });
@@ -2207,10 +2597,53 @@ $('selectAllBtn')?.addEventListener('click', () => {
 $('clearSelectBtn')?.addEventListener('click', () => {
   document.querySelectorAll('.photo-check').forEach(cb => {
     cb.checked = false;
-    cb.closest('.photo-item').classList.remove('selected');
+    cb.closest('.photo-item')?.classList.remove('selected');
   });
   selectedPhotoIds.clear();
   updateBulkToolbar();
+});
+
+// Floating Bar Action Listeners
+$('floatingClearSelectBtn')?.addEventListener('click', () => {
+  document.querySelectorAll('.photo-check').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.photo-item')?.classList.remove('selected');
+  });
+  selectedPhotoIds.clear();
+  updateBulkToolbar();
+});
+
+$('floatingBulkMoveBtn')?.addEventListener('click', async () => {
+  const targetAlbumId = $('floatingTargetAlbumSelect')?.value || $('bulkTargetAlbumSelect')?.value;
+  if (!targetAlbumId) return;
+  await fetch(`/api/admin/events/${activeSlug}/photos/bulk-move`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      photo_ids: Array.from(selectedPhotoIds),
+      target_album_id: Number(targetAlbumId)
+    })
+  });
+  selectedPhotoIds.clear();
+  updateBulkToolbar();
+  loadPhotos($('filterAlbumSelect').value);
+  await setEventWorkspace(activeSlug, false);
+});
+
+$('floatingBulkFeatureBtn')?.addEventListener('click', () => runBulkAction('feature'));
+$('floatingBulkUnfeatureBtn')?.addEventListener('click', () => runBulkAction('unfeature'));
+$('floatingBulkHideBtn')?.addEventListener('click', () => runBulkAction('hide'));
+$('floatingBulkDeleteBtn')?.addEventListener('click', () => {
+  if (selectedPhotoIds.size === 0) return;
+  openDeleteConfirmModal(
+    `Move ${selectedPhotoIds.size} Selected Photos to Trash?`,
+    `Are you sure you want to move <strong>${selectedPhotoIds.size} selected photos</strong> to the Trash Bin? You can restore them or permanently delete them from the Trash Bin.`,
+    'DELETE',
+    async () => {
+      await runBulkAction('delete');
+    },
+    'Move to Trash'
+  );
 });
 
 $('bulkMoveBtn')?.addEventListener('click', async () => {
@@ -2223,6 +2656,8 @@ $('bulkMoveBtn')?.addEventListener('click', async () => {
       target_album_id: Number(targetAlbumId)
     })
   });
+  selectedPhotoIds.clear();
+  updateBulkToolbar();
   loadPhotos($('filterAlbumSelect').value);
   await setEventWorkspace(activeSlug, false);
 });
@@ -2252,6 +2687,8 @@ async function runBulkAction(action) {
       action: action
     })
   });
+  selectedPhotoIds.clear();
+  updateBulkToolbar();
   loadPhotos($('filterAlbumSelect').value);
   await setEventWorkspace(activeSlug, false);
 }
@@ -2596,7 +3033,8 @@ async function pollTaskStatus() {
     if ((isRunning || status === 'running') && $('autoRefreshCheckbox')?.checked && !isRefreshingPhotos) {
       const curTab = localStorage.getItem('admin_active_tab');
       if (curTab === 'photos') {
-        loadPhotos($('filterAlbumSelect')?.value || '');
+        // preserveSelection = true ensures running tasks never uncheck selected photos or close floating bar
+        loadPhotos($('filterAlbumSelect')?.value || '', true);
       }
     }
 

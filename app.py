@@ -204,13 +204,16 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
                          log_line=f"Face indexing started for '{display_title}'")
 
     try:
+        idx_env = os.environ.copy()
+        idx_env["PYTHONUNBUFFERED"] = "1"
         proc = subprocess.Popen(
-            [sys.executable, str(BASE / "index_photos.py"), "--event", event_slug],
+            [sys.executable, "-u", str(BASE / "index_photos.py"), "--event", event_slug],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            cwd=str(BASE)
+            cwd=str(BASE),
+            env=idx_env
         )
         active_process = proc
         for line in proc.stdout:
@@ -219,7 +222,23 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
                 break
             txt = line.rstrip()
             append_log(txt)
-            update_task_progress(task_id, log_line=txt)
+
+            # Parse live progress e.g. "Progress: 25/100 (25%)"
+            m_prog = re.search(r"Progress:\s*(\d+)/(\d+)", txt)
+            if m_prog:
+                cur_p = int(m_prog.group(1))
+                tot_p = int(m_prog.group(2))
+                calc_pct = int(80 + (cur_p / max(tot_p, 1)) * 19) if not owns_task else int((cur_p / max(tot_p, 1)) * 95)
+                step_msg = f"Indexed {cur_p}/{tot_p} photos with InsightFace..."
+                with task_lock:
+                    current_task["processed_files"] = cur_p
+                    current_task["total_files"] = tot_p
+                    current_task["progress_pct"] = calc_pct
+                    current_task["message"] = step_msg
+                update_task_progress(task_id, progress_pct=calc_pct, processed_files=cur_p, total_files=tot_p,
+                                     current_step=step_msg, log_line=txt)
+            else:
+                update_task_progress(task_id, log_line=txt)
 
         proc.wait()
         active_process = None
