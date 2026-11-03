@@ -3961,6 +3961,8 @@ function setupUploadTab() {
 }
 
 // Google Drive Ingest & Queue Submissions
+let isSubmittingGdrive = false;
+
 $('startGdriveSyncBtn')?.addEventListener('click', async () => {
   await submitGdriveTask('now');
 });
@@ -3970,11 +3972,14 @@ $('btnGdriveAddToQueue')?.addEventListener('click', async () => {
 });
 
 async function submitGdriveTask(action) {
+  if (isSubmittingGdrive) return;
   const url = $('gdriveUrlInput').value.trim();
   if (!url) {
     alert('Please enter a Google Drive folder URL or ID.');
     return;
   }
+  isSubmittingGdrive = true;
+
   const customSlug = $('gdriveCustomSlugInput').value.trim();
   const selectSlug = $('gdriveTargetAlbumSelect').value;
   const albumSlug = customSlug || selectSlug || 'auto';
@@ -4011,6 +4016,7 @@ async function submitGdriveTask(action) {
   } catch (e) {
     if (statusEl) statusEl.textContent = 'Server connection error.';
   } finally {
+    isSubmittingGdrive = false;
     if (btnSync) btnSync.disabled = false;
     if (btnQueue) btnQueue.disabled = false;
   }
@@ -4321,62 +4327,6 @@ async function viewAutomationHistoryModal(autoId) {
     }
   } catch(e) {
     if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:#ef4444;">${e.message}</td></tr>`;
-  }
-}
-
-// Google Drive Ingest & Queue Submissions
-$('startGdriveSyncBtn')?.addEventListener('click', async () => {
-  await submitGdriveTask('now');
-});
-
-$('btnGdriveAddToQueue')?.addEventListener('click', async () => {
-  await submitGdriveTask('queue');
-});
-
-async function submitGdriveTask(action) {
-  const url = $('gdriveUrlInput').value.trim();
-  if (!url) {
-    alert('Please enter a Google Drive folder URL or ID.');
-    return;
-  }
-  const customSlug = $('gdriveCustomSlugInput').value.trim();
-  const selectSlug = $('gdriveTargetAlbumSelect').value;
-  const albumSlug = customSlug || selectSlug || 'auto';
-
-  const allowed = [];
-  if ($('gdriveFmtJpg')?.checked) allowed.push('jpg', 'jpeg');
-  if ($('gdriveFmtPng')?.checked) allowed.push('png');
-  if ($('gdriveFmtWebp')?.checked) allowed.push('webp');
-  if ($('gdriveFmtHeic')?.checked) allowed.push('heic', 'heif');
-
-  const btnSync = $('startGdriveSyncBtn');
-  const btnQueue = $('btnGdriveAddToQueue');
-  if (btnSync) btnSync.disabled = true;
-  if (btnQueue) btnQueue.disabled = true;
-
-  const statusEl = $('gdriveStatusText');
-  if (statusEl) statusEl.textContent = action === 'now' ? 'Starting ingest...' : 'Adding to queue...';
-
-  try {
-    const res = await fetch(`/api/admin/events/${activeSlug}/gdrive-queue`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, album_slug: albumSlug, allowed_extensions: allowed, action })
-    });
-    const j = await res.json();
-    if (res.ok) {
-      if (statusEl) statusEl.textContent = j.message || 'Task submitted successfully!';
-      $('gdriveUrlInput').value = '';
-      await loadUploadQueue();
-      pollTaskStatus();
-    } else {
-      if (statusEl) statusEl.textContent = j.detail || 'Failed to submit Google Drive task.';
-    }
-  } catch (e) {
-    if (statusEl) statusEl.textContent = 'Server connection error.';
-  } finally {
-    if (btnSync) btnSync.disabled = false;
-    if (btnQueue) btnQueue.disabled = false;
   }
 }
 
