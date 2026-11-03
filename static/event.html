@@ -197,12 +197,13 @@
     /* Page Center Layout */
     .page-center-wrap {
       min-height: 100vh;
+      min-height: 100dvh;
       width: 100%;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 2.5rem 1.25rem;
+      padding: clamp(0.45rem, 1.8vh, 1.25rem) clamp(0.75rem, 3vw, 1.25rem);
       box-sizing: border-box;
     }
 
@@ -214,8 +215,8 @@
       backdrop-filter: blur(32px) saturate(180%);
       -webkit-backdrop-filter: blur(32px) saturate(180%);
       border: 1px solid rgba(255, 255, 255, 0.95);
-      border-radius: 36px;
-      padding: clamp(2.2rem, 5vw, 3.2rem) clamp(1.5rem, 4vw, 2.5rem);
+      border-radius: clamp(22px, 3.8vw, 36px);
+      padding: clamp(1rem, 2.6vh, 2.4rem) clamp(1rem, 3.5vw, 2.2rem);
       text-align: center;
       margin: 0 auto;
       box-shadow:
@@ -231,14 +232,14 @@
     .faceid-badge-wrap {
       display: flex;
       justify-content: center;
-      margin-bottom: 1.4rem;
+      margin-bottom: clamp(0.35rem, 1.2vh, 1rem);
     }
 
     .faceid-badge {
       position: relative;
-      width: 80px;
-      height: 80px;
-      border-radius: 24px;
+      width: clamp(52px, 7.2vh, 76px);
+      height: clamp(52px, 7.2vh, 76px);
+      border-radius: clamp(15px, 2vh, 22px);
       background: rgba(255, 255, 255, 0.82);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
@@ -254,8 +255,8 @@
     }
 
     .faceid-svg {
-      width: 48px;
-      height: 48px;
+      width: clamp(32px, 4.4vh, 46px);
+      height: clamp(32px, 4.4vh, 46px);
       display: block;
       animation: faceIdPulse 2.8s ease-in-out infinite;
     }
@@ -300,12 +301,12 @@
 
     .finder-heading {
       font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
-      font-size: clamp(1.48rem, 3.2vw, 2.05rem);
+      font-size: clamp(1.22rem, 2.3vh, 1.95rem);
       font-weight: 700;
       color: #0f172a;
-      margin-bottom: 0.85rem;
+      margin-bottom: clamp(0.3rem, 0.9vh, 0.75rem);
       letter-spacing: -0.015em;
-      line-height: 1.3;
+      line-height: 1.25;
     }
 
     .heading-row-1 {
@@ -331,11 +332,11 @@
     }
 
     .finder-subheading {
-      font-size: clamp(0.92rem, 1.8vw, 1.02rem);
+      font-size: clamp(0.8rem, 1.45vh, 0.96rem);
       color: #4b5563;
-      max-width: 520px;
-      margin: 0 auto 1.8rem;
-      line-height: 1.6;
+      max-width: 500px;
+      margin: 0 auto clamp(0.55rem, 1.6vh, 1.4rem);
+      line-height: 1.45;
     }
 
     .sub-break {
@@ -344,7 +345,7 @@
 
     .finder-actions-row {
       display: flex;
-      gap: 1rem;
+      gap: clamp(0.5rem, 1.5vw, 0.9rem);
       justify-content: center;
       flex-wrap: wrap;
       align-items: center;
@@ -354,10 +355,18 @@
       background: linear-gradient(135deg, #0f5c4d 0%, #0a4539 100%);
       color: #ffffff;
       border: none;
-      border-radius: 16px;
-      padding: 0.9rem 1.85rem;
-      font-size: 0.98rem;
+      border-radius: clamp(12px, 2.5vw, 16px);
+      padding: clamp(0.62rem, 1.3vh, 0.85rem) clamp(1rem, 2.8vw, 1.65rem);
+      font-size: clamp(0.85rem, 1.65vh, 0.98rem);
       font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 8px 24px rgba(15, 92, 77, 0.32), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      font-family: inherit;
+    }
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -678,11 +687,11 @@
     }
 
     .search-status-text {
-      font-size: 0.95rem;
+      font-size: clamp(0.84rem, 1.5vh, 0.95rem);
       font-weight: 600;
       color: #374151;
-      margin-top: 1.25rem;
-      min-height: 1.4em;
+      margin-top: clamp(0.35rem, 0.9vh, 0.75rem);
+      min-height: 1.2em;
     }
 
     /* Subtle Card Dividers */
@@ -690,7 +699,7 @@
       width: 100%;
       height: 1px;
       background: rgba(0, 0, 0, 0.08);
-      margin: 1.8rem 0 1.25rem;
+      margin: clamp(0.55rem, 1.3vh, 1.1rem) 0 clamp(0.45rem, 1.1vh, 0.9rem);
       border: none;
     }
 
@@ -699,25 +708,25 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.85rem;
+      gap: clamp(0.28rem, 0.8vh, 0.7rem);
       text-align: center;
     }
 
     .social-label-wrap {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 1px;
     }
 
     .social-follow-text {
-      font-size: 0.9rem;
+      font-size: clamp(0.76rem, 1.3vh, 0.88rem);
       font-weight: 600;
       color: #374151;
       letter-spacing: -0.01em;
     }
 
     .social-channels-text {
-      font-size: 1.08rem;
+      font-size: clamp(0.92rem, 1.6vh, 1.05rem);
       font-weight: 800;
       color: #0f172a;
       letter-spacing: -0.015em;
@@ -727,13 +736,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.85rem;
+      gap: clamp(0.5rem, 1.8vw, 0.85rem);
     }
 
     .social-light-pill {
-      width: 48px;
-      height: 48px;
-      border-radius: 15px;
+      width: clamp(38px, 5.2vh, 46px);
+      height: clamp(38px, 5.2vh, 46px);
+      border-radius: clamp(12px, 1.6vh, 15px);
       background: rgba(255, 255, 255, 0.88);
       border: 1px solid rgba(0, 0, 0, 0.06);
       box-shadow:
@@ -746,6 +755,11 @@
       text-decoration: none;
       transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
       flex-shrink: 0;
+    }
+
+    .social-light-pill svg {
+      width: clamp(18px, 2.5vh, 22px);
+      height: clamp(18px, 2.5vh, 22px);
     }
 
     .social-light-pill:hover {
@@ -772,13 +786,13 @@
     .powered-by-wa-badge {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      font-size: 0.82rem;
+      gap: 6px;
+      font-size: clamp(0.74rem, 1.3vh, 0.82rem);
       color: #4b5563;
       text-decoration: none;
-      padding: 0.38rem 0.95rem;
+      padding: clamp(0.28rem, 0.7vh, 0.4rem) clamp(0.68rem, 1.8vw, 0.95rem);
       border-radius: 99px;
-      background: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.75);
       border: 1px solid rgba(0, 0, 0, 0.08);
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
       transition: all 0.2s ease;
@@ -802,20 +816,39 @@
       color: #111827;
     }
 
-    /* Photos Section */
+    /* Photos Section (High Contrast Light Glass Design) */
     .photos-section {
       max-width: 1040px;
       width: 100%;
       margin: 2.5rem auto 4rem;
       scroll-margin-top: 2rem;
-      background: rgba(255, 255, 255, 0.88);
-      border: 1px solid rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.98);
       border-radius: 28px;
-      padding: clamp(1.4rem, 3vw, 2.2rem);
+      padding: clamp(1.2rem, 3vw, 2.2rem);
       box-shadow: 0 24px 50px rgba(0, 0, 0, 0.14);
       backdrop-filter: blur(24px) saturate(180%);
       -webkit-backdrop-filter: blur(24px) saturate(180%);
       box-sizing: border-box;
+      color: #0f172a !important;
+      color-scheme: light;
+    }
+
+    .section-title,
+    #photosSectionTitle {
+      font-size: clamp(1.35rem, 2.8vw, 1.85rem);
+      font-weight: 800;
+      color: #0f172a !important;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.35rem;
+      line-height: 1.25;
+    }
+
+    #photosSectionSubtitle {
+      font-size: clamp(0.85rem, 1.8vw, 0.94rem) !important;
+      font-weight: 600 !important;
+      color: #334155 !important;
+      margin: 0;
     }
 
     .photos-head {
@@ -870,12 +903,17 @@
       margin: 1.5rem 0 0.85rem;
       font-size: 1.15rem;
       font-weight: 700;
-      color: var(--ink);
-      border-bottom: 2px solid var(--line);
+      color: #0f172a !important;
+      border-bottom: 2px solid rgba(0, 0, 0, 0.08);
       padding-bottom: 0.5rem;
       display: flex;
       align-items: baseline;
       gap: 0.6rem;
+    }
+
+    .group-section-title span:last-child {
+      color: #475569 !important;
+      font-weight: 600 !important;
     }
 
     .photo-card {
@@ -923,7 +961,7 @@
 
     .photo-filename {
       font-size: 0.76rem;
-      color: var(--muted);
+      color: #475569 !important;
       font-family: monospace;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1021,24 +1059,25 @@
       border-color: var(--accent);
     }
 
-    /* High-Resolution Photo Lightbox with Apple-Standard Motion & Tinder Card Stack */
+    /* High-Resolution Photo Lightbox with Apple-Standard Motion & Physical Card Stack */
     .lightbox-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(5, 12, 10, 0.94);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      background: rgba(5, 12, 10, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
       z-index: 2000;
-      padding: 0.75rem 1rem;
+      padding: max(0.5rem, env(safe-area-inset-top)) max(0.6rem, env(safe-area-inset-right)) max(0.6rem, env(safe-area-inset-bottom)) max(0.6rem, env(safe-area-inset-left));
+      box-sizing: border-box;
       user-select: none;
       -webkit-user-select: none;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .lightbox-backdrop.active {
@@ -1054,22 +1093,25 @@
       align-items: center;
       color: #ffffff;
       z-index: 2010;
-      padding: 0.4rem 0.5rem;
+      padding: clamp(0.3rem, 1vh, 0.55rem) clamp(0.35rem, 1.5vw, 0.65rem);
+      box-sizing: border-box;
+      gap: clamp(6px, 1.5vw, 12px);
     }
 
     .lightbox-badge {
-      background: rgba(255, 255, 255, 0.18);
-      padding: 0.25rem 0.65rem;
+      background: rgba(255, 255, 255, 0.2);
+      padding: clamp(0.25rem, 0.8vh, 0.35rem) clamp(0.45rem, 1.5vw, 0.75rem);
       border-radius: 99px;
-      font-size: 0.8rem;
+      font-size: clamp(0.72rem, 2vw, 0.82rem);
       font-weight: 700;
       letter-spacing: 0.02em;
       white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .lightbox-title {
       font-family: monospace;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 600;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1084,17 +1126,34 @@
       }
     }
 
+    .lightbox-actions-group {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: clamp(4px, 1.2vw, 8px);
+      flex-shrink: 0;
+      min-width: 0;
+    }
+
     .btn-lightbox-action {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      padding: 0.42rem 0.85rem;
-      border-radius: 8px;
-      font-size: 0.82rem;
+      justify-content: center;
+      gap: clamp(3px, 0.8vw, 6px);
+      padding: clamp(0.36rem, 1vh, 0.44rem) clamp(0.45rem, 1.5vw, 0.85rem);
+      border-radius: clamp(8px, 1.5vw, 10px);
+      font-size: clamp(0.72rem, 2vw, 0.84rem);
       font-weight: 700;
       text-decoration: none;
       transition: all 0.15s ease;
       white-space: nowrap;
+      flex-shrink: 1;
+    }
+
+    .btn-lightbox-action svg {
+      width: clamp(12px, 2.5vw, 14px);
+      height: clamp(12px, 2.5vw, 14px);
+      flex-shrink: 0;
     }
 
     .btn-lightbox-action.btn-hd {
@@ -1123,37 +1182,48 @@
       background: rgba(255, 255, 255, 0.16);
       border: 1px solid rgba(255, 255, 255, 0.25);
       color: #ffffff;
-      width: 38px;
-      height: 38px;
+      width: clamp(34px, 7.5vw, 38px);
+      height: clamp(34px, 7.5vw, 38px);
       border-radius: 50%;
-      font-size: 1.4rem;
+      font-size: clamp(1.2rem, 3.5vw, 1.4rem);
       line-height: 1;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: all 0.15s ease;
-      margin-left: 0.25rem;
+      margin-left: 0;
       flex-shrink: 0;
     }
 
     .lightbox-icon-btn:hover {
       background: rgba(255, 255, 255, 0.32);
-      transform: scale(1.08);
+      transform: scale(1.06);
     }
 
-    /* Card Stack Stage for Dribbble / Tinder-Style Swipe Physics */
+    @media (max-width: 400px) {
+      .btn-lightbox-action {
+        padding: 0.34rem 0.42rem;
+        font-size: 0.7rem;
+      }
+      .lightbox-actions-group {
+        gap: 3px;
+      }
+    }
+
+    /* Card Stack Stage for Natural Card Stack Physics */
     .lightbox-img-wrap {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      max-width: 1200px;
+      max-width: 100%;
       width: 100%;
       overflow: hidden;
       position: relative;
       touch-action: none;
       perspective: 1200px;
+      min-height: 0;
     }
 
     .card-stage {
@@ -1174,28 +1244,29 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      will-change: transform, opacity, filter;
+      will-change: transform, filter;
       user-select: none;
       -webkit-user-select: none;
       transform-origin: center center;
       pointer-events: none;
+      opacity: 1 !important;
     }
 
     .card-behind {
       z-index: 1;
       transform: scale(0.92) translate3d(0, 16px, 0);
-      opacity: 0.95;
       filter: brightness(0.85);
       pointer-events: none;
+      opacity: 1 !important;
     }
 
     .card-current {
       z-index: 2;
       transform: scale(1) translate3d(0, 0, 0) rotate(0deg);
-      opacity: 1;
       filter: brightness(1);
       cursor: grab;
       pointer-events: auto;
+      opacity: 1 !important;
     }
 
     .card-current:active {
@@ -1203,12 +1274,12 @@
     }
 
     .lightbox-img {
-      max-width: 90vw;
-      max-height: 80vh;
+      max-width: min(92vw, 1200px);
+      max-height: calc(100dvh - 110px);
       width: auto;
       height: auto;
       object-fit: contain;
-      border-radius: 20px;
+      border-radius: clamp(14px, 2.5vw, 20px);
       box-shadow: 0 24px 60px -8px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.1);
       pointer-events: none;
       transform-origin: center center;
@@ -1220,9 +1291,8 @@
     @media (max-width: 640px) {
       .lightbox-img {
         max-width: 92vw;
-        max-height: 72vh;
-        border-radius: 18px;
-        box-shadow: 0 18px 45px -6px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.12);
+        max-height: calc(100dvh - 100px);
+        border-radius: 16px;
       }
     }
 
@@ -1288,11 +1358,12 @@
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      width: 50px;
-      height: 50px;
+      width: clamp(38px, 6vw, 48px);
+      height: clamp(38px, 6vw, 48px);
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.18);
       backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.25);
       color: #ffffff;
       display: flex;
@@ -1303,31 +1374,28 @@
       z-index: 2010;
     }
 
+    .lightbox-nav-btn svg {
+      width: clamp(20px, 3.5vw, 24px);
+      height: clamp(20px, 3.5vw, 24px);
+    }
+
     .lightbox-nav-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.32);
       transform: translateY(-50%) scale(1.06);
     }
 
     .lightbox-nav-btn.prev {
-      left: 1rem;
+      left: max(0.45rem, env(safe-area-inset-left));
     }
 
     .lightbox-nav-btn.next {
-      right: 1rem;
+      right: max(0.45rem, env(safe-area-inset-right));
     }
 
     @media (max-width: 640px) {
       .lightbox-nav-btn {
-        width: 42px;
-        height: 42px;
-      }
-
-      .lightbox-nav-btn.prev {
-        left: 0.4rem;
-      }
-
-      .lightbox-nav-btn.next {
-        right: 0.4rem;
+        width: 38px;
+        height: 38px;
       }
     }
 
@@ -1580,7 +1648,7 @@
       <div class="photos-head">
         <div>
           <h2 class="section-title" id="photosSectionTitle">Photos with BRK Sir</h2>
-          <p style="font-size:0.88rem;color:var(--muted);" id="photosSectionSubtitle"></p>
+          <p id="photosSectionSubtitle"></p>
         </div>
         <button class="btn-find-photos btn-outline" style="padding:0.4rem 1rem;font-size:0.85rem;"
           id="closePhotosBtn">New Search ↑</button>
@@ -1597,7 +1665,7 @@
         <span id="lightboxCounter" class="lightbox-badge">1 / 1</span>
         <span id="lightboxFilename" class="lightbox-title">Photo</span>
       </div>
-      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:nowrap;">
+      <div class="lightbox-actions-group">
         <a id="lightboxDownloadHdBtn" href="#" download class="btn-lightbox-action btn-hd"
           title="Download Full HD (1080p)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
@@ -1631,7 +1699,7 @@
           </svg>
         </button>
         <button id="closeLightboxBtn" class="lightbox-icon-btn" title="Close Lightbox (Esc)"
-          style="font-size:1.4rem;line-height:1;">&times;</button>
+          aria-label="Close Preview" style="font-size:1.4rem;line-height:1;">&times;</button>
       </div>
     </div>
 
@@ -1958,7 +2026,7 @@
       btn4k.setAttribute('download', filename);
     }
 
-    // Studio-Quality Lightbox Viewer with Dribbble Card Physics
+    // Studio-Quality Lightbox Viewer with Natural Card Stack Physics
     function openPhotoLightbox(index) {
       if (currentPhotosList.length === 0) return;
       if (index < 0) index = currentPhotosList.length - 1;
@@ -1973,11 +2041,11 @@
       const nextIdx = (index + 1) % currentPhotosList.length;
       const nextEnc = getPhotoEnc(currentPhotosList[nextIdx]);
 
-      // Load Studio 1600px HD preview directly (crisp, instantaneous, zero size jump)
+      // Load Studio 1600px HD preview directly (crisp, instantaneous)
       activeImg.src = `/preview/${enc}`;
       behindImg.src = `/preview/${nextEnc}`;
 
-      // Reset Card Stack Positions (cardA on top, cardB behind)
+      // Reset Card Stack Positions (activeCard on top, behindCard underneath)
       activeCard.className = 'stack-card card-current';
       activeCard.style.zIndex = '2';
       activeCard.style.transition = 'none';
@@ -1989,7 +2057,7 @@
       behindCard.style.zIndex = '1';
       behindCard.style.transition = 'none';
       behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
-      behindCard.style.opacity = '0.95';
+      behindCard.style.opacity = '1';
       behindCard.style.filter = 'brightness(0.85)';
 
       const modal = $('photoLightboxModal');
@@ -1997,8 +2065,17 @@
         modal.hidden = false;
         requestAnimationFrame(() => {
           modal.classList.add('active');
-          activeCard.style.transition = 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.32s ease';
+          activeCard.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
         });
+
+        // Android Hardware Back Button: push navigation layer to browser history
+        try {
+          history.pushState({ brkLightboxOpen: true, photoIndex: index }, '');
+        } catch (e) {}
+      } else {
+        try {
+          history.replaceState({ brkLightboxOpen: true, photoIndex: index }, '');
+        } catch (e) {}
       }
 
       // Preload adjacent photos for instant transitions
@@ -2008,12 +2085,12 @@
       new Image().src = `/preview/${getPhotoEnc(currentPhotosList[next2Idx])}`;
     }
 
-    // Seamless Card Role Swap after Throw-Out Animation
-    function finishTransition(targetIdx) {
+    // Seamless Card Role Swap after Slide Transition
+    function finishTransition(targetIdx, direction) {
       currentPhotoIndex = targetIdx;
       updateLightboxHeader(targetIdx);
 
-      // behindCard has smoothly animated into center and is already showing target photo!
+      // Incoming card is now centered and becomes activeCard at z-index 2
       behindCard.className = 'stack-card card-current';
       behindCard.style.zIndex = '2';
       behindCard.style.transition = 'none';
@@ -2021,13 +2098,13 @@
       behindCard.style.filter = 'brightness(1)';
       behindCard.style.opacity = '1';
 
-      // activeCard was thrown off screen. Place it silently behind as the new depth layer:
+      // Old card is placed silently underneath as behindCard at z-index 1
       activeCard.className = 'stack-card card-behind';
       activeCard.style.zIndex = '1';
       activeCard.style.transition = 'none';
       activeCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
       activeCard.style.filter = 'brightness(0.85)';
-      activeCard.style.opacity = '0.95';
+      activeCard.style.opacity = '1';
 
       // Preload next upcoming photo into the card now behind
       const upcomingIdx = (targetIdx + 1) % currentPhotosList.length;
@@ -2036,6 +2113,11 @@
       // Swap pointers: behindCard is now activeCard, activeCard is now behindCard
       const tempCard = activeCard; activeCard = behindCard; behindCard = tempCard;
       const tempImg = activeImg; activeImg = behindImg; behindImg = tempImg;
+
+      // Update history state so current position is preserved
+      try {
+        history.replaceState({ brkLightboxOpen: true, photoIndex: targetIdx }, '');
+      } catch (e) {}
 
       // Background preload previous photo
       const prevIdx = (targetIdx - 1 + currentPhotosList.length) % currentPhotosList.length;
@@ -2052,35 +2134,68 @@
       if (isTransitioning || currentPhotosList.length <= 1) return;
       isTransitioning = true;
 
-      const targetIdx = direction > 0
-        ? (currentPhotoIndex + 1) % currentPhotosList.length
-        : (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
+      if (direction > 0) {
+        // NEXT (Swipe Left): Active card slides left, reveal next from bottom of stack
+        const targetIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
+        behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[targetIdx])}`;
 
-      // Ensure behindCard is ready with target photo
-      behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[targetIdx])}`;
+        behindCard.className = 'stack-card card-behind';
+        behindCard.style.zIndex = '1';
+        behindCard.style.transition = 'none';
+        behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+        behindCard.style.filter = 'brightness(0.85)';
+        behindCard.style.opacity = '1';
 
-      // dir: Next throws card left (-1), Prev throws card right (1)
-      const dir = direction > 0 ? -1 : 1;
-      const flyX = dir * (window.innerWidth + 200);
+        activeCard.className = 'stack-card card-current';
+        activeCard.style.zIndex = '2';
+        activeCard.style.opacity = '1';
 
-      // Smooth Card Flight Animation (Matching Dribbble Video)
-      activeCard.style.transition = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.28s cubic-bezier(0.5, 0, 1, 1)';
-      activeCard.style.transform = `translate3d(${flyX}px, 0, 0) rotate(${dir * 14}deg)`;
-      activeCard.style.opacity = '0';
+        requestAnimationFrame(() => {
+          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+          activeCard.style.transform = 'translate3d(-120vw, 0, 0) rotate(-10deg)';
 
-      behindCard.style.transition = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), filter 0.28s ease';
-      behindCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
-      behindCard.style.filter = 'brightness(1)';
+          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
+          behindCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
+          behindCard.style.filter = 'brightness(1)';
+        });
 
-      playSwipeSound();
+        playSwipeSound();
+        setTimeout(() => { finishTransition(targetIdx, 1); }, 280);
 
-      setTimeout(() => {
-        finishTransition(targetIdx);
-      }, 280);
+      } else {
+        // PREVIOUS (Swipe Right): Incoming photo appears from ABOVE existing card, stacking over current card
+        const targetIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
+        behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[targetIdx])}`;
+
+        behindCard.className = 'stack-card';
+        behindCard.style.zIndex = '3'; // Layer incoming card ABOVE current card
+        behindCard.style.transition = 'none';
+        behindCard.style.transform = 'translate3d(-110vw, 0, 0) scale(1) rotate(-6deg)';
+        behindCard.style.filter = 'brightness(1)';
+        behindCard.style.opacity = '1';
+
+        activeCard.className = 'stack-card';
+        activeCard.style.zIndex = '2';
+        activeCard.style.opacity = '1';
+
+        requestAnimationFrame(() => {
+          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+          behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
+
+          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
+          activeCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+          activeCard.style.filter = 'brightness(0.85)';
+        });
+
+        playSwipeSound();
+        setTimeout(() => { finishTransition(targetIdx, -1); }, 280);
+      }
     }
 
-    function closeLightbox() {
+    function closeLightbox(isFromPopState = false) {
       const modal = $('photoLightboxModal');
+      if (modal.hidden) return;
+
       modal.classList.remove('active');
       setTimeout(() => {
         modal.hidden = true;
@@ -2088,6 +2203,13 @@
         if (imgB) imgB.src = '';
         resetZoom();
       }, 260);
+
+      // If user closed via UI close button or Esc key and a history entry exists, step back in history
+      if (!isFromPopState && window.history.state && window.history.state.brkLightboxOpen) {
+        try {
+          window.history.back();
+        } catch (e) {}
+      }
 
       // Restore Scroll Position: smoothly bring currently viewed photo into view!
       const allCards = document.querySelectorAll('.photo-card');
@@ -2100,6 +2222,15 @@
       }
     }
 
+    // Android Hardware Back Button & Browser Navigation Listener
+    window.addEventListener('popstate', () => {
+      const modal = $('photoLightboxModal');
+      if (modal && !modal.hidden && modal.classList.contains('active')) {
+        // Close only the full-screen preview and preserve search session
+        closeLightbox(true);
+      }
+    });
+
     // Lightbox Controls
     $('lightboxPrevBtn').addEventListener('click', e => {
       e.stopPropagation();
@@ -2111,14 +2242,14 @@
       navigateLightbox(1);
     });
 
-    $('closeLightboxBtn').addEventListener('click', closeLightbox);
+    $('closeLightboxBtn').addEventListener('click', () => closeLightbox(false));
 
     // Keyboard Navigation
     document.addEventListener('keydown', e => {
       if (!$('photoLightboxModal').hidden) {
         if (e.key === 'ArrowRight') navigateLightbox(1);
         if (e.key === 'ArrowLeft') navigateLightbox(-1);
-        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'Escape') closeLightbox(false);
       }
     });
 
@@ -2193,26 +2324,46 @@
           currentDragX = diffX;
           currentDragY = diffY;
 
-          // Ensure behind card displays correct photo for drag direction
-          if (diffX > 5 && dragDirection !== 1) {
-            dragDirection = 1;
-            const prevIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
-            behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
-          } else if (diffX < -5 && dragDirection !== -1) {
-            dragDirection = -1;
-            const nextIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
-            behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
-          }
-
-          const rot = Math.max(Math.min(diffX * 0.045, 14), -14);
-          if (activeCard) {
-            activeCard.style.transform = `translate3d(${diffX}px, ${diffY * 0.3}px, 0) rotate(${rot}deg)`;
-            activeCard.style.opacity = '1';
-          }
-          if (behindCard) {
+          if (diffX < -5) {
+            // Dragging Left: reveal next photo from bottom of card stack
+            if (dragDirection !== -1) {
+              dragDirection = -1;
+              const nextIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
+              behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
+              behindCard.className = 'stack-card card-behind';
+              behindCard.style.zIndex = '1';
+              behindCard.style.opacity = '1';
+              activeCard.className = 'stack-card card-current';
+              activeCard.style.zIndex = '2';
+              activeCard.style.opacity = '1';
+            }
+            const rot = Math.max(Math.min(diffX * 0.04, 12), -12);
+            activeCard.style.transform = `translate3d(${diffX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg)`;
             const progress = Math.min(Math.abs(diffX) / 180, 1);
             behindCard.style.transform = `scale(${0.92 + 0.08 * progress}) translate3d(0, ${16 * (1 - progress)}px, 0)`;
             behindCard.style.filter = `brightness(${0.85 + 0.15 * progress})`;
+
+          } else if (diffX > 5) {
+            // Dragging Right: incoming photo appears from ABOVE existing card, stacking over current card
+            if (dragDirection !== 1) {
+              dragDirection = 1;
+              const prevIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
+              behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
+              behindCard.className = 'stack-card';
+              behindCard.style.zIndex = '3'; // Layer incoming card ABOVE current card
+              behindCard.style.opacity = '1';
+              behindCard.style.filter = 'brightness(1)';
+              activeCard.className = 'stack-card';
+              activeCard.style.zIndex = '2';
+              activeCard.style.opacity = '1';
+            }
+            const incomingX = -window.innerWidth + diffX;
+            const rot = Math.max(Math.min((diffX - 100) * 0.02, 6), -6);
+            behindCard.style.transform = `translate3d(${incomingX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg) scale(1)`;
+
+            const progress = Math.min(diffX / 200, 1);
+            activeCard.style.transform = `scale(${1 - 0.08 * progress}) translate3d(0, ${16 * progress}px, 0)`;
+            activeCard.style.filter = `brightness(${1 - 0.15 * progress})`;
           }
         }
       }
@@ -2228,35 +2379,52 @@
           isCardDragging = false;
           const diffX = currentDragX;
 
-          if (Math.abs(diffX) > 60 && !isTransitioning) {
-            // Swipe Threshold Exceeded: Throw Card Out with Momentum!
+          if (diffX < -60 && !isTransitioning) {
+            // Swipe Left Confirmed: Throw active card out left, reveal next photo from bottom
             isTransitioning = true;
-            const dir = diffX > 0 ? 1 : -1; // 1 = right (prev), -1 = left (next)
-            const targetIdx = dir === 1
-              ? (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length
-              : (currentPhotoIndex + 1) % currentPhotosList.length;
-            const flyX = dir * (window.innerWidth + 200);
+            const targetIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
 
-            activeCard.style.transition = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.28s cubic-bezier(0.5, 0, 1, 1)';
-            activeCard.style.transform = `translate3d(${flyX}px, ${currentDragY * 0.4}px, 0) rotate(${dir * 14}deg)`;
-            activeCard.style.opacity = '0';
+            activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+            activeCard.style.transform = `translate3d(-120vw, ${currentDragY * 0.3}px, 0) rotate(-12deg)`;
 
-            behindCard.style.transition = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), filter 0.28s ease';
+            behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
             behindCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
             behindCard.style.filter = 'brightness(1)';
 
             playSwipeSound();
+            setTimeout(() => { finishTransition(targetIdx, 1); }, 280);
 
-            setTimeout(() => {
-              finishTransition(targetIdx);
-            }, 280);
+          } else if (diffX > 60 && !isTransitioning) {
+            // Swipe Right Confirmed: Slide incoming previous photo in from ABOVE over current card
+            isTransitioning = true;
+            const targetIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
+
+            behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+            behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
+
+            activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
+            activeCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+            activeCard.style.filter = 'brightness(0.85)';
+
+            playSwipeSound();
+            setTimeout(() => { finishTransition(targetIdx, -1); }, 280);
+
           } else {
-            // Snap Back to Center with Spring Bounce
-            if (activeCard) {
+            // Threshold not reached: Spring cancel
+            if (dragDirection === 1) {
+              behindCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
+              behindCard.style.transform = 'translate3d(-110vw, 0, 0) scale(1)';
+              activeCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease';
+              activeCard.style.transform = 'scale(1) translate3d(0, 0, 0)';
+              activeCard.style.filter = 'brightness(1)';
+              setTimeout(() => {
+                behindCard.style.zIndex = '1';
+                behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+                behindCard.style.filter = 'brightness(0.85)';
+              }, 250);
+            } else {
               activeCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
               activeCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
-            }
-            if (behindCard) {
               behindCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.26s ease';
               behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
               behindCard.style.filter = 'brightness(0.85)';
@@ -2319,25 +2487,44 @@
         mouseDragX = diffX;
         mouseDragY = diffY;
 
-        if (diffX > 5 && dragDirection !== 1) {
-          dragDirection = 1;
-          const prevIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
-          behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
-        } else if (diffX < -5 && dragDirection !== -1) {
-          dragDirection = -1;
-          const nextIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
-          behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
-        }
-
-        const rot = Math.max(Math.min(diffX * 0.045, 14), -14);
-        if (activeCard) {
-          activeCard.style.transform = `translate3d(${diffX}px, ${diffY * 0.3}px, 0) rotate(${rot}deg)`;
-          activeCard.style.opacity = '1';
-        }
-        if (behindCard) {
+        if (diffX < -5) {
+          if (dragDirection !== -1) {
+            dragDirection = -1;
+            const nextIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
+            behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
+            behindCard.className = 'stack-card card-behind';
+            behindCard.style.zIndex = '1';
+            behindCard.style.opacity = '1';
+            activeCard.className = 'stack-card card-current';
+            activeCard.style.zIndex = '2';
+            activeCard.style.opacity = '1';
+          }
+          const rot = Math.max(Math.min(diffX * 0.04, 12), -12);
+          activeCard.style.transform = `translate3d(${diffX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg)`;
           const progress = Math.min(Math.abs(diffX) / 180, 1);
           behindCard.style.transform = `scale(${0.92 + 0.08 * progress}) translate3d(0, ${16 * (1 - progress)}px, 0)`;
           behindCard.style.filter = `brightness(${0.85 + 0.15 * progress})`;
+
+        } else if (diffX > 5) {
+          if (dragDirection !== 1) {
+            dragDirection = 1;
+            const prevIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
+            behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
+            behindCard.className = 'stack-card';
+            behindCard.style.zIndex = '3';
+            behindCard.style.opacity = '1';
+            behindCard.style.filter = 'brightness(1)';
+            activeCard.className = 'stack-card';
+            activeCard.style.zIndex = '2';
+            activeCard.style.opacity = '1';
+          }
+          const incomingX = -window.innerWidth + diffX;
+          const rot = Math.max(Math.min((diffX - 100) * 0.02, 6), -6);
+          behindCard.style.transform = `translate3d(${incomingX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg) scale(1)`;
+
+          const progress = Math.min(diffX / 200, 1);
+          activeCard.style.transform = `scale(${1 - 0.08 * progress}) translate3d(0, ${16 * progress}px, 0)`;
+          activeCard.style.filter = `brightness(${1 - 0.15 * progress})`;
         }
       }
     });
@@ -2347,36 +2534,52 @@
       mouseIsDown = false;
       if (zoomScale <= 1.05 && !isTransitioning) {
         const diffX = mouseDragX;
-        if (Math.abs(diffX) > 60) {
+        if (diffX < -60) {
+          // Swipe Left Confirmed
           isTransitioning = true;
-          const dir = diffX > 0 ? 1 : -1;
-          const targetIdx = dir === 1
-            ? (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length
-            : (currentPhotoIndex + 1) % currentPhotosList.length;
-          const flyX = dir * (window.innerWidth + 200);
-
-          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.28s cubic-bezier(0.5, 0, 1, 1)';
-          activeCard.style.transform = `translate3d(${flyX}px, ${mouseDragY * 0.4}px, 0) rotate(${dir * 14}deg)`;
-          activeCard.style.opacity = '0';
-
-          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), filter 0.28s ease';
+          const targetIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
+          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+          activeCard.style.transform = `translate3d(-120vw, ${mouseDragY * 0.3}px, 0) rotate(-12deg)`;
+          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
           behindCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
           behindCard.style.filter = 'brightness(1)';
-
           playSwipeSound();
+          setTimeout(() => { finishTransition(targetIdx, 1); }, 280);
 
-          setTimeout(() => {
-            finishTransition(targetIdx);
-          }, 280);
+        } else if (diffX > 60) {
+          // Swipe Right Confirmed
+          isTransitioning = true;
+          const targetIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
+          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+          behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
+          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
+          activeCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+          activeCard.style.filter = 'brightness(0.85)';
+          playSwipeSound();
+          setTimeout(() => { finishTransition(targetIdx, -1); }, 280);
+
         } else {
-          if (activeCard) {
-            activeCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            activeCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
-          }
-          if (behindCard) {
-            behindCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.26s ease';
-            behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
-            behindCard.style.filter = 'brightness(0.85)';
+          if (dragDirection === 1) {
+            behindCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
+            behindCard.style.transform = 'translate3d(-110vw, 0, 0) scale(1)';
+            activeCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease';
+            activeCard.style.transform = 'scale(1) translate3d(0, 0, 0)';
+            activeCard.style.filter = 'brightness(1)';
+            setTimeout(() => {
+              behindCard.style.zIndex = '1';
+              behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+              behindCard.style.filter = 'brightness(0.85)';
+            }, 250);
+          } else {
+            if (activeCard) {
+              activeCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+              activeCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
+            }
+            if (behindCard) {
+              behindCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.26s ease';
+              behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+              behindCard.style.filter = 'brightness(0.85)';
+            }
           }
           dragDirection = 0;
         }
