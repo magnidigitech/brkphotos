@@ -4,10 +4,13 @@ Uses SQLite in WAL mode for microsecond reads and concurrent safety.
 """
 import sqlite3
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parent
+if str(BASE) not in sys.path:
+    sys.path.insert(0, str(BASE))
 STORAGE = Path(os.environ.get("STORAGE_DIR", BASE / "storage"))
 DATA_DIR = STORAGE / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -101,6 +104,7 @@ def init_db():
             photo_id INTEGER NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
             person_id INTEGER REFERENCES person_profiles(id) ON DELETE SET NULL,
             bbox_json TEXT,
+            crop_path TEXT,
             embedding_offset INTEGER,
             confidence REAL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -156,6 +160,11 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_upload_queue_status ON upload_queue(status, id);
         CREATE INDEX IF NOT EXISTS idx_upload_queue_task_id ON upload_queue(task_id);
         """)
+        try:
+            conn.execute("ALTER TABLE face_detections ADD COLUMN crop_path TEXT;")
+            conn.commit()
+        except Exception:
+            pass
     conn.close()
 
 def create_task_record(task_id: str, task_type: str, event_slug: str, target_folder: str = "", source_url: str = ""):
@@ -663,18 +672,13 @@ def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
     # Sort clusters by number of unique photo appearances
     clusters.sort(key=lambda c: len(set(names[idx] for idx in c)), reverse=True)
     
-    # 4. Preserve existing user-assigned custom names
-    cursor.execute("SELECT id, name FROM person_profiles WHERE event_id = ?", (event_id,))
-    custom_names = {}
-    for r in cursor.fetchall():
-        name = r["name"]
-        if not name.startswith("Guest #") and name not in {"Featured Person", "Key Family", "Rahul (Groom)", "Priya (Bride)"}:
-            custom_names[r["id"]] = name
+    # 4. Preserve existing person profiles and custom names to prevent ID churn and broken avatars
+    cursor.execute("SELECT id, name, avatar_thumb_path FROM person_profiles WHERE event_id = ? ORDER BY id ASC", (event_id,))
+    existing_profiles = [dict(r) for r in cursor.fetchall()]
 
-    # Clear old face_detections and unrenamed profiles for clean sync
+    # Clear old face_detections for clean re-linking
     cursor.execute("DELETE FROM face_detections WHERE event_id = ?", (event_id,))
-    cursor.execute("DELETE FROM person_profiles WHERE event_id = ?", (event_id,))
-    
+
     # Map photos rel_path, filename and relative subpath to photo id
     cursor.execute("SELECT id, rel_path, filename FROM photos WHERE event_id = ?", (event_id,))
     photo_map = {}
@@ -686,24 +690,34 @@ def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
             photo_map["/".join(parts[1:])] = r["id"]
         if len(parts) >= 3:
             photo_map["/".join(parts[2:])] = r["id"]
-    
-    people_created = 0
+
+    assigned_person_ids = []
     for idx, cl in enumerate(clusters):
         sample_raw = names[cl[0]]
         if event_slug not in {"default", "wedding", "brk-sir", "brksir"} and not sample_raw.startswith("events/"):
             sample_rel = f"events/{event_slug}/{sample_raw}"
         else:
             sample_rel = sample_raw
-            
-        default_name = "Bhashyam Ramakrishna Garu (BRK Sir)" if idx == 0 else f"Person #{idx + 1}"
-            
-        cursor.execute("""
-            INSERT INTO person_profiles (event_id, name, avatar_thumb_path)
-            VALUES (?, ?, ?)
-        """, (event_id, default_name, sample_rel))
-        person_id = cursor.lastrowid
-        people_created += 1
-            
+
+        # If reusing existing profile at same rank
+        if idx < len(existing_profiles):
+            ep = existing_profiles[idx]
+            person_id = ep["id"]
+            name = ep["name"]
+            avatar = ep["avatar_thumb_path"] if ep.get("avatar_thumb_path") and ep["avatar_thumb_path"].startswith("faces/") else sample_rel
+            if idx == 0 and (not name or name.startswith("Person #")):
+                name = "Bhashyam Ramakrishna Garu (BRK Sir)"
+            cursor.execute("UPDATE person_profiles SET name = ?, avatar_thumb_path = ? WHERE id = ?", (name, avatar, person_id))
+        else:
+            default_name = "Bhashyam Ramakrishna Garu (BRK Sir)" if idx == 0 else f"Person #{idx + 1}"
+            cursor.execute("""
+                INSERT INTO person_profiles (event_id, name, avatar_thumb_path)
+                VALUES (?, ?, ?)
+            """, (event_id, default_name, sample_rel))
+            person_id = cursor.lastrowid
+
+        assigned_person_ids.append(person_id)
+
         # Link face detections
         for face_idx in cl:
             photo_rel = names[face_idx]
@@ -714,7 +728,13 @@ def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
                     INSERT INTO face_detections (event_id, photo_id, person_id, embedding_offset, confidence)
                     VALUES (?, ?, ?, ?, ?)
                 """, (event_id, p_id, person_id, int(face_idx), 0.95))
-                
+
+    # Clean up excess unassigned profiles if cluster count decreased
+    if len(existing_profiles) > len(clusters):
+        excess_ids = [p["id"] for p in existing_profiles[len(clusters):]]
+        if excess_ids:
+            cursor.execute(f"DELETE FROM person_profiles WHERE id IN ({','.join('?' for _ in excess_ids)})", excess_ids)
+
     conn.commit()
     conn.close()
 
@@ -724,7 +744,12 @@ def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48):
     except Exception as e:
         print(f"Face crop note: {e}")
 
-    return {"status": "ok", "people_count": len(clusters), "created": people_created}
+    return {
+        "status": "ok",
+        "total_faces": len(embs),
+        "people_count": len(clusters),
+        "created": len(assigned_person_ids)
+    }
 
 def list_people_for_event(event_slug: str):
     """Returns all identified people for an event with thumbnail and photo count."""

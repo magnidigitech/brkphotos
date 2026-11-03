@@ -29,7 +29,9 @@ import numpy as np
 from PIL import Image, ImageOps
 from insightface.app import FaceAnalysis
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parent
+if str(BASE) not in sys.path:
+    sys.path.insert(0, str(BASE))
 STORAGE = Path(os.environ.get("STORAGE_DIR", BASE / "storage"))
 PHOTOS = STORAGE / "photos"
 DATA = STORAGE / "data"
@@ -94,6 +96,12 @@ def index_event(event_slug="brk-sir"):
             print(f"[{datetime.now().strftime('%H:%M:%S')}] Clustering complete: {cl_res}", flush=True)
         except Exception as e:
             print(f"[{datetime.now().strftime('%H:%M:%S')}] Clustering note: {e}", flush=True)
+
+        try:
+            from crop_faces import validate_and_recover_face_crops
+            validate_and_recover_face_crops(event_slug, logger=lambda m: print(m, flush=True))
+        except Exception as e:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] Face crop validation error: {e}", flush=True)
         return
 
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Loading InsightFace neural network model...", flush=True)
@@ -163,6 +171,12 @@ def index_event(event_slug="brk-sir"):
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Clustering complete: {cl_res}", flush=True)
     except Exception as e:
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Clustering note: {e}", flush=True)
+
+    try:
+        from crop_faces import validate_and_recover_face_crops
+        validate_and_recover_face_crops(event_slug, logger=lambda m: print(m, flush=True), face_app=face_app)
+    except Exception as e:
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Face crop validation error: {e}", flush=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="BRK Photos Multi-Event Face Indexer")
