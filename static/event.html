@@ -473,13 +473,52 @@
       cursor: pointer;
     }
 
+    .saved-profile-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+
+    .badge-new-pulse {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1px 7px;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      background: #0f5c4d;
+      color: #fef08a;
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
+      animation: subtleNewGlow 2.4s ease-in-out infinite;
+      line-height: 1.25;
+      flex-shrink: 0;
+    }
+
+    @keyframes subtleNewGlow {
+      0%, 100% {
+        opacity: 0.95;
+        box-shadow: 0 0 6px rgba(16, 185, 129, 0.25);
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.45;
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.55);
+        transform: scale(1.04);
+      }
+    }
+
     .saved-profile-title {
       font-size: 0.74rem;
       font-weight: 800;
       color: #0f5c4d;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      margin-bottom: 2px;
+      margin-bottom: 0;
     }
 
     .saved-profile-subtitle {
@@ -1534,7 +1573,10 @@
           <span class="saved-avatar-badge">✓</span>
         </div>
         <div class="saved-profile-info" id="savedInfoClickWrap" title="Click to view your saved photos">
-          <div class="saved-profile-title">Welcome back!</div>
+          <div class="saved-profile-title-row">
+            <span class="saved-profile-title">Welcome back!</span>
+            <span id="newBadgeIndicator" class="badge-new-pulse" hidden>NEW</span>
+          </div>
           <div class="saved-profile-subtitle" id="savedPhotosCountText">View your photos with BRK Sir</div>
         </div>
         <div class="saved-actions-group">
@@ -2672,7 +2714,9 @@
 
     let currentSearchFile = null;
 
-    // --- Local Storage Saved Photos Cache ---
+    // --- Local Storage Saved Photos Cache & Real-Time Match Sync ---
+    let isSyncingProfileCount = false;
+
     function checkSavedProfile() {
       const badge = $('savedProfileBadge');
       if (!badge) return;
@@ -2680,6 +2724,7 @@
       const savedThumb = localStorage.getItem('brk_saved_face_thumb');
       const savedPhotosJson = localStorage.getItem('brk_saved_photos');
       const savedCount = parseInt(localStorage.getItem('brk_saved_count') || '0', 10);
+      const acknowledgedCount = parseInt(localStorage.getItem('brk_acknowledged_count') || `${savedCount}`, 10);
 
       if (savedThumb && savedPhotosJson && savedCount > 0) {
         try {
@@ -2691,6 +2736,10 @@
             if (countText) {
               countText.textContent = `Found ${savedCount} photo${savedCount === 1 ? '' : 's'} with BRK Sir`;
             }
+            const newBadge = $('newBadgeIndicator');
+            if (newBadge) {
+              newBadge.hidden = !(savedCount > acknowledgedCount);
+            }
             badge.hidden = false;
             return;
           }
@@ -2701,11 +2750,81 @@
       badge.hidden = true;
     }
 
+    async function syncLatestProfileCount() {
+      if (isSyncingProfileCount) return;
+      const savedThumb = localStorage.getItem('brk_saved_face_thumb');
+      const savedEmbeddingRaw = localStorage.getItem('brk_saved_embedding');
+      let embedding = null;
+      if (savedEmbeddingRaw) {
+        try { embedding = JSON.parse(savedEmbeddingRaw); } catch (e) {}
+      }
+      if (!savedThumb && !embedding) return;
+
+      const lastCount = parseInt(localStorage.getItem('brk_saved_count') || '0', 10);
+      const acknowledgedCount = parseInt(localStorage.getItem('brk_acknowledged_count') || `${lastCount}`, 10);
+
+      isSyncingProfileCount = true;
+      try {
+        const payload = {
+          embedding: embedding,
+          face_thumb: embedding ? null : savedThumb,
+          last_count: lastCount
+        };
+        let res = await fetch('/api/check-profile-matches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          res = await fetch(`/api/events/${slug}/check-profile-matches`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.count === 'number') {
+            const newCount = data.count;
+            if (newCount > 0) {
+              localStorage.setItem('brk_saved_count', newCount);
+              if (data.photos && data.photos.length > 0) {
+                localStorage.setItem('brk_saved_photos', JSON.stringify(data.photos));
+              }
+              if (data.query_embedding && !embedding) {
+                localStorage.setItem('brk_saved_embedding', JSON.stringify(data.query_embedding));
+              }
+
+              const countText = $('savedPhotosCountText');
+              if (countText) {
+                countText.textContent = `Found ${newCount} photo${newCount === 1 ? '' : 's'} with BRK Sir`;
+              }
+
+              const newBadge = $('newBadgeIndicator');
+              if (newBadge) {
+                // Show subtle flickering NEW only when newly indexed matching photos detected
+                newBadge.hidden = !(newCount > acknowledgedCount);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Quiet background check
+      } finally {
+        isSyncingProfileCount = false;
+      }
+    }
+
     function viewSavedPhotos(e) {
       if (e) e.preventDefault();
       const savedPhotosJson = localStorage.getItem('brk_saved_photos');
       const savedCount = parseInt(localStorage.getItem('brk_saved_count') || '0', 10);
       if (!savedPhotosJson) return;
+
+      // User has viewed/acknowledged these photographs: dismiss NEW badge
+      localStorage.setItem('brk_acknowledged_count', savedCount);
+      const newBadge = $('newBadgeIndicator');
+      if (newBadge) newBadge.hidden = true;
 
       try {
         const photos = JSON.parse(savedPhotosJson);
@@ -2731,8 +2850,10 @@
         e.stopPropagation();
       }
       localStorage.removeItem('brk_saved_face_thumb');
+      localStorage.removeItem('brk_saved_embedding');
       localStorage.removeItem('brk_saved_photos');
       localStorage.removeItem('brk_saved_count');
+      localStorage.removeItem('brk_acknowledged_count');
       localStorage.removeItem('brk_saved_time');
       const badge = $('savedProfileBadge');
       if (badge) badge.hidden = true;
@@ -2825,8 +2946,12 @@
             if (j.face_thumb) {
               localStorage.setItem('brk_saved_face_thumb', j.face_thumb);
             }
+            if (j.query_embedding) {
+              localStorage.setItem('brk_saved_embedding', JSON.stringify(j.query_embedding));
+            }
             localStorage.setItem('brk_saved_photos', JSON.stringify(j.photos));
             localStorage.setItem('brk_saved_count', j.count);
+            localStorage.setItem('brk_acknowledged_count', j.count);
             localStorage.setItem('brk_saved_time', new Date().toISOString());
             checkSavedProfile();
           } catch (e) {
@@ -2899,8 +3024,15 @@
       });
     }
 
-    // Check for saved profile on startup
+    // Check for saved profile on startup and sync dynamic counts
     checkSavedProfile();
+    syncLatestProfileCount();
+    setInterval(syncLatestProfileCount, 45000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        syncLatestProfileCount();
+      }
+    });
     loadEvent();
   </script>
 </body>

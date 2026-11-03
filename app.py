@@ -283,6 +283,95 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
             current_task["message"] = f"Error: {e}"
         update_task_progress(task_id, status="failed", current_step=f"Error: {e}", log_line=f"ERROR: {e}")
 
+def run_reclustering_task(event_slug="brk-sir", threshold=0.48, task_id=None):
+    global current_task
+    display_title = "BRK Sir" if event_slug in {"default", "wedding", "brk-sir", "brksir"} else event_slug
+    if not task_id:
+        task_id = f"cl_{secrets.token_hex(4)}"
+
+    create_task_record(task_id, "recluster", display_title, "All People & Faces", "Existing Embeddings")
+    task_cancel_event.clear()
+
+    with task_lock:
+        current_task["task_id"] = task_id
+        current_task["status"] = "running"
+        current_task["type"] = "reclustering"
+        current_task["event"] = display_title
+        current_task["progress_pct"] = 15
+        current_task["message"] = f"Face reclustering in progress for '{display_title}'..."
+
+    now_ts = datetime.now().strftime("%H:%M:%S")
+    append_log(f"[{now_ts}] Recluster requested by admin for '{display_title}' (threshold: {threshold})")
+    update_task_progress(task_id, progress_pct=15, current_step="Loading existing face embeddings...",
+                         log_line=f"Recluster requested by admin for '{display_title}'")
+
+    try:
+        now_ts = datetime.now().strftime("%H:%M:%S")
+        append_log(f"[{now_ts}] Loading existing face records from database and vector index...")
+        embs, names, _ = get_event_index(event_slug)
+        if len(embs) == 0:
+            now_ts = datetime.now().strftime("%H:%M:%S")
+            msg = f"[{now_ts}] No face records found to cluster."
+            append_log(msg)
+            with task_lock:
+                current_task["status"] = "completed"
+                current_task["progress_pct"] = 100
+                current_task["message"] = msg
+            update_task_progress(task_id, status="completed", progress_pct=100, current_step=msg, log_line=msg)
+            return
+
+        now_ts = datetime.now().strftime("%H:%M:%S")
+        unique_photos = len(set(names))
+        append_log(f"[{now_ts}] Found {len(embs):,} face records across {unique_photos:,} photos.")
+        append_log(f"[{now_ts}] Starting face clustering (similarity threshold: {threshold})...")
+        update_task_progress(task_id, progress_pct=40,
+                             current_step=f"Clustering {len(embs):,} faces across {unique_photos:,} photos...",
+                             log_line=f"Found {len(embs):,} face records. Starting face clustering...")
+
+        if task_cancel_event.is_set():
+            append_log("Reclustering cancelled by administrator.")
+            with task_lock:
+                current_task["status"] = "cancelled"
+                current_task["message"] = "Task stopped by admin."
+            update_task_progress(task_id, status="cancelled", current_step="Task stopped by admin.", log_line="Reclustering cancelled by administrator.")
+            return
+
+        now_ts = datetime.now().strftime("%H:%M:%S")
+        append_log(f"[{now_ts}] Clustering in progress: computing centroid merges and face-to-person relationships...")
+        update_task_progress(task_id, progress_pct=65, current_step="Merging cluster centroids and syncing database...", log_line="Clustering in progress...")
+
+        res = cluster_and_sync_people(event_slug, threshold=threshold)
+
+        if task_cancel_event.is_set():
+            append_log("Reclustering cancelled by administrator.")
+            with task_lock:
+                current_task["status"] = "cancelled"
+                current_task["message"] = "Task stopped by admin."
+            update_task_progress(task_id, status="cancelled", current_step="Task stopped by admin.", log_line="Reclustering cancelled by administrator.")
+            return
+
+        now_ts = datetime.now().strftime("%H:%M:%S")
+        people_count = res.get("people_count", 0)
+        append_log(f"[{now_ts}] Clustering completed successfully: {people_count} people profiles created/updated.")
+        append_log(f"[{now_ts}] Updated people records and face relationships.")
+        
+        with task_lock:
+            current_task["status"] = "completed"
+            current_task["progress_pct"] = 100
+            current_task["message"] = f"Clustering completed ({people_count} people)"
+        update_task_progress(task_id, status="completed", progress_pct=100, current_step=f"Clustering completed ({people_count} people)",
+                             log_line=f"Clustering completed successfully. {people_count} people updated.")
+
+    except Exception as e:
+        now_ts = datetime.now().strftime("%H:%M:%S")
+        err_msg = f"Reclustering error: {e}"
+        append_log(f"[{now_ts}] ERROR: {err_msg}")
+        with task_lock:
+            current_task["status"] = "error"
+            current_task["message"] = err_msg
+        update_task_progress(task_id, status="failed", current_step=err_msg, log_line=f"ERROR: {err_msg}")
+
+
 def sync_photos_to_database(dest_dir: Path, event_slug: str, drive_map: dict, allowed_set: set) -> int:
     """
     Progressively scans downloaded photos on disk, auto-creates/matches subfolder albums,
@@ -769,7 +858,8 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
         "legacy_photos": [p["rel_path"] for p in photos_data],
         "face_thumb": selected_face_thumb,
         "total_faces_in_query": len(faces),
-        "selected_face_index": selected_idx
+        "selected_face_index": selected_idx,
+        "query_embedding": face.normed_embedding.tolist()
     }
 
 @app.post("/api/search")
@@ -781,6 +871,102 @@ def default_search(selfie: UploadFile = File(...), face_index: Optional[int] = F
 def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[int] = Form(None)):
     """Search for matching photos using face recognition."""
     return perform_face_search(selfie, slug, face_index=face_index)
+
+@app.post("/api/events/{slug}/check-profile-matches")
+@app.post("/api/check-profile-matches")
+async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request = None):
+    """
+    Lightweight dynamic check for returning users with saved face embedding or thumbnail.
+    Returns latest total matched photo count and photos list without re-taking selfie.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    embedding = body.get("embedding")
+    face_thumb = body.get("face_thumb")
+    last_count = int(body.get("last_count", 0) or 0)
+
+    embs, names, _ = get_event_index(slug)
+    if len(embs) == 0:
+        return {"status": "ok", "count": 0, "photos": [], "has_new": False, "new_count": 0}
+
+    query_emb = None
+    if embedding and isinstance(embedding, list) and len(embedding) == 512:
+        query_emb = np.array(embedding, dtype=np.float32)
+        norm = np.linalg.norm(query_emb)
+        if norm > 0:
+            query_emb = query_emb / norm
+    elif face_thumb and isinstance(face_thumb, str) and face_thumb.startswith("data:image"):
+        try:
+            head, b64 = face_thumb.split(",", 1)
+            raw_bytes = base64.b64decode(b64)
+            nparr = np.frombuffer(raw_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            with lock:
+                faces = face_app.get(img)
+            if faces:
+                target_f = max(faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
+                query_emb = target_f.normed_embedding
+        except Exception as e:
+            print("Error decoding face_thumb in match check:", e)
+
+    if query_emb is None:
+        return {"status": "error", "message": "No face embedding available to query", "count": 0, "has_new": False}
+
+    sims = embs @ query_emb
+    matches = np.where(sims >= THRESHOLD)[0]
+
+    seen = set()
+    photos_data = []
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT p.filename, p.rel_path, p.is_featured, p.is_hidden, p.drive_file_id,
+               a.name as album_name, e.name as event_name, e.slug as event_slug
+        FROM photos p
+        JOIN albums a ON p.album_id = a.id
+        JOIN events e ON p.event_id = e.id
+        WHERE e.slug = ? AND p.is_deleted = 0
+    """, (slug,))
+    photo_lookup = {r["rel_path"]: dict(r) for r in cursor.fetchall()}
+    conn.close()
+
+    for idx in matches:
+        rel = names[idx]
+        fname = Path(rel).name
+        if fname in seen:
+            continue
+        seen.add(fname)
+        info = photo_lookup.get(rel) or {"rel_path": rel, "filename": fname, "is_featured": 0, "is_hidden": 0}
+        if info.get("is_hidden"):
+            continue
+        photos_data.append({
+            "rel_path": rel,
+            "filename": fname,
+            "drive_file_id": info.get("drive_file_id") or drive_map.get(rel) or drive_map.get(fname),
+            "similarity": round(float(sims[idx]), 3),
+            "confidence": round(float(sims[idx]), 3),
+            "is_featured": bool(info.get("is_featured", 0)),
+            "album_name": info.get("album_name", ""),
+            "event_name": info.get("event_name", ""),
+            "event_slug": info.get("event_slug", slug)
+        })
+
+    photos_data.sort(key=lambda p: (not p["is_featured"], -p["confidence"]))
+    total_count = len(photos_data)
+    has_new = total_count > last_count if last_count > 0 else False
+    new_count = max(0, total_count - last_count) if last_count > 0 else 0
+
+    return {
+        "status": "ok",
+        "count": total_count,
+        "photos": photos_data,
+        "query_embedding": query_emb.tolist(),
+        "has_new": has_new,
+        "new_count": new_count
+    }
 
 @app.get("/thumb/{name:path}")
 def thumb(name: str):
@@ -2052,10 +2238,64 @@ def admin_event_people(slug: str, token: str = Depends(get_auth_token)):
 
 @app.post("/api/admin/events/{slug}/people/recluster")
 def admin_recluster_people(slug: str, payload: dict = None, token: str = Depends(get_auth_token)):
-    threshold = float(payload.get("threshold", 0.55)) if payload else 0.55
-    res = cluster_and_sync_people(slug, threshold=threshold)
-    people = list_people_for_event(slug)
-    return {"status": "ok", "result": res, "people": people}
+    with task_lock:
+        if current_task.get("status") == "running":
+            raise HTTPException(409, "A background task is already running.")
+        current_task["status"] = "running"
+    
+    threshold = float(payload.get("threshold", 0.48)) if payload else 0.48
+    task_id = f"cl_{secrets.token_hex(4)}"
+    threading.Thread(target=run_reclustering_task, args=(slug, threshold, task_id), daemon=True).start()
+    return {"status": "started", "task_id": task_id}
+
+@app.get("/api/admin/events/{slug}/search")
+def admin_search_albums_and_photos(slug: str, q: str = "", token: str = Depends(get_auth_token)):
+    q = q.strip()
+    if not q:
+        return {"albums": [], "photos": []}
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM events WHERE slug = ?", (slug,))
+    ev = cursor.fetchone()
+    if not ev:
+        conn.close()
+        return {"albums": [], "photos": []}
+    event_id = ev["id"]
+
+    query_like = f"%{q}%"
+    
+    # 1. Search Albums
+    cursor.execute("""
+        SELECT a.id, a.name, a.slug, a.cover_image_path,
+               COUNT(p.id) as photo_count
+        FROM albums a
+        LEFT JOIN photos p ON a.id = p.album_id AND p.is_deleted = 0
+        WHERE a.event_id = ? AND a.is_deleted = 0 AND (a.name LIKE ? OR a.slug LIKE ?)
+        GROUP BY a.id
+        ORDER BY a.name ASC
+        LIMIT 20
+    """, (event_id, query_like, query_like))
+    matched_albums = [dict(r) for r in cursor.fetchall()]
+
+    # 2. Search Photos by filename or path
+    cursor.execute("""
+        SELECT p.id, p.album_id, p.filename, p.rel_path, p.is_featured, p.is_hidden,
+               a.name as album_name, a.slug as album_slug
+        FROM photos p
+        JOIN albums a ON p.album_id = a.id
+        WHERE p.event_id = ? AND p.is_deleted = 0 AND (p.filename LIKE ? OR p.rel_path LIKE ?)
+        ORDER BY p.id DESC
+        LIMIT 40
+    """, (event_id, query_like, query_like))
+    matched_photos = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    return {
+        "query": q,
+        "albums": matched_albums,
+        "photos": matched_photos
+    }
 
 @app.put("/api/admin/events/{slug}/people/{person_id}")
 def admin_rename_person(slug: str, person_id: int, payload: dict, token: str = Depends(get_auth_token)):
