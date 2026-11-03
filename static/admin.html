@@ -4380,16 +4380,46 @@ async function submitGdriveTask(action) {
   }
 }
 
-// --- Upload Task Queue Management & Live Polling ---
-function formatTimeShort(dateStr) {
-  if (!dateStr) return '—';
-  try {
-    const d = new Date(dateStr.endsWith('Z') || dateStr.includes('+') ? dateStr : dateStr + 'Z');
-    if (isNaN(d.getTime())) return dateStr;
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  } catch(e) {
-    return dateStr;
+// --- Standardized Indian Standard Time (IST) Date/Time Parsing & Formatting ---
+function parseDateUtcOrLocal(dateVal) {
+  if (!dateVal) return null;
+  if (dateVal instanceof Date) return dateVal;
+  const s = String(dateVal).trim();
+  if (!s || s === 'None' || s === 'null') return null;
+  // If it's SQLite CURRENT_TIMESTAMP like "YYYY-MM-DD HH:MM:SS" without offset, it's stored in UTC
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) {
+    return new Date(s.replace(' ', 'T') + 'Z');
   }
+  if (!s.endsWith('Z') && !s.includes('+') && !s.includes('T')) {
+    return new Date(s.replace(' ', 'T') + 'Z');
+  }
+  return new Date(s);
+}
+
+function formatToIST(dateVal, includeDate = true) {
+  if (!dateVal) return '—';
+  try {
+    const d = parseDateUtcOrLocal(dateVal);
+    if (!d || isNaN(d.getTime())) return String(dateVal);
+    const opts = {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    };
+    if (includeDate) {
+      opts.day = 'numeric';
+      opts.month = 'short';
+    }
+    return d.toLocaleString('en-IN', opts) + (includeDate ? ' IST' : '');
+  } catch (e) {
+    return String(dateVal);
+  }
+}
+
+function formatTimeShort(dateStr) {
+  return formatToIST(dateStr, false);
 }
 
 let isFetchingQueue = false;
@@ -4454,13 +4484,14 @@ function renderUploadQueueUI(data) {
     return;
   }
 
-  tbody.replaceChildren();
-  for (const t of tasks) {
-    const tr = document.createElement('tr');
-    tr.style.cssText = 'border-bottom:1px solid #f1f5f9;transition:background 0.15s;';
-    tr.onmouseover = () => tr.style.background = '#f8fafc';
-    tr.onmouseout = () => tr.style.background = 'transparent';
+  // Remove empty placeholder row if real tasks arrived
+  const emptyRow = tbody.querySelector('td[colspan="7"]');
+  if (emptyRow) tbody.innerHTML = '';
 
+  const taskIds = new Set(tasks.map(t => t.task_id));
+
+  for (let i = 0; i < tasks.length; i++) {
+    const t = tasks[i];
     let badgeClass = 'badge-queued';
     let statusLabel = 'Queued';
     if (t.status === 'running') {
@@ -4480,42 +4511,89 @@ function renderUploadQueueUI(data) {
     const pct = t.progress_pct || 0;
     const stepText = t.current_step || 'Waiting in queue...';
     const filesCount = t.file_count || t.processed_count || 0;
-    const createdAt = t.created_at ? formatTimeShort(t.created_at) : '—';
-    const timing = t.completed_at ? `Done ${formatTimeShort(t.completed_at)}` : (t.started_at ? `Started ${formatTimeShort(t.started_at)}` : 'Waiting');
+    const createdAt = t.created_at ? formatToIST(t.created_at) : '—';
+    const timing = t.completed_at ? `Done ${formatToIST(t.completed_at, false)}` : (t.started_at ? `Started ${formatToIST(t.started_at, false)}` : 'Waiting');
 
-    tr.innerHTML = `
-      <td style="padding:0.65rem 0.75rem;">
-        <div style="font-weight:700;color:#111827;">${escapeHtml(t.task_name)}</div>
-        <div style="font-size:0.75rem;color:var(--muted);font-family:monospace;">#${t.task_id} • Folder: ${escapeHtml(t.target_album_slug || 'auto')}</div>
-      </td>
-      <td style="padding:0.65rem 0.75rem;font-weight:600;color:#374151;">
-        ${filesCount} photo${filesCount === 1 ? '' : 's'}
-      </td>
-      <td style="padding:0.65rem 0.75rem;">
-        <span class="q-badge ${badgeClass}">${statusLabel}</span>
-      </td>
-      <td style="padding:0.65rem 0.75rem;">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-          <div style="flex:1;background:#e2e8f0;height:6px;border-radius:99px;overflow:hidden;">
-            <div style="width:${pct}%;background:${t.status === 'failed' ? '#ef4444' : '#0f5c4d'};height:100%;transition:width 0.3s;"></div>
+    let tr = document.getElementById(`queue-row-${t.task_id}`);
+    if (tr) {
+      // In-place AJAX update without replacing elements (prevents UI flicker)
+      const badgeEl = tr.querySelector('.q-badge');
+      if (badgeEl && (badgeEl.textContent !== statusLabel || !badgeEl.classList.contains(badgeClass))) {
+        badgeEl.className = `q-badge ${badgeClass}`;
+        badgeEl.textContent = statusLabel;
+      }
+      const progressBar = tr.querySelector('.q-progress-bar');
+      if (progressBar) {
+        progressBar.style.width = `${pct}%`;
+        progressBar.style.background = t.status === 'failed' ? '#ef4444' : '#0f5c4d';
+      }
+      const progressPctText = tr.querySelector('.q-progress-pct');
+      if (progressPctText && progressPctText.textContent !== `${pct}%`) {
+        progressPctText.textContent = `${pct}%`;
+      }
+      const stepEl = tr.querySelector('.q-step-text');
+      if (stepEl && stepEl.textContent !== stepText) {
+        stepEl.textContent = stepText;
+        stepEl.title = stepText;
+      }
+      const timingEl = tr.querySelector('.q-timing-text');
+      if (timingEl && timingEl.textContent !== timing) {
+        timingEl.textContent = timing;
+      }
+      const filesEl = tr.querySelector('.q-files-text');
+      if (filesEl) {
+        filesEl.textContent = `${filesCount} photo${filesCount === 1 ? '' : 's'}`;
+      }
+    } else {
+      tr = document.createElement('tr');
+      tr.id = `queue-row-${t.task_id}`;
+      tr.style.cssText = 'border-bottom:1px solid #f1f5f9;transition:background 0.15s;';
+      tr.onmouseover = () => tr.style.background = '#f8fafc';
+      tr.onmouseout = () => tr.style.background = 'transparent';
+
+      tr.innerHTML = `
+        <td style="padding:0.65rem 0.75rem;">
+          <div style="font-weight:700;color:#111827;">${escapeHtml(t.task_name)}</div>
+          <div style="font-size:0.75rem;color:var(--muted);font-family:monospace;">#${t.task_id} • Folder: ${escapeHtml(t.target_album_slug || 'auto')}</div>
+        </td>
+        <td class="q-files-text" style="padding:0.65rem 0.75rem;font-weight:600;color:#374151;">
+          ${filesCount} photo${filesCount === 1 ? '' : 's'}
+        </td>
+        <td style="padding:0.65rem 0.75rem;">
+          <span class="q-badge ${badgeClass}">${statusLabel}</span>
+        </td>
+        <td style="padding:0.65rem 0.75rem;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+            <div style="flex:1;background:#e2e8f0;height:6px;border-radius:99px;overflow:hidden;">
+              <div class="q-progress-bar" style="width:${pct}%;background:${t.status === 'failed' ? '#ef4444' : '#0f5c4d'};height:100%;transition:width 0.3s;"></div>
+            </div>
+            <span class="q-progress-pct" style="font-size:0.75rem;font-weight:700;color:#475569;min-width:32px;">${pct}%</span>
           </div>
-          <span style="font-size:0.75rem;font-weight:700;color:#475569;min-width:32px;">${pct}%</span>
-        </div>
-        <div style="font-size:0.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;" title="${escapeHtml(stepText)}">${escapeHtml(stepText)}</div>
-      </td>
-      <td style="padding:0.65rem 0.75rem;color:#64748b;font-size:0.8rem;">
-        ${createdAt}
-      </td>
-      <td style="padding:0.65rem 0.75rem;color:#64748b;font-size:0.8rem;">
-        ${timing}
-      </td>
-      <td style="padding:0.65rem 0.75rem;text-align:right;white-space:nowrap;">
-        <button class="btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;" onclick="viewQueueTaskDetails('${t.task_id}')">Details</button>
-        ${(t.status === 'queued' || t.status === 'running') ? `<button class="btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;color:#ef4444;border-color:#fca5a5;margin-left:4px;" onclick="cancelQueueTaskAction('${t.task_id}')">Cancel</button>` : ''}
-        ${(t.status === 'failed' || t.status === 'cancelled') ? `<button class="btn-primary" style="padding:0.25rem 0.55rem;font-size:0.75rem;margin-left:4px;background:#0f5c4d;" onclick="retryQueueTaskAction('${t.task_id}')">Retry</button>` : ''}
-      </td>
-    `;
-    tbody.appendChild(tr);
+          <div class="q-step-text" style="font-size:0.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;" title="${escapeHtml(stepText)}">${escapeHtml(stepText)}</div>
+        </td>
+        <td style="padding:0.65rem 0.75rem;color:#64748b;font-size:0.8rem;">
+          ${createdAt}
+        </td>
+        <td class="q-timing-text" style="padding:0.65rem 0.75rem;color:#64748b;font-size:0.8rem;">
+          ${timing}
+        </td>
+        <td style="padding:0.65rem 0.75rem;text-align:right;white-space:nowrap;">
+          <button class="btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;" onclick="viewQueueTaskDetails('${t.task_id}')">Details</button>
+          ${(t.status === 'queued' || t.status === 'running') ? `<button class="btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;color:#ef4444;border-color:#fca5a5;margin-left:4px;" onclick="cancelQueueTaskAction('${t.task_id}')">Cancel</button>` : ''}
+          ${(t.status === 'failed' || t.status === 'cancelled') ? `<button class="btn-primary" style="padding:0.25rem 0.55rem;font-size:0.75rem;margin-left:4px;background:#0f5c4d;" onclick="retryQueueTaskAction('${t.task_id}')">Retry</button>` : ''}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  // Remove rows no longer in queue tasks
+  const allQueueRows = Array.from(tbody.querySelectorAll('tr[id^="queue-row-"]'));
+  for (const r of allQueueRows) {
+    const tid = r.id.replace('queue-row-', '');
+    if (!taskIds.has(tid)) {
+      r.remove();
+    }
   }
 }
 
@@ -4539,8 +4617,8 @@ async function viewQueueTaskDetails(taskId) {
         <div><strong>Task Type:</strong> ${t.task_type}</div>
         <div><strong>Target Album:</strong> ${escapeHtml(t.target_album_name || t.target_album_slug)}</div>
         <div><strong>Files Count:</strong> ${t.file_count || 0}</div>
-        <div><strong>Created At:</strong> ${t.created_at || '—'}</div>
-        <div><strong>Completed At:</strong> ${t.completed_at || 'In progress / waiting'}</div>
+        <div><strong>Created At:</strong> ${formatToIST(t.created_at)}</div>
+        <div><strong>Completed At:</strong> ${t.completed_at ? formatToIST(t.completed_at) : 'In progress / waiting'}</div>
         ${t.error_message ? `<div style="grid-column:1/-1;color:#b91c1c;"><strong>Error:</strong> ${escapeHtml(t.error_message)}</div>` : ''}
       `;
     }
@@ -4908,7 +4986,7 @@ async function openInlineTaskLogs(taskId, isLivePoll = false) {
     }
     const metaEl = $(`inlineLogMeta-${taskId}`);
     if (metaEl) {
-      metaEl.textContent = `Started: ${t.started_at} | Files: ${t.processed_files || 0} / ${t.total_files || '?'} | Saved: ${(t.storage_saved_mb || 0).toFixed(1)} MB | Status: ${t.status.toUpperCase()}`;
+      metaEl.textContent = `Started: ${formatToIST(t.started_at)} | Files: ${t.processed_files || 0} / ${t.total_files || '?'} | Saved: ${(t.storage_saved_mb || 0).toFixed(1)} MB | Status: ${t.status.toUpperCase()}`;
     }
 
     const consoleEl = $(`inlineLogConsole-${taskId}`);
@@ -4927,6 +5005,48 @@ async function openInlineTaskLogs(taskId, isLivePoll = false) {
   }
 }
 
+function renderTaskRowInnerHtml(t) {
+  const isExpanded = currentInlineLogTaskId === t.task_id;
+  const isRunning = t.status === 'running';
+  const isFailed = t.status === 'failed';
+  const statusClass = isRunning ? 'running' : (isFailed ? 'failed' : 'completed');
+  const timeStr = formatToIST(t.started_at);
+  const isGdrive = t.task_type === 'gdrive_ingest';
+  const typeLabel = isGdrive ? 'Google Drive Sync' : 'AI Facial Index';
+  const driveUrl = t.source_url ? (t.source_url.length > 34 ? t.source_url.substring(0, 34) + '...' : t.source_url) : 'Direct Upload';
+  const savedMb = t.storage_saved_mb ? `${t.storage_saved_mb.toFixed(1)} MB saved` : 'Optimized';
+
+  return `
+    <td style="font-family:monospace;font-size:0.8rem;white-space:nowrap;padding:0.75rem 1rem;">${timeStr}</td>
+    <td style="padding:0.75rem 1rem;">
+      <div style="font-weight:600;display:flex;align-items:center;gap:0.4rem;">
+        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>${typeLabel}</span>
+      </div>
+    </td>
+    <td style="padding:0.75rem 1rem;">
+      <span style="font-weight:600;">${['wedding', 'default', 'brk-sir', 'brksir'].includes(t.event_slug) ? 'BRK Sir' : escapeHtml(t.event_slug)}</span>
+      <span style="color:var(--muted);font-size:0.78rem;"> / ${escapeHtml(t.target_folder || 'All')}</span>
+    </td>
+    <td style="padding:0.75rem 1rem;">
+      ${t.source_url ? `<a href="${t.source_url}" target="_blank" style="color:var(--primary);text-decoration:none;font-family:monospace;font-size:0.78rem;">${escapeHtml(driveUrl)} ↗</a>` : '<span style="color:var(--muted);font-size:0.78rem;">Manual / Direct</span>'}
+    </td>
+    <td style="padding:0.75rem 1rem;">
+      <div id="task-files-${t.task_id}" style="font-weight:600;">${t.processed_files || 0} / ${t.total_files || '?'} files</div>
+      <div id="task-saved-${t.task_id}" style="font-size:0.75rem;color:var(--emerald);font-weight:600;">${savedMb}</div>
+    </td>
+    <td style="padding:0.75rem 1rem;" id="task-status-cell-${t.task_id}">
+      <span class="task-status-pill ${statusClass}" style="font-size:0.68rem;padding:0.15rem 0.5rem;">
+        ${isRunning ? '<span class="status-pulse-dot"></span>' : ''}
+        <span>${t.status.toUpperCase()}</span>
+      </span>
+    </td>
+    <td style="padding:0.75rem 1rem;text-align:right;">
+      <button id="btn-view-logs-${t.task_id}" class="${isExpanded ? 'btn-primary' : 'btn-outline'}" style="padding:0.25rem 0.6rem;font-size:0.75rem;${isExpanded ? 'background:#0f5c4d;border-color:#0f5c4d;color:#fff;' : ''}" onclick="toggleTaskLogs('${t.task_id}')">${isExpanded ? 'Hide Logs' : 'View Logs'}</button>
+    </td>
+  `;
+}
+
 async function loadTaskHistory(isLiveUpdate = false) {
   try {
     const res = await fetch('/api/admin/tasks/history?limit=30');
@@ -4939,82 +5059,77 @@ async function loadTaskHistory(isLiveUpdate = false) {
     }
 
     const tbody = $('taskHistoryTableBody');
-    tbody.replaceChildren();
+    if (!tbody) return;
 
     if (tasks.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--muted);">No background tasks recorded yet.</td></tr>';
       return;
     }
 
-    for (const t of tasks) {
-      const isExpanded = currentInlineLogTaskId === t.task_id;
-      const tr = document.createElement('tr');
-      tr.id = `task-row-${t.task_id}`;
+    // Remove empty placeholder row if tasks exist
+    const emptyRow = tbody.querySelector('td[colspan="7"]');
+    if (emptyRow && !emptyRow.closest('.inline-task-log-row')) tbody.innerHTML = '';
+
+    const taskIds = new Set(tasks.map(t => t.task_id));
+
+    // Update existing rows or insert new tasks in place (no DOM wiping = no flickering)
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      let tr = document.getElementById(`task-row-${t.task_id}`);
       const isRunning = t.status === 'running';
       const isFailed = t.status === 'failed';
       const statusClass = isRunning ? 'running' : (isFailed ? 'failed' : 'completed');
-      const timeStr = t.started_at ? new Date(t.started_at.includes('Z') ? t.started_at : t.started_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' }) : 'Recently';
-      const isGdrive = t.task_type === 'gdrive_ingest';
-      const typeLabel = isGdrive ? 'Google Drive Sync' : 'AI Facial Index';
-      const driveUrl = t.source_url ? (t.source_url.length > 34 ? t.source_url.substring(0, 34) + '...' : t.source_url) : 'Direct Upload';
       const savedMb = t.storage_saved_mb ? `${t.storage_saved_mb.toFixed(1)} MB saved` : 'Optimized';
 
-      tr.innerHTML = `
-        <td style="font-family:monospace;font-size:0.8rem;white-space:nowrap;padding:0.75rem 1rem;">${timeStr}</td>
-        <td style="padding:0.75rem 1rem;">
-          <div style="font-weight:600;display:flex;align-items:center;gap:0.4rem;">
-            <svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <span>${typeLabel}</span>
-          </div>
-        </td>
-        <td style="padding:0.75rem 1rem;">
-          <span style="font-weight:600;">${['wedding', 'default', 'brk-sir', 'brksir'].includes(t.event_slug) ? 'BRK Sir' : t.event_slug}</span>
-          <span style="color:var(--muted);font-size:0.78rem;"> / ${t.target_folder || 'All'}</span>
-        </td>
-        <td style="padding:0.75rem 1rem;">
-          ${t.source_url ? `<a href="${t.source_url}" target="_blank" style="color:var(--primary);text-decoration:none;font-family:monospace;font-size:0.78rem;">${driveUrl} ↗</a>` : '<span style="color:var(--muted);font-size:0.78rem;">Manual / Direct</span>'}
-        </td>
-        <td style="padding:0.75rem 1rem;">
-          <div style="font-weight:600;">${t.processed_files || 0} / ${t.total_files || '?'} files</div>
-          <div style="font-size:0.75rem;color:var(--emerald);font-weight:600;">${savedMb}</div>
-        </td>
-        <td style="padding:0.75rem 1rem;">
-          <span class="task-status-pill ${statusClass}" style="font-size:0.68rem;padding:0.15rem 0.5rem;">
-            ${isRunning ? '<span class="status-pulse-dot"></span>' : ''}
-            <span>${t.status.toUpperCase()}</span>
-          </span>
-        </td>
-        <td style="padding:0.75rem 1rem;text-align:right;">
-          <button id="btn-view-logs-${t.task_id}" class="${isExpanded ? 'btn-primary' : 'btn-outline'}" style="padding:0.25rem 0.6rem;font-size:0.75rem;${isExpanded ? 'background:#0f5c4d;border-color:#0f5c4d;color:#fff;' : ''}" onclick="toggleTaskLogs('${t.task_id}')">${isExpanded ? 'Hide Logs' : 'View Logs'}</button>
-        </td>
-      `;
-      tbody.append(tr);
+      if (tr) {
+        // In-place updates for live changes
+        const filesEl = document.getElementById(`task-files-${t.task_id}`);
+        if (filesEl) filesEl.textContent = `${t.processed_files || 0} / ${t.total_files || '?'} files`;
+        const savedEl = document.getElementById(`task-saved-${t.task_id}`);
+        if (savedEl) savedEl.textContent = savedMb;
 
-      // If this task was open, re-render the inline log row right underneath it
-      if (isExpanded) {
-        const logRow = document.createElement('tr');
-        logRow.id = `inline-log-row-${t.task_id}`;
-        logRow.className = 'inline-task-log-row';
-        logRow.innerHTML = `
-          <td colspan="7" style="padding:0;background:#0d1117;border-bottom:2px solid #0f5c4d;">
-            <div style="padding:0.85rem 1.15rem 1rem;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;color:#f8fafc;flex-wrap:wrap;gap:0.5rem;">
-                <div style="display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;">
-                  <span style="font-weight:700;font-size:0.88rem;color:#6ee7b7;" id="inlineLogTitle-${t.task_id}">Task Execution Logs</span>
-                  <span style="background:rgba(255,255,255,0.12);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:0.75rem;color:#94a3b8;">#${t.task_id}</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:0.75rem;">
-                  <span style="font-size:0.78rem;color:#94a3b8;font-family:monospace;" id="inlineLogMeta-${t.task_id}"></span>
-                  <button type="button" class="btn-outline" style="padding:0.2rem 0.55rem;font-size:0.72rem;color:#ffffff;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25);cursor:pointer;" onclick="closeInlineTaskLogs()">✕ Close</button>
-                </div>
-              </div>
-              <pre class="console" id="inlineLogConsole-${t.task_id}" style="min-height:160px;max-height:380px;overflow-y:auto;background:#06090e;color:#4ade80;padding:0.85rem 1rem;border-radius:8px;font-family:monospace;font-size:0.78rem;line-height:1.55;white-space:pre-wrap;word-break:break-all;margin:0;border:1px solid rgba(255,255,255,0.12);"></pre>
-            </div>
-          </td>
-        `;
-        tbody.append(logRow);
-        openInlineTaskLogs(t.task_id, true);
+        const statusCell = document.getElementById(`task-status-cell-${t.task_id}`);
+        if (statusCell) {
+          statusCell.innerHTML = `
+            <span class="task-status-pill ${statusClass}" style="font-size:0.68rem;padding:0.15rem 0.5rem;">
+              ${isRunning ? '<span class="status-pulse-dot"></span>' : ''}
+              <span>${t.status.toUpperCase()}</span>
+            </span>
+          `;
+        }
+      } else {
+        // New task row: create element and insert in correct position
+        tr = document.createElement('tr');
+        tr.id = `task-row-${t.task_id}`;
+        tr.innerHTML = renderTaskRowInnerHtml(t);
+        if (i === 0) {
+          tbody.prepend(tr);
+        } else {
+          const prevTask = tasks[i - 1];
+          const prevRow = document.getElementById(`inline-log-row-${prevTask.task_id}`) || document.getElementById(`task-row-${prevTask.task_id}`);
+          if (prevRow && prevRow.nextSibling) {
+            tbody.insertBefore(tr, prevRow.nextSibling);
+          } else {
+            tbody.appendChild(tr);
+          }
+        }
       }
+    }
+
+    // Remove any stale task rows no longer present (excluding inline log rows)
+    const allTrs = Array.from(tbody.querySelectorAll('tr[id^="task-row-"]'));
+    for (const r of allTrs) {
+      const tid = r.id.replace('task-row-', '');
+      if (!taskIds.has(tid)) {
+        const inlineLog = document.getElementById(`inline-log-row-${tid}`);
+        if (inlineLog) inlineLog.remove();
+        r.remove();
+      }
+    }
+
+    // If an inline log row is currently open, seamlessly fetch newest logs in place
+    if (currentInlineLogTaskId && taskIds.has(currentInlineLogTaskId)) {
+      openInlineTaskLogs(currentInlineLogTaskId, true);
     }
   } catch (e) {
     console.error('Error loading task history:', e);

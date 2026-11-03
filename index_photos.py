@@ -4,8 +4,14 @@ Can index a specific event (--event <slug>) or all events.
 Saves per-event face embeddings, names, and thumbnails.
 """
 import argparse, json, os, sys, time, warnings
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def ist_ts():
+    """Returns current Indian Standard Time (IST) formatted as HH:MM:SS."""
+    return datetime.now(IST).strftime("%H:%M:%S")
 
 # Force unbuffered output so logs stream live to admin console
 if hasattr(sys.stdout, "reconfigure"):
@@ -39,10 +45,9 @@ MODELS = STORAGE / "models"
 DET_SIZE = int(os.environ.get("DET_SIZE", "640"))
 EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
-def index_event(event_slug="brk-sir"):
+def index_event(event_slug="brk-sir", run_clustering=False):
     display_name = "BRK Sir" if event_slug in {"default", "wedding", "brk-sir", "brksir"} else event_slug
-    now_str = datetime.now().strftime("%H:%M:%S")
-    print(f"[{now_str}] === Starting AI Face Indexing for: '{display_name}' ===", flush=True)
+    print(f"[{ist_ts()}] === Starting AI Face Indexing for: '{display_name}' ===", flush=True)
     
     # Per-event directories
     if event_slug in {"default", "wedding", "brk-sir", "brksir"}:
@@ -84,30 +89,25 @@ def index_event(event_slug="brk-sir"):
     total_files = len(files)
     pending_files = [p for p in files if str(p.relative_to(event_photos_dir)) not in done]
     
-    now_str = datetime.now().strftime("%H:%M:%S")
-    print(f"[{now_str}] Scan complete: {total_files} total photos found in library.", flush=True)
-    print(f"[{now_str}] {len(done)} already indexed. {len(pending_files)} pending AI face analysis.", flush=True)
+    print(f"[{ist_ts()}] Scan complete: {total_files} total photos found in library.", flush=True)
+    print(f"[{ist_ts()}] {len(done)} already indexed. {len(pending_files)} pending AI face analysis.", flush=True)
 
     if not pending_files:
-        print(f"[{now_str}] All {total_files} photos are already indexed! Running clustering check...", flush=True)
-        try:
-            from database import cluster_and_sync_people
-            cl_res = cluster_and_sync_people(event_slug)
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Clustering complete: {cl_res}", flush=True)
-        except Exception as e:
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Clustering note: {e}", flush=True)
-
-        try:
-            from crop_faces import validate_and_recover_face_crops
-            validate_and_recover_face_crops(event_slug, logger=lambda m: print(m, flush=True))
-        except Exception as e:
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Face crop validation error: {e}", flush=True)
+        print(f"[{ist_ts()}] All {total_files} photos are already indexed! Face indexing complete.", flush=True)
+        if run_clustering:
+            print(f"[{ist_ts()}] Running facial clustering...", flush=True)
+            try:
+                from database import cluster_and_sync_people
+                cl_res = cluster_and_sync_people(event_slug)
+                print(f"[{ist_ts()}] Clustering complete: {cl_res}", flush=True)
+            except Exception as e:
+                print(f"[{ist_ts()}] Clustering note: {e}", flush=True)
         return
 
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Loading InsightFace neural network model...", flush=True)
+    print(f"[{ist_ts()}] Loading InsightFace neural network model...", flush=True)
     face_app = FaceAnalysis(name="buffalo_l", root=str(MODELS), providers=["CPUExecutionProvider"])
     face_app.prepare(ctx_id=-1, det_size=(DET_SIZE, DET_SIZE))
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] InsightFace model initialized successfully. Processing {len(pending_files)} photos...", flush=True)
+    print(f"[{ist_ts()}] InsightFace model initialized successfully. Processing {len(pending_files)} photos...", flush=True)
 
     processed_new = 0
     last_log_time = time.time()
@@ -152,8 +152,7 @@ def index_event(event_slug="brk-sir"):
         curr_time = time.time()
         if (processed_new % 5 == 0) or (detected_here > 0) or (curr_time - last_log_time >= 4):
             pct = int((i / max(total_files, 1)) * 100)
-            now_ts = datetime.now().strftime("%H:%M:%S")
-            print(f"[{now_ts}] Progress: {i}/{total_files} ({pct}%) | Photo: {path.name} | Detected: {detected_here} face(s) | Total library faces: {len(embs)}", flush=True)
+            print(f"[{ist_ts()}] Progress: {i}/{total_files} ({pct}%) | Photo: {path.name} | Detected: {detected_here} face(s) | Total library faces: {len(embs)}", flush=True)
             last_log_time = curr_time
 
         # Save to disk every 20 photos or every 30 seconds
@@ -162,24 +161,19 @@ def index_event(event_slug="brk-sir"):
             last_save_time = curr_time
 
     save()
-    now_ts = datetime.now().strftime("%H:%M:%S")
-    print(f"[{now_ts}] AI Face Indexing finished for '{display_name}'! Total: {len(done)} photos, {len(embs)} faces indexed.", flush=True)
-    try:
-        from database import cluster_and_sync_people
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Running facial clustering...", flush=True)
-        cl_res = cluster_and_sync_people(event_slug)
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Clustering complete: {cl_res}", flush=True)
-    except Exception as e:
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Clustering note: {e}", flush=True)
-
-    try:
-        from crop_faces import validate_and_recover_face_crops
-        validate_and_recover_face_crops(event_slug, logger=lambda m: print(m, flush=True), face_app=face_app)
-    except Exception as e:
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Face crop validation error: {e}", flush=True)
+    print(f"[{ist_ts()}] AI Face Indexing finished for '{display_name}'! Total: {len(done)} photos, {len(embs)} faces indexed.", flush=True)
+    if run_clustering:
+        try:
+            from database import cluster_and_sync_people
+            print(f"[{ist_ts()}] Running facial clustering...", flush=True)
+            cl_res = cluster_and_sync_people(event_slug)
+            print(f"[{ist_ts()}] Clustering complete: {cl_res}", flush=True)
+        except Exception as e:
+            print(f"[{ist_ts()}] Clustering note: {e}", flush=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="BRK Photos Multi-Event Face Indexer")
     parser.add_argument("--event", type=str, default="brk-sir", help="Event slug to index")
+    parser.add_argument("--cluster", action="store_true", help="Run clustering after indexing (optional)")
     args = parser.parse_args()
-    index_event(args.event)
+    index_event(args.event, run_clustering=args.cluster)

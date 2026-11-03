@@ -221,7 +221,7 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
         current_task["processed_files"] = 0
         current_task["message"] = f"Initializing AI face indexing for '{display_title}'..."
 
-    append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Starting face indexing for '{display_title}'")
+    append_log(f"[{now_ist().strftime('%H:%M:%S')}] Starting face indexing for '{display_title}'")
     update_task_progress(task_id, progress_pct=init_pct,
                          total_files=total_lib_photos, processed_files=0,
                          current_step=f"Scanning library photos for '{display_title}'...",
@@ -366,8 +366,8 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
             return
 
         get_event_index(event_slug)
-        cluster_and_sync_people(event_slug)
-        append_log(f"--- Face Indexing for '{event_slug}' Completed (exit code {proc.returncode}) ---")
+        now_ts = now_ist().strftime("%H:%M:%S")
+        append_log(f"[{now_ts}] --- Face Indexing for '{event_slug}' Completed (exit code {proc.returncode}) ---")
         
         if owns_task:
             final_files = current_task.get("total_files") or total_lib_photos
@@ -379,8 +379,8 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
                 current_task["message"] = f"Face indexing completed successfully for '{event_slug}'."
             update_task_progress(task_id, progress_pct=100, status="completed",
                                  processed_files=final_files, total_files=final_files,
-                                 current_step=f"Face indexing & clustering completed successfully for '{event_slug}'.",
-                                 log_line="Face indexing and clustering finished successfully.")
+                                 current_step=f"Face indexing completed successfully for '{event_slug}'.",
+                                 log_line="Face indexing finished successfully.")
     except Exception as e:
         active_process = None
         append_log(f"Indexing error: {e}")
@@ -414,18 +414,18 @@ def run_reclustering_task(event_slug="brk-sir", threshold=0.48, task_id=None):
         current_task["processed_files"] = total_lib_photos
         current_task["message"] = f"Face reclustering in progress for '{display_title}'..."
 
-    now_ts = datetime.now().strftime("%H:%M:%S")
+    now_ts = now_ist().strftime("%H:%M:%S")
     append_log(f"[{now_ts}] Recluster requested by admin for '{display_title}' (threshold: {threshold})")
     update_task_progress(task_id, progress_pct=15, total_files=total_lib_photos, processed_files=total_lib_photos,
                          current_step="Loading existing face embeddings...",
                          log_line=f"Recluster requested by admin for '{display_title}'")
 
     try:
-        now_ts = datetime.now().strftime("%H:%M:%S")
+        now_ts = now_ist().strftime("%H:%M:%S")
         append_log(f"[{now_ts}] Loading existing face records from database and vector index...")
         embs, names, _ = get_event_index(event_slug)
         if len(embs) == 0:
-            now_ts = datetime.now().strftime("%H:%M:%S")
+            now_ts = now_ist().strftime("%H:%M:%S")
             msg = f"[{now_ts}] No face records found to cluster."
             append_log(msg)
             with task_lock:
@@ -435,7 +435,7 @@ def run_reclustering_task(event_slug="brk-sir", threshold=0.48, task_id=None):
             update_task_progress(task_id, status="completed", progress_pct=100, current_step=msg, log_line=msg)
             return
 
-        now_ts = datetime.now().strftime("%H:%M:%S")
+        now_ts = now_ist().strftime("%H:%M:%S")
         unique_photos = len(set(names))
         append_log(f"[{now_ts}] Found {len(embs):,} face records across {unique_photos:,} photos.")
         append_log(f"[{now_ts}] Starting face clustering (similarity threshold: {threshold})...")
@@ -451,7 +451,7 @@ def run_reclustering_task(event_slug="brk-sir", threshold=0.48, task_id=None):
             update_task_progress(task_id, status="cancelled", current_step="Task stopped by admin.", log_line="Reclustering cancelled by administrator.")
             return
 
-        now_ts = datetime.now().strftime("%H:%M:%S")
+        now_ts = now_ist().strftime("%H:%M:%S")
         append_log(f"[{now_ts}] Clustering in progress: computing centroid merges and face-to-person relationships...")
         update_task_progress(task_id, progress_pct=65, current_step="Merging cluster centroids and syncing database...", log_line="Clustering in progress...")
 
@@ -465,7 +465,7 @@ def run_reclustering_task(event_slug="brk-sir", threshold=0.48, task_id=None):
             update_task_progress(task_id, status="cancelled", current_step="Task stopped by admin.", log_line="Reclustering cancelled by administrator.")
             return
 
-        now_ts = datetime.now().strftime("%H:%M:%S")
+        now_ts = now_ist().strftime("%H:%M:%S")
         people_count = res.get("people_count", 0)
         append_log(f"[{now_ts}] Clustering completed successfully: {people_count} people profiles created/updated.")
         append_log(f"[{now_ts}] Updated people records and face relationships.")
@@ -875,7 +875,7 @@ def trigger_queue_worker():
 
 def _queue_worker_loop():
     global queue_worker_running
-    append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Upload task queue worker loop started.")
+    append_log(f"[{now_ist().strftime('%H:%M:%S')}] Upload task queue worker loop started.")
     try:
         while True:
             # Check if any manual/active task is currently running in current_task
@@ -894,12 +894,12 @@ def _queue_worker_loop():
             try:
                 execute_queued_job(job)
             except Exception as ex:
-                append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Queue worker uncaught exception on task #{job.get('task_id')}: {ex}")
+                append_log(f"[{now_ist().strftime('%H:%M:%S')}] Queue worker uncaught exception on task #{job.get('task_id')}: {ex}")
             time.sleep(1)
     finally:
         with queue_worker_lock:
             queue_worker_running = False
-        append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Upload task queue worker idle (all tasks processed).")
+        append_log(f"[{now_ist().strftime('%H:%M:%S')}] Upload task queue worker idle (all tasks processed).")
 
 def execute_queued_job(job: dict):
     global current_task, active_process
@@ -914,7 +914,7 @@ def execute_queued_job(job: dict):
     display_title = "BRK Sir" if event_slug in {"default", "wedding", "brk-sir", "brksir"} else event_slug
 
     task_cancel_event.clear()
-    now_str = datetime.now().strftime('%H:%M:%S')
+    now_str = now_ist().strftime('%H:%M:%S')
     append_log(f"[{now_str}] Starting queued task #{task_id}: {task_name}")
 
     create_task_record(task_id, "upload_queue", display_title, target_album_name, f"Queue: {task_name}")
@@ -927,7 +927,7 @@ def execute_queued_job(job: dict):
             "event": display_title,
             "progress_pct": 5,
             "message": f"Processing queue task '{task_name}'...",
-            "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "started_at": now_ist().strftime("%Y-%m-%d %H:%M:%S")
         })
 
     update_queue_task(task_id, status="running", progress_pct=5, current_step="Staging and preparing files...",
@@ -992,7 +992,7 @@ def execute_queued_job(job: dict):
             update_queue_task(task_id, file_count=total_staged, progress_pct=15,
                               current_step=f"Processing {total_staged} staged files...",
                               log_line=f"Found {total_staged} files in staging area.")
-            append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Task #{task_id}: Processing {total_staged} staged files into '{safe_album}'")
+            append_log(f"[{now_ist().strftime('%H:%M:%S')}] Task #{task_id}: Processing {total_staged} staged files into '{safe_album}'")
 
             for idx, fpath in enumerate(staged_files, 1):
                 if task_cancel_event.is_set():
@@ -1029,7 +1029,7 @@ def execute_queued_job(job: dict):
                                     update_queue_task(task_id, processed_count=saved_count, progress_pct=pct,
                                                       current_step=f"Extracted {saved_count} photos from ZIP...")
                     except Exception as ze:
-                        append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Task #{task_id} ZIP error: {ze}")
+                        append_log(f"[{now_ist().strftime('%H:%M:%S')}] Task #{task_id} ZIP error: {ze}")
                 elif ext in valid_exts:
                     dest_path = dest_dir / fpath.name
                     shutil.copy2(fpath, dest_path)
@@ -1056,7 +1056,7 @@ def execute_queued_job(job: dict):
             update_queue_task(task_id, processed_count=saved_count, file_count=saved_count, progress_pct=60,
                               current_step="Starting AI face indexing...",
                               log_line=f"Saved {saved_count} photos. Proceeding to face recognition indexing.")
-            append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Task #{task_id}: Saved {saved_count} photos. Starting face indexing.")
+            append_log(f"[{now_ist().strftime('%H:%M:%S')}] Task #{task_id}: Saved {saved_count} photos. Starting face indexing.")
 
             # Step 2: Face indexing
             if saved_count > 0:
@@ -1064,14 +1064,14 @@ def execute_queued_job(job: dict):
 
             update_queue_task(task_id, status="completed", progress_pct=100, current_step="Completed successfully",
                               log_line=f"Task #{task_id} completed successfully ({saved_count} photos indexed).")
-            append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Task #{task_id} completed successfully.")
+            append_log(f"[{now_ist().strftime('%H:%M:%S')}] Task #{task_id} completed successfully.")
 
             # Clean up staged files on success
             if staged_dir and staged_dir.exists():
                 shutil.rmtree(staged_dir, ignore_errors=True)
 
     except Exception as e:
-        now_err = datetime.now().strftime('%H:%M:%S')
+        now_err = now_ist().strftime('%H:%M:%S')
         append_log(f"[{now_err}] Task #{task_id} error: {e}")
         update_queue_task(task_id, status="failed", error_message=str(e),
                           current_step="Task failed", log_line=f"Error: {e}")
@@ -1080,7 +1080,7 @@ def execute_queued_job(job: dict):
         with task_lock:
             current_task["status"] = "idle"
             current_task["message"] = "Ready"
-        append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Finished task #{task_id}. Checking next queued task...")
+        append_log(f"[{now_ist().strftime('%H:%M:%S')}] Finished task #{task_id}. Checking next queued task...")
 
 app = FastAPI()
 
