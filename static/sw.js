@@ -1,9 +1,12 @@
 // BRK Photos Service Worker - Offline Shell & Fast Re-validation
-const CACHE_NAME = 'brk-photos-v1';
+const CACHE_NAME = 'brk-photos-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/favicon.ico',
   '/manifest.json',
+  '/static/images/Background.webp',
+  '/static/images/Background-mobile.webp',
+  '/static/images/Background.jpg',
   '/static/images/pwa-icon-192.png',
   '/static/images/pwa-icon-512.png',
   '/static/images/apple-touch-icon.png',
@@ -35,7 +38,7 @@ self.addEventListener('fetch', event => {
   }
 
   // Cache-first for images & icons, network-first for documents
-  if (url.pathname.startsWith('/static/images/') || url.pathname.endsWith('.png') || url.pathname.endsWith('.jpg')) {
+  if (url.pathname.startsWith('/static/images/') || url.pathname.endsWith('.png') || url.pathname.endsWith('.jpg') || url.pathname.endsWith('.jpeg') || url.pathname.endsWith('.webp')) {
     event.respondWith(
       caches.match(event.request).then(cached => {
         if (cached) return cached;
