@@ -26,11 +26,11 @@ from database import (
     create_task_record, update_task_progress, get_latest_task, list_task_history, get_task_by_id,
     stop_running_tasks,
     enqueue_upload_task, claim_next_queued_task, update_queue_task,
-    get_queue_tasks, get_queue_task_by_id, cancel_queue_task, retry_queue_task,
+    get_queue_tasks, get_queue_task_by_id, get_queue_task_logs, cancel_queue_task, retry_queue_task,
     clear_completed_queue_tasks, get_queue_stats, reset_stale_running_queue_tasks,
     create_automation, get_automations, get_automation_by_id, update_automation,
     delete_automation, toggle_automation, record_automation_history, get_automation_history,
-    get_due_automations, advance_automation_schedule, now_ist, extract_photo_capture_date
+    get_due_automations, advance_automation_schedule, is_automation_task_pending, now_ist, extract_photo_capture_date
 )
 
 BASE = Path(__file__).resolve().parent
@@ -1727,7 +1727,7 @@ def sync_event_folders_and_photos(slug: str):
                 if f.is_file() and f.suffix.lower() in valid_exts and not f.name.startswith("."):
                     rel = str(f.relative_to(PHOTOS))
                     fsize = f.stat().st_size
-                    cap_date = extract_photo_capture_date(file_path=f, rel_path=rel, album_hint=sub_folder)
+                    cap_date = extract_photo_capture_date(file_path=f, rel_path=rel, album_hint=folder_name)
                     cursor.execute("""
                         INSERT INTO photos (event_id, album_id, filename, rel_path, file_size_bytes, captured_at, is_deleted)
                         VALUES (?, ?, ?, ?, ?, ?, 0)
@@ -1767,8 +1767,9 @@ def sync_event_folders_and_photos(slug: str):
         conn.close()
 
 @app.get("/api/admin/events/{slug}")
-def admin_event_workspace(slug: str, token: str = Depends(get_auth_token)):
-    sync_event_folders_and_photos(slug)
+def admin_event_workspace(slug: str, sync: bool = False, token: str = Depends(get_auth_token)):
+    if sync:
+        sync_event_folders_and_photos(slug)
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM events WHERE slug = ?", (slug,))
@@ -2450,8 +2451,8 @@ def admin_event_gdrive(slug: str, payload: dict, token: str = Depends(get_auth_t
     }
 
 @app.get("/api/admin/queue")
-def admin_get_queue(token: str = Depends(get_auth_token)):
-    tasks = get_queue_tasks(limit=100)
+def admin_get_queue(limit: int = 30, token: str = Depends(get_auth_token)):
+    tasks = get_queue_tasks(limit=limit)
     stats = get_queue_stats()
     with task_lock:
         mem_task = dict(current_task)
@@ -2468,6 +2469,47 @@ def admin_get_queue_task(task_id: str, token: str = Depends(get_auth_token)):
     if not task:
         raise HTTPException(404, "Queue task not found")
     return {"task": task}
+
+@app.get("/api/admin/queue/{task_id}/logs")
+def admin_get_queue_task_logs(task_id: str, token: str = Depends(get_auth_token)):
+    logs = get_queue_task_logs(task_id)
+    if not logs:
+        hist = get_task_by_id(task_id)
+        if hist:
+            return {"task_id": task_id, "task_name": hist.get("task_type", ""), "status": hist["status"], "current_step": hist["current_step"], "log_text": hist["log_text"]}
+        raise HTTPException(404, "Task logs not found")
+    return logs
+
+@app.get("/api/admin/system/metrics")
+def admin_system_metrics(token: str = Depends(get_auth_token)):
+    import resource
+    try:
+        load1, load5, load15 = os.getloadavg()
+    except Exception:
+        load1, load5, load15 = (0.0, 0.0, 0.0)
+
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    max_rss_mb = round(usage.ru_maxrss / (1024 * 1024) if sys.platform == "darwin" else usage.ru_maxrss / 1024, 1)
+
+    db_size_mb = 0.0
+    db_file = DATA / "magniwedding.db"
+    if db_file.exists():
+        db_size_mb = round(db_file.stat().st_size / (1024 * 1024), 2)
+
+    stats = get_queue_stats()
+    with task_lock:
+        mem_task = dict(current_task)
+
+    return {
+        "status": "healthy",
+        "load_avg": [round(load1, 2), round(load5, 2), round(load15, 2)],
+        "memory_rss_mb": max_rss_mb,
+        "db_size_mb": db_size_mb,
+        "active_worker": queue_worker_running,
+        "current_task_status": mem_task.get("status", "idle"),
+        "queue_stats": stats,
+        "timestamp": now_ist().strftime("%Y-%m-%d %H:%M:%S")
+    }
 
 @app.post("/api/admin/queue/{task_id}/cancel")
 def admin_cancel_queue_task(task_id: str, token: str = Depends(get_auth_token)):
@@ -2513,7 +2555,7 @@ def admin_clear_completed_queue(token: str = Depends(get_auth_token)):
 # --- Scheduled Automation Worker & Endpoints ---
 
 def _automation_scheduler_loop():
-    """Background worker checking due automations every 30 seconds."""
+    """Background worker checking due automations every 30 seconds with idempotency protection."""
     while True:
         try:
             time.sleep(30)
@@ -2526,6 +2568,10 @@ def _automation_scheduler_loop():
                 gdrive_url = auto.get("gdrive_url", "")
                 target_album = auto.get("target_album_slug", "auto")
 
+                # Idempotency guard: prevent duplicate queuing if already running or queued
+                if is_automation_task_pending(gdrive_url, auto_name):
+                    continue
+
                 task_id = f"auto_{secrets.token_hex(4)}"
                 enqueue_upload_task(
                     task_id=task_id,
@@ -2537,14 +2583,6 @@ def _automation_scheduler_loop():
                     source_info=gdrive_url,
                     staged_dir="",
                     file_count=0
-                )
-                record_automation_history(
-                    automation_id=auto_id,
-                    automation_name=auto_name,
-                    task_id=task_id,
-                    status="queued",
-                    files_count=0,
-                    result_message=f"Scheduled trigger executed at {now_str}. Added to Upload Queue as #{task_id}."
                 )
                 advance_automation_schedule(auto_id, task_id=task_id, status="queued")
                 trigger_queue_worker()

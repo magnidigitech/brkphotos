@@ -3670,16 +3670,38 @@ async function submitGdriveTask(action) {
 
 // --- Scheduled Automations Management ---
 let currentAutomationsList = [];
+let isFetchingAutomations = false;
 
 async function loadAutomations() {
+  if (isFetchingAutomations) return;
+  isFetchingAutomations = true;
+  const tbody = $('automationsTableBody');
   try {
-    const res = await fetch(`/api/admin/automations?event_slug=${activeSlug}`);
-    if (!res.ok) return;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const res = await fetch(`/api/admin/automations?event_slug=${activeSlug}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      throw new Error(`Server returned HTTP ${res.status}`);
+    }
     const data = await res.json();
     currentAutomationsList = data.automations || [];
     renderAutomationsTable(currentAutomationsList);
   } catch (err) {
     console.error('Failed to load automations:', err);
+    if (tbody && (!currentAutomationsList || currentAutomationsList.length === 0)) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align:center;padding:2rem 1rem;color:var(--err,#dc2626);">
+            <div style="font-weight:600;font-size:0.92rem;margin-bottom:0.35rem;">Could not load automations</div>
+            <div style="font-size:0.8rem;color:var(--muted,#6b7280);margin-bottom:0.75rem;">${escapeHtml(err.message || 'Request timed out or connection interrupted')}</div>
+            <button class="btn-outline" onclick="loadAutomations()" style="font-size:0.8rem;padding:0.35rem 0.85rem;cursor:pointer;">⟳ Retry</button>
+          </td>
+        </tr>
+      `;
+    }
+  } finally {
+    isFetchingAutomations = false;
   }
 }
 
@@ -4022,14 +4044,39 @@ function formatTimeShort(dateStr) {
   }
 }
 
+let isFetchingQueue = false;
+let currentQueueTasksList = [];
+
 async function loadUploadQueue() {
+  if (isFetchingQueue) return;
+  isFetchingQueue = true;
+  const tbody = $('uploadQueueTableBody');
   try {
-    const res = await fetch('/api/admin/queue');
-    if (!res.ok) return;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const res = await fetch('/api/admin/queue?limit=30', { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      throw new Error(`Server returned HTTP ${res.status}`);
+    }
     const data = await res.json();
+    currentQueueTasksList = data.tasks || [];
     renderUploadQueueUI(data);
   } catch (e) {
     console.error('Error loading upload queue:', e);
+    if (tbody && currentQueueTasksList.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align:center;padding:2rem 1rem;color:var(--err,#dc2626);">
+            <div style="font-weight:600;font-size:0.92rem;margin-bottom:0.35rem;">Could not load upload queue</div>
+            <div style="font-size:0.8rem;color:var(--muted,#6b7280);margin-bottom:0.75rem;">${escapeHtml(e.message || 'Request timed out or connection interrupted')}</div>
+            <button class="btn-outline" onclick="loadUploadQueue()" style="font-size:0.8rem;padding:0.35rem 0.85rem;cursor:pointer;">⟳ Retry</button>
+          </td>
+        </tr>
+      `;
+    }
+  } finally {
+    isFetchingQueue = false;
   }
 }
 
@@ -4232,6 +4279,7 @@ async function loadAnalytics() {
 // Activity Logs & Task Management
 let pollTimer = null;
 let taskDismissTimer = null;
+let isPollingTaskStatus = false;
 
 function dismissTaskCard() {
   $('visualTaskCard').hidden = true;
@@ -4239,9 +4287,29 @@ function dismissTaskCard() {
   sessionStorage.setItem('dismissed_task_recent', 'true');
 }
 
+// Pause/slowdown polling when browser tab is hidden to save server and client resources
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    clearTimeout(pollTimer);
+    pollTaskStatus();
+  }
+});
+
 async function pollTaskStatus() {
+  if (isPollingTaskStatus) return;
+  // If tab is currently backgrounded/hidden, reduce polling drastically
+  if (document.hidden) {
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(pollTaskStatus, 25000);
+    return;
+  }
+
+  isPollingTaskStatus = true;
   try {
-    const res = await fetch('/api/admin/tasks/current');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch('/api/admin/tasks/current', { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!res.ok) return;
     const data = await res.json();
     const task = data.latest_task || data.memory_task;
@@ -4309,26 +4377,24 @@ async function pollTaskStatus() {
     if ((isRunning || status === 'running') && $('autoRefreshCheckbox')?.checked && !isRefreshingPhotos) {
       const curTab = localStorage.getItem('admin_active_tab');
       if (curTab === 'photos') {
-        // preserveSelection = true ensures running tasks never uncheck selected photos or close floating bar
         loadPhotos($('filterAlbumSelect')?.value || '', true);
       }
     }
 
-    // Auto-update task history table, log viewer console, and sidebar albums live without manual refresh
     const nowMs = Date.now();
 
-    // Auto-update Upload Queue if upload panel is active or if tasks are running/queued
+    // Auto-update Upload Queue if upload panel is active or if tasks are running/queued (spaced cleanly)
     const uploadPanel = $('panel-upload');
     const isUploadPanelVisible = uploadPanel && !uploadPanel.hidden;
     if (isUploadPanelVisible || hasActiveQueueTasks) {
-      if (nowMs - lastQueueRefreshTime > 2500) {
+      if (nowMs - lastQueueRefreshTime > 5000) {
         lastQueueRefreshTime = nowMs;
         loadUploadQueue();
       }
     }
 
     if (isRunning || status === 'running') {
-      if (nowMs - lastHistoryRefreshTime > 3000) {
+      if (nowMs - lastHistoryRefreshTime > 6000) {
         lastHistoryRefreshTime = nowMs;
         loadTaskHistory(true);
       }
@@ -4336,12 +4402,12 @@ async function pollTaskStatus() {
       if (curViewingId && curViewingId !== '--') {
         viewTaskLogs(curViewingId, true);
       }
-      if (nowMs - lastSidebarAutoSyncTime > 15000) {
+      if (nowMs - lastSidebarAutoSyncTime > 30000) {
         lastSidebarAutoSyncTime = nowMs;
         loadAlbums();
       }
     } else {
-      if (nowMs - lastHistoryRefreshTime > 12000) {
+      if (nowMs - lastHistoryRefreshTime > 20000) {
         lastHistoryRefreshTime = nowMs;
         loadTaskHistory(true);
         loadAlbums();
@@ -4351,9 +4417,8 @@ async function pollTaskStatus() {
     // Polling rate and auto-close timer on completion
     clearTimeout(pollTimer);
     if (isRunning || status === 'running' || hasActiveQueueTasks) {
-      pollTimer = setTimeout(pollTaskStatus, 2000);
+      pollTimer = setTimeout(pollTaskStatus, 3500);
     } else {
-      // Completed or failed: show for 6 seconds then automatically dismiss
       if (!taskDismissTimer) {
         taskDismissTimer = setTimeout(() => {
           $('visualTaskCard').hidden = true;
@@ -4361,10 +4426,14 @@ async function pollTaskStatus() {
           taskDismissTimer = null;
         }, 6000);
       }
-      pollTimer = setTimeout(pollTaskStatus, 10000);
+      pollTimer = setTimeout(pollTaskStatus, 15000);
     }
   } catch (e) {
     console.error('Error polling task:', e);
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(pollTaskStatus, 8000);
+  } finally {
+    isPollingTaskStatus = false;
   }
 }
 

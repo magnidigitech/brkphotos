@@ -7,6 +7,8 @@ import os
 import sys
 import re
 import json
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -104,28 +106,13 @@ def extract_photo_capture_date(file_path: Optional[Path] = None, rel_path: str =
     return now_ist().strftime("%Y-%m-%d %H:%M:%S")
 
 def get_db():
-    conn = sqlite3.connect(str(DB_PATH), timeout=20.0)
+    conn = sqlite3.connect(str(DB_PATH), timeout=30.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA synchronous = NORMAL;")
+    conn.execute("PRAGMA busy_timeout = 30000;")
+    conn.execute("PRAGMA cache_size = -64000;")
     conn.execute("PRAGMA foreign_keys = ON;")
-    try:
-        conn.execute("ALTER TABLE albums ADD COLUMN is_deleted BOOLEAN DEFAULT 0;")
-        conn.commit()
-    except Exception:
-        pass
-    try:
-        # Deduplicate any pre-existing duplicates on rel_path before enforcing unique index
-        conn.execute("""
-            DELETE FROM photos 
-            WHERE id NOT IN (
-                SELECT MIN(id) FROM photos GROUP BY rel_path
-            );
-        """)
-        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_event_rel ON photos(event_id, rel_path);")
-        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_rel_unique ON photos(rel_path);")
-        conn.commit()
-    except Exception:
-        pass
     return conn
 
 def init_db():
@@ -272,15 +259,31 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_events_slug ON events(slug);
         CREATE INDEX IF NOT EXISTS idx_albums_event ON albums(event_id);
         CREATE INDEX IF NOT EXISTS idx_photos_event_album ON photos(event_id, album_id);
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_event_rel ON photos(event_id, rel_path);
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_rel_unique ON photos(rel_path);
         CREATE INDEX IF NOT EXISTS idx_photos_deleted ON photos(is_deleted);
         CREATE INDEX IF NOT EXISTS idx_task_history_id ON task_history(task_id);
+        CREATE INDEX IF NOT EXISTS idx_task_history_status ON task_history(status, id);
         CREATE INDEX IF NOT EXISTS idx_upload_queue_status ON upload_queue(status, id);
+        CREATE INDEX IF NOT EXISTS idx_upload_queue_event ON upload_queue(event_slug, status);
         CREATE INDEX IF NOT EXISTS idx_upload_queue_task_id ON upload_queue(task_id);
         CREATE INDEX IF NOT EXISTS idx_automations_active ON automations(is_active, next_trigger_at);
+        CREATE INDEX IF NOT EXISTS idx_automations_event ON automations(event_slug, is_active);
         CREATE INDEX IF NOT EXISTS idx_automation_history_task ON automation_history(task_id);
+        CREATE INDEX IF NOT EXISTS idx_automation_history_auto ON automation_history(automation_id, id);
         """)
+
+        # One-time schema migrations
+        try:
+            conn.execute("ALTER TABLE albums ADD COLUMN is_deleted BOOLEAN DEFAULT 0;")
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute("DELETE FROM photos WHERE id NOT IN (SELECT MIN(id) FROM photos GROUP BY rel_path);")
+            conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_event_rel ON photos(event_id, rel_path);")
+            conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_rel_unique ON photos(rel_path);")
+            conn.commit()
+        except Exception:
+            pass
         try:
             conn.execute("ALTER TABLE photos ADD COLUMN captured_at TIMESTAMP;")
             conn.commit()
@@ -330,6 +333,37 @@ def backfill_photo_dates():
         conn.close()
         return 0
 
+# In-memory log buffer for high-frequency task logs to avoid SQLite disk write churn
+_task_log_buffers = {}
+_task_log_lock = threading.Lock()
+_last_flush_times = {}
+
+def buffer_task_log(task_id: str, line: str):
+    if not line or not task_id:
+        return
+    clean = line.strip()
+    if not clean:
+        return
+    formatted = clean if clean.startswith("[") else f"[{clean}]"
+    with _task_log_lock:
+        if task_id not in _task_log_buffers:
+            _task_log_buffers[task_id] = []
+        _task_log_buffers[task_id].append(formatted)
+
+def flush_task_logs(task_id: str, force: bool = False) -> str:
+    with _task_log_lock:
+        lines = _task_log_buffers.get(task_id, [])
+        if not lines:
+            return ""
+        now = time.time()
+        last = _last_flush_times.get(task_id, 0)
+        if force or (now - last >= 3.0) or len(lines) >= 25:
+            text = "\n".join(lines) + "\n"
+            _task_log_buffers[task_id] = []
+            _last_flush_times[task_id] = now
+            return text
+        return ""
+
 def create_task_record(task_id: str, task_type: str, event_slug: str, target_folder: str = "", source_url: str = ""):
     conn = get_db()
     c = conn.cursor()
@@ -343,6 +377,16 @@ def create_task_record(task_id: str, task_type: str, event_slug: str, target_fol
 def update_task_progress(task_id: str, progress_pct: int = None, current_step: str = None,
                          processed_files: int = None, total_files: int = None,
                          storage_saved_mb: float = None, status: str = None, log_line: str = None):
+    if log_line:
+        buffer_task_log(task_id, log_line)
+
+    force_flush = (status is not None) or (progress_pct is not None and progress_pct in {0, 10, 50, 80, 100})
+    flushed_text = flush_task_logs(task_id, force=force_flush)
+
+    has_meta_change = any(x is not None for x in (progress_pct, current_step, processed_files, total_files, storage_saved_mb, status))
+    if not has_meta_change and not flushed_text:
+        return
+
     conn = get_db()
     c = conn.cursor()
     fields = []
@@ -367,10 +411,10 @@ def update_task_progress(task_id: str, progress_pct: int = None, current_step: s
         vals.append(status)
         if status in {"completed", "failed", "cancelled"}:
             fields.append("completed_at = CURRENT_TIMESTAMP")
-    if log_line:
-        clean_line = log_line if log_line.strip().startswith("[") else f"[{log_line.strip()}]"
+    if flushed_text:
         fields.append("log_text = COALESCE(log_text, '') || ?")
-        vals.append(f"{clean_line}\n")
+        vals.append(flushed_text)
+
     if fields:
         vals_history = list(vals) + [task_id]
         c.execute(f"UPDATE task_history SET {', '.join(fields)} WHERE task_id = ?", vals_history)
@@ -395,10 +439,9 @@ def update_task_progress(task_id: str, progress_pct: int = None, current_step: s
             q_vals.append(status)
             if status in {"completed", "failed", "cancelled"}:
                 q_fields.append("completed_at = CURRENT_TIMESTAMP")
-        if log_line:
-            clean_line = log_line if log_line.strip().startswith("[") else f"[{log_line.strip()}]"
+        if flushed_text:
             q_fields.append("log_text = COALESCE(log_text, '') || ?")
-            q_vals.append(f"{clean_line}\n")
+            q_vals.append(flushed_text)
         if q_fields:
             q_vals.append(task_id)
             c.execute(f"UPDATE upload_queue SET {', '.join(q_fields)} WHERE task_id = ?", q_vals)
@@ -433,15 +476,25 @@ def stop_running_tasks(reason="Task stopped by admin."):
 def get_latest_task():
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM task_history ORDER BY id DESC LIMIT 1")
+    c.execute("""
+        SELECT id, task_id, task_type, event_slug, target_folder, source_url, status,
+               progress_pct, total_files, processed_files, storage_saved_mb, current_step,
+               started_at, completed_at
+        FROM task_history ORDER BY id DESC LIMIT 1
+    """)
     row = c.fetchone()
     conn.close()
     return dict(row) if row else None
 
-def list_task_history(limit=50):
+def list_task_history(limit=30):
     conn = get_db()
     c = conn.cursor()
-    c.execute("SELECT * FROM task_history ORDER BY id DESC LIMIT ?", (limit,))
+    c.execute("""
+        SELECT id, task_id, task_type, event_slug, target_folder, source_url, status,
+               progress_pct, total_files, processed_files, storage_saved_mb, current_step,
+               started_at, completed_at
+        FROM task_history ORDER BY id DESC LIMIT ?
+    """, (limit,))
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     return rows
@@ -452,7 +505,14 @@ def get_task_by_id(task_id: str):
     c.execute("SELECT * FROM task_history WHERE task_id = ?", (task_id,))
     row = c.fetchone()
     conn.close()
-    return dict(row) if row else None
+    if not row:
+        return None
+    d = dict(row)
+    with _task_log_lock:
+        pending = _task_log_buffers.get(task_id, [])
+        if pending:
+            d["log_text"] = (d["log_text"] or "") + "\n".join(pending) + "\n"
+    return d
 
 # --- Upload Queue Operations (FIFO Sequential Processing) ---
 
@@ -539,13 +599,16 @@ def update_queue_task(task_id: str, status: str = None, progress_pct: int = None
         conn.commit()
     conn.close()
 
-def get_queue_tasks(limit=100, event_slug=None):
+def get_queue_tasks(limit=30, event_slug=None):
+    """Fetches lightweight task summaries without large log_text payload to prevent table bloat."""
     conn = get_db()
     c = conn.cursor()
-    # Sort: running first, queued next (FIFO order), then completed/failed by id DESC
-    if event_slug:
-        c.execute("""
-            SELECT * FROM upload_queue 
+    cols = """id, task_id, task_name, task_type, event_slug, target_album_slug, target_album_name,
+              source_info, staged_dir, file_count, processed_count, status, progress_pct,
+              current_step, error_message, created_at, started_at, completed_at"""
+    if event_slug and event_slug not in {"all", "*"}:
+        c.execute(f"""
+            SELECT {cols} FROM upload_queue 
             WHERE event_slug = ?
             ORDER BY 
                 CASE status 
@@ -557,8 +620,8 @@ def get_queue_tasks(limit=100, event_slug=None):
             LIMIT ?
         """, (event_slug, limit))
     else:
-        c.execute("""
-            SELECT * FROM upload_queue 
+        c.execute(f"""
+            SELECT {cols} FROM upload_queue 
             ORDER BY 
                 CASE status 
                     WHEN 'running' THEN 1 
@@ -578,7 +641,30 @@ def get_queue_task_by_id(task_id: str):
     c.execute("SELECT * FROM upload_queue WHERE task_id = ?", (task_id,))
     row = c.fetchone()
     conn.close()
-    return dict(row) if row else None
+    if not row:
+        return None
+    d = dict(row)
+    with _task_log_lock:
+        pending = _task_log_buffers.get(task_id, [])
+        if pending:
+            d["log_text"] = (d["log_text"] or "") + "\n".join(pending) + "\n"
+    return d
+
+def get_queue_task_logs(task_id: str):
+    """Specifically fetches the execution log text for a single queue task on demand."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT task_id, task_name, status, current_step, log_text FROM upload_queue WHERE task_id = ?", (task_id,))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    with _task_log_lock:
+        pending = _task_log_buffers.get(task_id, [])
+        if pending:
+            d["log_text"] = (d["log_text"] or "") + "\n".join(pending) + "\n"
+    return d
 
 def cancel_queue_task(task_id: str):
     conn = get_db()
@@ -1110,6 +1196,20 @@ def get_due_automations(now_str: str):
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     return rows
+
+def is_automation_task_pending(gdrive_url: str, automation_name: str = "") -> bool:
+    """Idempotency check: returns True if an active or queued task exists for this source or automation."""
+    if not gdrive_url and not automation_name:
+        return False
+    conn = get_db()
+    c = conn.cursor()
+    if gdrive_url:
+        c.execute("SELECT id FROM upload_queue WHERE status IN ('queued', 'running') AND source_info = ? LIMIT 1", (gdrive_url,))
+    else:
+        c.execute("SELECT id FROM upload_queue WHERE status IN ('queued', 'running') AND task_name LIKE ? LIMIT 1", (f"%{automation_name}%",))
+    row = c.fetchone()
+    conn.close()
+    return row is not None
 
 def advance_automation_schedule(auto_id: int, task_id: str, status: str = "queued"):
     """Advances schedule to the next interval or deactivates one-time automations."""
