@@ -27,10 +27,15 @@ from database import (
     stop_running_tasks,
     enqueue_upload_task, claim_next_queued_task, update_queue_task,
     get_queue_tasks, get_queue_task_by_id, cancel_queue_task, retry_queue_task,
-    clear_completed_queue_tasks, get_queue_stats, reset_stale_running_queue_tasks
+    clear_completed_queue_tasks, get_queue_stats, reset_stale_running_queue_tasks,
+    create_automation, get_automations, get_automation_by_id, update_automation,
+    delete_automation, toggle_automation, record_automation_history, get_automation_history,
+    get_due_automations, advance_automation_schedule, now_ist, extract_photo_capture_date
 )
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parent
+if str(BASE) not in sys.path:
+    sys.path.insert(0, str(BASE))
 STORAGE = Path(os.environ.get("STORAGE_DIR", BASE / "storage"))
 PHOTOS = STORAGE / "photos"
 DATA = STORAGE / "data"
@@ -1054,7 +1059,7 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT p.filename, p.rel_path, p.drive_file_id, 
+        SELECT p.filename, p.rel_path, p.drive_file_id, p.captured_at, p.created_at,
                a.name as album_name, a.slug as album_slug, 
                e.name as event_name, e.slug as event_slug
         FROM photos p
@@ -1070,15 +1075,20 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
         n = item["rel_path"]
         score = item["score"]
         info = photo_info.get(fname, {})
+        cap_dt = info.get("captured_at") or info.get("created_at") or ""
         photos_data.append({
             "rel_path": n,
             "filename": fname,
             "drive_file_id": info.get("drive_file_id") or drive_map.get(n) or drive_map.get(fname),
             "confidence": round(float(score), 3),
+            "captured_at": cap_dt,
+            "created_at": info.get("created_at", ""),
             "album_name": info.get("album_name", ""),
             "event_name": info.get("event_name", ""),
             "event_slug": info.get("event_slug", event_slug)
         })
+    # Sort search results by latest date first (Newest to Oldest)
+    photos_data.sort(key=lambda p: p.get("captured_at") or p.get("created_at") or "", reverse=True)
     return {
         "multiple_faces": False,
         "count": len(photos_data),
@@ -1152,12 +1162,13 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
     cursor = conn.cursor()
     cursor.execute("""
         SELECT p.filename, p.rel_path, p.is_featured, p.is_hidden, p.drive_file_id,
+               p.captured_at, p.created_at,
                a.name as album_name, e.name as event_name, e.slug as event_slug
         FROM photos p
-        JOIN albums a ON p.album_id = a.id
+        LEFT JOIN albums a ON p.album_id = a.id
         JOIN events e ON p.event_id = e.id
-        WHERE e.slug = ? AND p.is_deleted = 0
-    """, (slug,))
+        WHERE (e.slug = ? OR ? IN ('brk-sir', 'brksir', 'wedding', 'default', '')) AND p.is_deleted = 0
+    """, (slug, slug))
     photo_lookup = {r["rel_path"]: dict(r) for r in cursor.fetchall()}
     conn.close()
 
@@ -1170,6 +1181,7 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
         info = photo_lookup.get(rel) or {"rel_path": rel, "filename": fname, "is_featured": 0, "is_hidden": 0}
         if info.get("is_hidden"):
             continue
+        cap_dt = info.get("captured_at") or info.get("created_at") or ""
         photos_data.append({
             "rel_path": rel,
             "filename": fname,
@@ -1177,12 +1189,16 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
             "similarity": round(float(sims[idx]), 3),
             "confidence": round(float(sims[idx]), 3),
             "is_featured": bool(info.get("is_featured", 0)),
+            "captured_at": cap_dt,
+            "created_at": info.get("created_at", ""),
             "album_name": info.get("album_name", ""),
             "event_name": info.get("event_name", ""),
             "event_slug": info.get("event_slug", slug)
         })
 
-    photos_data.sort(key=lambda p: (not p["is_featured"], -p["confidence"]))
+    # Sort descending by capture date, with featured photos at top
+    photos_data.sort(key=lambda p: p.get("captured_at") or p.get("created_at") or "", reverse=True)
+    photos_data.sort(key=lambda p: 0 if p.get("is_featured") else 1)
     total_count = len(photos_data)
     has_new = total_count > last_count if last_count > 0 else False
     new_count = max(0, total_count - last_count) if last_count > 0 else 0
@@ -1533,10 +1549,10 @@ def public_album_photos(slug: str, album_slug: str):
         raise HTTPException(404, "Album not found")
         
     cursor.execute("""
-        SELECT id, filename, rel_path, drive_file_id, is_featured, created_at
+        SELECT id, filename, rel_path, drive_file_id, is_featured, created_at, captured_at
         FROM photos
         WHERE album_id = ? AND is_deleted = 0 AND is_hidden = 0
-        ORDER BY is_featured DESC, filename ASC
+        ORDER BY is_featured DESC, COALESCE(captured_at, created_at) DESC, id DESC
     """, (album["id"],))
     photos = [dict(row) for row in cursor.fetchall()]
     conn.close()
@@ -1700,25 +1716,28 @@ def sync_event_folders_and_photos(slug: str):
                 if f.is_file() and f.suffix.lower() in valid_exts and not f.name.startswith("."):
                     rel = str(f.relative_to(PHOTOS))
                     fsize = f.stat().st_size
+                    cap_date = extract_photo_capture_date(file_path=f, rel_path=rel, album_hint=sub_folder)
                     cursor.execute("""
-                        INSERT INTO photos (event_id, album_id, filename, rel_path, file_size_bytes, is_deleted)
-                        VALUES (?, ?, ?, ?, ?, 0)
+                        INSERT INTO photos (event_id, album_id, filename, rel_path, file_size_bytes, captured_at, is_deleted)
+                        VALUES (?, ?, ?, ?, ?, ?, 0)
                         ON CONFLICT(rel_path) DO UPDATE SET
                             event_id = excluded.event_id,
                             album_id = excluded.album_id,
                             file_size_bytes = excluded.file_size_bytes,
+                            captured_at = COALESCE(excluded.captured_at, photos.captured_at),
                             is_deleted = 0
-                    """, (eid, album_id, f.name, rel, fsize))
+                    """, (eid, album_id, f.name, rel, fsize, cap_date))
 
         # Direct files in event root
         for f in event_dir.iterdir():
             if f.is_file() and f.suffix.lower() in valid_exts and not f.name.startswith("."):
                 rel = str(f.relative_to(PHOTOS))
                 fsize = f.stat().st_size
+                cap_date = extract_photo_capture_date(file_path=f, rel_path=rel, album_hint="")
                 cursor.execute("""
-                    INSERT OR IGNORE INTO photos (event_id, filename, rel_path, file_size_bytes)
-                    VALUES (?, ?, ?, ?)
-                """, (eid, f.name, rel, fsize))
+                    INSERT OR IGNORE INTO photos (event_id, filename, rel_path, file_size_bytes, captured_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (eid, f.name, rel, fsize, cap_date))
 
         # Set cover image for any album that has photos but no cover
         cursor.execute("""
@@ -2011,7 +2030,7 @@ def admin_event_all_photos(slug: str, album_id: int = None, token: str = Depends
             JOIN events e ON p.event_id = e.id
             LEFT JOIN albums a ON p.album_id = a.id
             WHERE e.slug = ? AND p.album_id = ? AND (a.is_deleted = 0 OR a.is_deleted IS NULL) AND p.is_deleted = 0
-            ORDER BY p.is_featured DESC, p.filename ASC
+            ORDER BY p.is_featured DESC, COALESCE(p.captured_at, p.created_at) DESC, p.id DESC
         """, (slug, album_id))
     else:
         cursor.execute("""
@@ -2020,7 +2039,7 @@ def admin_event_all_photos(slug: str, album_id: int = None, token: str = Depends
             JOIN events e ON p.event_id = e.id
             LEFT JOIN albums a ON p.album_id = a.id
             WHERE e.slug = ? AND (a.is_deleted = 0 OR a.is_deleted IS NULL) AND p.is_deleted = 0
-            ORDER BY p.is_featured DESC, p.filename ASC
+            ORDER BY p.is_featured DESC, COALESCE(p.captured_at, p.created_at) DESC, p.id DESC
         """, (slug,))
     photos = [dict(r) for r in cursor.fetchall()]
     conn.close()
@@ -2480,6 +2499,156 @@ def admin_clear_completed_queue(token: str = Depends(get_auth_token)):
     append_log(f"[{now_str}] Administrator cleared {cleared} completed/cancelled tasks from queue.")
     return {"status": "ok", "cleared_count": cleared}
 
+# --- Scheduled Automation Worker & Endpoints ---
+
+def _automation_scheduler_loop():
+    """Background worker checking due automations every 30 seconds."""
+    while True:
+        try:
+            time.sleep(30)
+            now_str = now_ist().strftime("%Y-%m-%d %H:%M:%S")
+            due_list = get_due_automations(now_str)
+            for auto in due_list:
+                auto_id = auto["id"]
+                auto_name = auto["name"]
+                event_slug = auto.get("event_slug", "brk-sir")
+                gdrive_url = auto.get("gdrive_url", "")
+                target_album = auto.get("target_album_slug", "auto")
+
+                task_id = f"auto_{secrets.token_hex(4)}"
+                enqueue_upload_task(
+                    task_id=task_id,
+                    task_name=f"🤖 {auto_name}",
+                    task_type="gdrive_sync",
+                    event_slug=event_slug,
+                    target_album_slug=target_album,
+                    target_album_name="Auto Ingestion",
+                    source_info=gdrive_url,
+                    staged_dir="",
+                    file_count=0
+                )
+                record_automation_history(
+                    automation_id=auto_id,
+                    automation_name=auto_name,
+                    task_id=task_id,
+                    status="queued",
+                    files_count=0,
+                    result_message=f"Scheduled trigger executed at {now_str}. Added to Upload Queue as #{task_id}."
+                )
+                advance_automation_schedule(auto_id, task_id=task_id, status="queued")
+                trigger_queue_worker()
+                append_log(f"[{now_ist().strftime('%H:%M:%S')}] Automation '{auto_name}' triggered. Task #{task_id} added to upload queue.")
+        except Exception:
+            time.sleep(10)
+
+threading.Thread(target=_automation_scheduler_loop, daemon=True, name="AutomationScheduler").start()
+
+@app.get("/api/admin/automations")
+def admin_get_automations(event_slug: str = "brk-sir", token: str = Depends(get_auth_token)):
+    autos = get_automations(event_slug)
+    return {"automations": autos}
+
+@app.post("/api/admin/automations")
+def admin_create_automation_endpoint(payload: dict, token: str = Depends(get_auth_token)):
+    name = payload.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "Automation name is required.")
+    gdrive_url = payload.get("gdrive_url", "").strip()
+    if not gdrive_url:
+        raise HTTPException(400, "Google Drive URL or Folder ID is required.")
+    event_slug = payload.get("event_slug", "brk-sir").strip()
+    target_album = payload.get("target_album_slug", "auto").strip() or "auto"
+    formats = payload.get("formats", ["jpg", "png", "webp"])
+    trigger_date = payload.get("trigger_date", "").strip() or now_ist().strftime("%Y-%m-%d")
+    trigger_time = payload.get("trigger_time", "").strip() or now_ist().strftime("%H:%M")
+    repeat = payload.get("repeat_interval", "none").strip()
+    is_active = 1 if payload.get("is_active", True) else 0
+
+    auto_id = create_automation(
+        name=name,
+        event_slug=event_slug,
+        gdrive_url=gdrive_url,
+        target_album_slug=target_album,
+        formats_list=formats,
+        trigger_date=trigger_date,
+        trigger_time=trigger_time,
+        repeat_interval=repeat,
+        is_active=is_active
+    )
+    append_log(f"[{now_ist().strftime('%H:%M:%S')}] Configured automation '{name}' (Schedule: {trigger_date} {trigger_time}, Repeat: {repeat}).")
+    return {"status": "ok", "id": auto_id, "automation": get_automation_by_id(auto_id)}
+
+@app.put("/api/admin/automations/{auto_id}")
+def admin_update_automation_endpoint(auto_id: int, payload: dict, token: str = Depends(get_auth_token)):
+    name = payload.get("name", "").strip()
+    gdrive_url = payload.get("gdrive_url", "").strip()
+    target_album = payload.get("target_album_slug", "auto").strip() or "auto"
+    formats = payload.get("formats", ["jpg", "png", "webp"])
+    trigger_date = payload.get("trigger_date", "").strip() or now_ist().strftime("%Y-%m-%d")
+    trigger_time = payload.get("trigger_time", "").strip() or now_ist().strftime("%H:%M")
+    repeat = payload.get("repeat_interval", "none").strip()
+    is_active = 1 if payload.get("is_active", True) else 0
+
+    ok = update_automation(
+        auto_id=auto_id,
+        name=name,
+        gdrive_url=gdrive_url,
+        target_album_slug=target_album,
+        formats_list=formats,
+        trigger_date=trigger_date,
+        trigger_time=trigger_time,
+        repeat_interval=repeat,
+        is_active=is_active
+    )
+    if not ok:
+        raise HTTPException(404, "Automation not found.")
+    return {"status": "ok", "automation": get_automation_by_id(auto_id)}
+
+@app.delete("/api/admin/automations/{auto_id}")
+def admin_delete_automation_endpoint(auto_id: int, token: str = Depends(get_auth_token)):
+    ok = delete_automation(auto_id)
+    return {"status": "ok", "deleted": ok}
+
+@app.post("/api/admin/automations/{auto_id}/toggle")
+def admin_toggle_automation_endpoint(auto_id: int, token: str = Depends(get_auth_token)):
+    ok = toggle_automation(auto_id)
+    return {"status": "ok", "automation": get_automation_by_id(auto_id)}
+
+@app.post("/api/admin/automations/{auto_id}/run-now")
+def admin_run_automation_now_endpoint(auto_id: int, token: str = Depends(get_auth_token)):
+    auto = get_automation_by_id(auto_id)
+    if not auto:
+        raise HTTPException(404, "Automation not found.")
+    task_id = f"auto_{secrets.token_hex(4)}"
+    enqueue_upload_task(
+        task_id=task_id,
+        task_name=f"🤖 {auto['name']} (Run Now)",
+        task_type="gdrive_sync",
+        event_slug=auto.get("event_slug", "brk-sir"),
+        target_album_slug=auto.get("target_album_slug", "auto"),
+        target_album_name="Auto Ingestion",
+        source_info=auto.get("gdrive_url", ""),
+        staged_dir="",
+        file_count=0
+    )
+    record_automation_history(
+        automation_id=auto_id,
+        automation_name=auto["name"],
+        task_id=task_id,
+        status="queued",
+        files_count=0,
+        result_message=f"Manual Run Now executed at {now_ist().strftime('%Y-%m-%d %H:%M:%S')}. Added to Upload Queue as #{task_id}."
+    )
+    trigger_queue_worker()
+    append_log(f"[{now_ist().strftime('%H:%M:%S')}] Manually triggered automation '{auto['name']}'. Task #{task_id} queued.")
+    return {"status": "ok", "task_id": task_id}
+
+@app.get("/api/admin/automations/history")
+@app.get("/api/admin/automations/{auto_id}/history")
+def admin_get_automation_history_endpoint(auto_id: Optional[int] = None, token: str = Depends(get_auth_token)):
+    hist = get_automation_history(auto_id, limit=60)
+    return {"history": hist}
+
 @app.post("/api/admin/tasks/stop")
 def admin_stop_task(token: str = Depends(get_auth_token)):
     global active_process
@@ -2606,7 +2775,7 @@ def admin_search_albums_and_photos(slug: str, q: str = "", token: str = Depends(
         FROM photos p
         JOIN albums a ON p.album_id = a.id
         WHERE p.event_id = ? AND p.is_deleted = 0 AND (p.filename LIKE ? OR p.rel_path LIKE ?)
-        ORDER BY p.id DESC
+        ORDER BY p.is_featured DESC, COALESCE(p.captured_at, p.created_at) DESC, p.id DESC
         LIMIT 40
     """, (event_id, query_like, query_like))
     matched_photos = [dict(r) for r in cursor.fetchall()]

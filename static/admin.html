@@ -1589,60 +1589,7 @@
           <div class="views-bar-title">Upload Manager</div>
         </div>
 
-        <!-- Direct Upload Card with Quick Subfolder Chips -->
-        <div class="card-block">
-          <div class="card-block-header">
-            <span class="card-block-title">Direct Photo or ZIP Archive Upload</span>
-          </div>
-          <div class="card-block-body">
-            <div class="field">
-              <label style="display:flex;justify-content:space-between;align-items:center;">
-                <span>Select Target Subfolder:</span>
-                <span id="activeUploadFolderLabel" style="font-size:0.8rem;color:var(--primary);font-weight:600;"></span>
-              </label>
-              <!-- Dynamic Subfolder Chips for One-Click Destination Selection -->
-              <div class="folder-chips-grid" id="uploadFolderChips">
-                <!-- Injected via JavaScript based on selected event -->
-              </div>
-              <select id="uploadTargetAlbumSelect" style="max-width:320px;" hidden></select>
-            </div>
-
-            <div style="border:2px dashed var(--line);border-radius:12px;padding:2.2rem 1rem;text-align:center;cursor:pointer;margin-bottom:1rem;background:#fbfcfd;transition:border-color 0.2s, background 0.2s;" id="uploadDropArea">
-              <input type="file" id="directFileInput" multiple accept="image/*,.zip" style="display:none;">
-              <div style="margin-bottom:0.5rem;color:var(--muted);">
-                <svg style="width:36px;height:36px;stroke-width:1.5;stroke:currentColor;fill:none;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              </div>
-              <strong style="font-size:0.95rem;color:var(--ink);">Drag & drop files or click to browse</strong>
-              <p style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem;">Supports JPG, PNG, WEBP, and .ZIP archives (N batches supported)</p>
-            </div>
-
-            <!-- Staged File Selection Preview & Dual Action Buttons (Upload Now vs Add to Queue) -->
-            <div id="stagedFilesContainer" style="margin-bottom:1rem;padding:1rem 1.15rem;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;" hidden>
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem;flex-wrap:wrap;gap:0.5rem;">
-                <div style="display:flex;align-items:center;gap:0.5rem;">
-                  <svg class="icon" viewBox="0 0 24 24" style="color:var(--emerald);"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span id="stagedFilesSummaryText" style="font-weight:700;font-size:0.92rem;color:#111827;">0 files selected</span>
-                </div>
-                <button type="button" id="clearStagedFilesBtn" class="btn-outline" style="padding:0.25rem 0.65rem;font-size:0.76rem;">Clear Selection</button>
-              </div>
-              <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
-                <button type="button" class="btn-primary" id="btnUploadNow" style="background:#0f5c4d;border-color:#0f5c4d;">
-                  <svg class="icon" viewBox="0 0 24 24"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  <span>Upload Now</span>
-                </button>
-                <button type="button" class="btn-outline" id="btnAddToQueue" style="border-color:#0f5c4d;color:#0f5c4d;font-weight:700;background:#ffffff;">
-                  <svg class="icon" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                  <span>Add to Queue</span>
-                </button>
-                <span style="font-size:0.78rem;color:var(--muted);">Add to queue allows preparing multiple batches without waiting.</span>
-              </div>
-            </div>
-
-            <div id="uploadStatusText" style="font-size:0.85rem;font-weight:600;color:var(--emerald);"></div>
-          </div>
-        </div>
-
-        <!-- Google Drive Ingestion Card -->
+        <!-- Google Drive Ingestion Card (Primary Ingestion Method) -->
         <div class="card-block">
           <div class="card-block-header">
             <span class="card-block-title">Google Drive Folder Ingestion (5TB Cloud Offload)</span>
@@ -1700,8 +1647,56 @@
           </div>
         </div>
 
+        <!-- Scheduled Automations Card -->
+        <div class="card-block" id="automationsSection" style="margin-top:1.5rem;">
+          <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+            <div>
+              <span class="card-block-title" style="display:flex;align-items:center;gap:6px;">
+                <span>🤖 Scheduled Automations</span>
+              </span>
+              <p style="font-size:0.8rem;color:var(--muted);margin-top:2px;">
+                Configure automated Google Drive ingestion tasks that run on schedule and automatically queue for processing.
+              </p>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <button type="button" class="btn-primary" id="btnCreateAutomation" style="font-size:0.8rem;padding:0.4rem 0.85rem;background:#0f5c4d;border-color:#0f5c4d;" onclick="openCreateAutomationModal()">
+                <svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Create Automation</span>
+              </button>
+              <button type="button" class="btn-outline" id="btnRefreshAutomations" style="font-size:0.78rem;padding:0.35rem 0.75rem;" onclick="loadAutomations()">
+                <svg class="icon-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+          <div class="card-block-body" style="padding:0;">
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:left;">
+                <thead>
+                  <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">
+                    <th style="padding:0.75rem 1rem;">Automation Name</th>
+                    <th style="padding:0.75rem 0.75rem;">Source Drive / Target</th>
+                    <th style="padding:0.75rem 0.75rem;">Next Trigger (IST)</th>
+                    <th style="padding:0.75rem 0.75rem;">Repeat</th>
+                    <th style="padding:0.75rem 0.75rem;">Last Result</th>
+                    <th style="padding:0.75rem 0.75rem;">Status</th>
+                    <th style="padding:0.75rem 1rem;text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="automationsTableBody">
+                  <tr>
+                    <td colspan="7" style="text-align:center;padding:2.5rem 1rem;color:var(--muted);">
+                      Loading automations...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- Dedicated Upload Task Queue Management Section -->
-        <div class="card-block" id="uploadQueueSection">
+        <div class="card-block" id="uploadQueueSection" style="margin-top:1.5rem;">
           <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
             <div>
               <span class="card-block-title">Upload Background Task Queue</span>
@@ -2060,6 +2055,119 @@
         </a>
         <button class="btn-outline" style="padding:0.5rem 0.9rem;font-size:0.85rem;color:#ffffff;border-color:rgba(255,255,255,0.25);" onclick="closeModal('hdLightboxModal')">Close</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create / Edit Automation Modal -->
+<div id="createAutomationModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('createAutomationModal')">&times;</button>
+    <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:0.35rem;" id="autoModalHeading">Create Automation</h3>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1.25rem;">
+      Schedule automatic Google Drive ingestion. When the trigger time is reached, the task is automatically added to the background queue.
+    </p>
+
+    <input type="hidden" id="autoEditId" value="">
+
+    <div class="field" style="margin-bottom:0.85rem;">
+      <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">Automation Name *</label>
+      <input type="text" id="autoNameInput" placeholder="e.g. Daily Event Photos Sync" style="width:100%;">
+    </div>
+
+    <div class="field" style="margin-bottom:0.85rem;">
+      <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">Google Drive Folder URL or ID *</label>
+      <input type="text" id="autoGdriveUrlInput" placeholder="https://drive.google.com/drive/folders/..." style="width:100%;">
+    </div>
+
+    <div class="field" style="margin-bottom:0.85rem;">
+      <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">Target Subfolder</label>
+      <div style="display:flex;gap:0.5rem;">
+        <select id="autoTargetAlbumSelect" style="flex:1;">
+          <option value="auto">⚡ Auto-detect albums from Google Drive folders</option>
+        </select>
+        <input type="text" id="autoCustomSlugInput" placeholder="or custom slug" style="flex:1;">
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:0.85rem;">
+      <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">Accepted File Formats</label>
+      <div style="display:flex;flex-wrap:wrap;gap:1rem;padding:0.5rem 0.75rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">
+        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;cursor:pointer;">
+          <input type="checkbox" id="autoFmtJpg" checked> <span>JPG / JPEG</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;cursor:pointer;">
+          <input type="checkbox" id="autoFmtPng" checked> <span>PNG</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;cursor:pointer;">
+          <input type="checkbox" id="autoFmtWebp" checked> <span>WEBP</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;cursor:pointer;">
+          <input type="checkbox" id="autoFmtHeic"> <span>HEIC / HEIF</span>
+        </label>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.85rem;">
+      <div class="field">
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">Trigger Date (IST) *</label>
+        <input type="date" id="autoTriggerDateInput" style="width:100%;">
+      </div>
+      <div class="field">
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">Trigger Time (IST) *</label>
+        <input type="time" id="autoTriggerTimeInput" style="width:100%;">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
+      <div class="field">
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">Repeat Schedule</label>
+        <select id="autoRepeatSelect" style="width:100%;">
+          <option value="none">One-time (Runs once then completes)</option>
+          <option value="daily">Daily (Runs every day at trigger time)</option>
+          <option value="weekly">Weekly (Runs every week)</option>
+        </select>
+      </div>
+      <div class="field" style="display:flex;flex-direction:column;justify-content:flex-end;">
+        <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;cursor:pointer;padding-bottom:0.5rem;">
+          <input type="checkbox" id="autoIsActiveInput" checked>
+          <span>Enable Automation</span>
+        </label>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:0.5rem;">
+      <button type="button" class="btn-outline" onclick="closeModal('createAutomationModal')">Cancel</button>
+      <button type="button" class="btn-primary" id="btnSaveAutomation" onclick="submitAutomationForm()" style="background:#0f5c4d;border-color:#0f5c4d;">Save Automation</button>
+    </div>
+  </div>
+</div>
+
+<!-- Automation Execution History Modal -->
+<div id="automationHistoryModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width:720px;max-height:85vh;display:flex;flex-direction:column;">
+    <button class="modal-close" onclick="closeModal('automationHistoryModal')">&times;</button>
+    <div style="margin-bottom:0.75rem;padding-right:2rem;">
+      <h3 style="font-size:1.15rem;font-weight:700;margin:0;" id="autoHistoryModalTitle">Automation History</h3>
+      <p style="font-size:0.8rem;color:var(--muted);margin-top:2px;">Complete log of every scheduled trigger and queue execution.</p>
+    </div>
+    <div style="flex:1;overflow-y:auto;max-height:400px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:1rem;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.82rem;text-align:left;">
+        <thead>
+          <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:0.73rem;text-transform:uppercase;">
+            <th style="padding:0.6rem 0.75rem;">Trigger Time (IST)</th>
+            <th style="padding:0.6rem 0.75rem;">Task ID</th>
+            <th style="padding:0.6rem 0.75rem;">Queue Status</th>
+            <th style="padding:0.6rem 0.75rem;">Result / Details</th>
+          </tr>
+        </thead>
+        <tbody id="autoHistoryTableBody">
+          <!-- Injected via JS -->
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button type="button" class="btn-outline" onclick="closeModal('automationHistoryModal')">Close</button>
     </div>
   </div>
 </div>
@@ -3103,12 +3211,17 @@ async function loadPhotos(filterAlbumId = '', preserveSelection = false) {
     const grid = $('photoLibraryGrid');
     grid.replaceChildren();
 
-    // Natural Alphanumeric Sort with Featured photos placed in the beginning
+    // Sort: Featured photos placed in the beginning, followed by descending date order (newest to oldest)
     const photos = (j.photos || []).slice().sort((a, b) => {
       const featA = a.is_featured ? 1 : 0;
       const featB = b.is_featured ? 1 : 0;
       if (featA !== featB) return featB - featA; // Featured photos first
-      return a.filename.localeCompare(b.filename, undefined, { numeric: true, sensitivity: 'base' });
+      const dtA = (a.captured_at || a.created_at || '');
+      const dtB = (b.captured_at || b.created_at || '');
+      if (dtA && dtB && dtA !== dtB) return dtB.localeCompare(dtA);
+      if (dtB && !dtA) return 1;
+      if (dtA && !dtB) return -1;
+      return (b.id || 0) - (a.id || 0);
     });
 
     const evName = currentEvent ? currentEvent.name : activeSlug;
@@ -3441,7 +3554,17 @@ async function viewPersonPhotos(personId) {
   switchTab('photos');
   const grid = $('photoLibraryGrid');
   grid.replaceChildren();
-  const photos = (j.photos || []).slice().sort((a, b) => a.filename.localeCompare(b.filename, undefined, { numeric: true }));
+  const photos = (j.photos || []).slice().sort((a, b) => {
+    const featA = a.is_featured ? 1 : 0;
+    const featB = b.is_featured ? 1 : 0;
+    if (featA !== featB) return featB - featA;
+    const dtA = (a.captured_at || a.created_at || '');
+    const dtB = (b.captured_at || b.created_at || '');
+    if (dtA && dtB && dtA !== dtB) return dtB.localeCompare(dtA);
+    if (dtB && !dtA) return 1;
+    if (dtA && !dtB) return -1;
+    return (b.id || 0) - (a.id || 0);
+  });
   for (const p of photos) {
     const item = document.createElement('div');
     item.className = 'photo-item';
@@ -3460,203 +3583,374 @@ async function viewPersonPhotos(personId) {
 
 // Upload Manager Setup
 function setupUploadTab() {
-  const sel = $('uploadTargetAlbumSelect');
-  sel.replaceChildren();
-
-  const chipsContainer = $('uploadFolderChips');
-  chipsContainer.replaceChildren();
-
-  if (allAlbums.length === 0) {
-    chipsContainer.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">No folders found for this event. Click "+ New Folder" to add one.</div>';
-    return;
-  }
-
-  // Set default upload album if none active
-  if (!activeUploadAlbumSlug || !allAlbums.some(a => a.slug === activeUploadAlbumSlug)) {
-    activeUploadAlbumSlug = allAlbums[0].slug;
-  }
-
-  for (const a of allAlbums) {
-    const opt = document.createElement('option');
-    opt.value = a.slug;
-    opt.textContent = a.name;
-    if (a.slug === activeUploadAlbumSlug) opt.selected = true;
-    sel.append(opt);
-
-    // Create chip
-    const chip = document.createElement('div');
-    chip.className = `folder-chip ${a.slug === activeUploadAlbumSlug ? 'active' : ''}`;
-    chip.setAttribute('data-slug', a.slug);
-    chip.innerHTML = `
-      <svg class="icon-sm" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      <span>${a.name}</span>
-      <span class="chip-badge">${a.photo_count || 0}</span>
-    `;
-    chip.addEventListener('click', () => {
-      selectUploadTargetAlbum(a.slug, a.name);
-    });
-    chipsContainer.append(chip);
-  }
-
-  // Add a "+ New Folder" chip at the end
-  const addChip = document.createElement('div');
-  addChip.className = 'folder-chip';
-  addChip.style.borderStyle = 'dashed';
-  addChip.innerHTML = `
-    <svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    <span>+ New Folder</span>
-  `;
-  addChip.addEventListener('click', openNewAlbumModal);
-  chipsContainer.append(addChip);
-
-  const activeAlbum = allAlbums.find(a => a.slug === activeUploadAlbumSlug) || allAlbums[0];
-  $('activeUploadFolderLabel').textContent = `Destination: ${activeAlbum.name} (slug: ${activeAlbum.slug})`;
-
-  // Also populate Google Drive target selector
+  // Populate Google Drive and Automation target subfolder dropdowns
   const gdSel = $('gdriveTargetAlbumSelect');
-  if (gdSel) {
-    gdSel.replaceChildren();
+  const autoSel = $('autoTargetAlbumSelect');
+
+  const populateSelector = (sel) => {
+    if (!sel) return;
+    sel.replaceChildren();
     const autoOpt = document.createElement('option');
     autoOpt.value = 'auto';
     autoOpt.textContent = '⚡ Auto-detect albums from Google Drive folders (Recommended)';
     autoOpt.selected = true;
-    gdSel.append(autoOpt);
+    sel.append(autoOpt);
 
     for (const a of allAlbums) {
       const o = document.createElement('option');
       o.value = a.slug;
       o.textContent = `Specific Album: ${a.name}`;
-      gdSel.append(o);
+      sel.append(o);
     }
-  }
-  // Load Upload Queue list on tab setup
+  };
+
+  populateSelector(gdSel);
+  populateSelector(autoSel);
+
+  // Load Automations & Queue
+  loadAutomations();
   loadUploadQueue();
 }
 
-// Staged Direct Upload Files State
-let stagedUploadFiles = [];
+// Google Drive Ingest & Queue Submissions
+$('startGdriveSyncBtn')?.addEventListener('click', async () => {
+  await submitGdriveTask('now');
+});
 
-function renderStagedFilesPreview() {
-  const container = $('stagedFilesContainer');
-  const summary = $('stagedFilesSummaryText');
-  if (!container || !summary) return;
+$('btnGdriveAddToQueue')?.addEventListener('click', async () => {
+  await submitGdriveTask('queue');
+});
 
-  if (stagedUploadFiles.length === 0) {
-    container.hidden = true;
+async function submitGdriveTask(action) {
+  const url = $('gdriveUrlInput').value.trim();
+  if (!url) {
+    alert('Please enter a Google Drive folder URL or ID.');
     return;
   }
+  const customSlug = $('gdriveCustomSlugInput').value.trim();
+  const selectSlug = $('gdriveTargetAlbumSelect').value;
+  const albumSlug = customSlug || selectSlug || 'auto';
 
-  const totalBytes = stagedUploadFiles.reduce((acc, f) => acc + (f.size || 0), 0);
-  const sizeMb = (totalBytes / (1024 * 1024)).toFixed(1);
-  const targetAlbum = activeUploadAlbumSlug || $('uploadTargetAlbumSelect')?.value || 'highlights';
+  const allowed = [];
+  if ($('gdriveFmtJpg')?.checked) allowed.push('jpg', 'jpeg');
+  if ($('gdriveFmtPng')?.checked) allowed.push('png');
+  if ($('gdriveFmtWebp')?.checked) allowed.push('webp');
+  if ($('gdriveFmtHeic')?.checked) allowed.push('heic', 'heif');
 
-  summary.textContent = `Selected ${stagedUploadFiles.length} file${stagedUploadFiles.length === 1 ? '' : 's'} (${sizeMb} MB) for folder '${targetAlbum}'`;
-  container.hidden = false;
-}
-
-$('clearStagedFilesBtn')?.addEventListener('click', () => {
-  stagedUploadFiles = [];
-  if ($('directFileInput')) $('directFileInput').value = '';
-  renderStagedFilesPreview();
-  const statusEl = $('uploadStatusText');
-  if (statusEl) statusEl.textContent = '';
-});
-
-// Drag & drop support for upload drop area
-const dropArea = $('uploadDropArea');
-if (dropArea) {
-  dropArea.addEventListener('click', () => $('directFileInput')?.click());
-  ['dragenter', 'dragover'].forEach(eventName => {
-    dropArea.addEventListener(eventName, e => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropArea.style.borderColor = '#0f5c4d';
-      dropArea.style.background = '#f0fdf4';
-    }, false);
-  });
-  ['dragleave', 'drop'].forEach(eventName => {
-    dropArea.addEventListener(eventName, e => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropArea.style.borderColor = 'var(--line)';
-      dropArea.style.background = '#fbfcfd';
-    }, false);
-  });
-  dropArea.addEventListener('drop', e => {
-    const dt = e.dataTransfer;
-    const files = Array.from(dt.files || []);
-    if (files.length > 0) {
-      stagedUploadFiles = files;
-      renderStagedFilesPreview();
-    }
-  }, false);
-}
-
-$('directFileInput')?.addEventListener('change', e => {
-  const files = Array.from(e.target.files || []);
-  if (files.length > 0) {
-    stagedUploadFiles = files;
-    renderStagedFilesPreview();
-  }
-});
-
-// Dual Upload Action Buttons: "Upload Now" vs "Add to Queue"
-$('btnUploadNow')?.addEventListener('click', async () => {
-  await submitUploadTask('now');
-});
-
-$('btnAddToQueue')?.addEventListener('click', async () => {
-  await submitUploadTask('queue');
-});
-
-async function submitUploadTask(action) {
-  if (stagedUploadFiles.length === 0) {
-    alert('Please choose or drop files first.');
-    return;
-  }
-  const btnNow = $('btnUploadNow');
-  const btnQueue = $('btnAddToQueue');
-  if (btnNow) btnNow.disabled = true;
+  const btnSync = $('startGdriveSyncBtn');
+  const btnQueue = $('btnGdriveAddToQueue');
+  if (btnSync) btnSync.disabled = true;
   if (btnQueue) btnQueue.disabled = true;
 
-  const albumSlug = activeUploadAlbumSlug || $('uploadTargetAlbumSelect')?.value || 'highlights';
-  const statusEl = $('uploadStatusText');
-  if (statusEl) {
-    statusEl.innerHTML = `<span style="color:#0f5c4d;display:inline-flex;align-items:center;gap:6px;font-weight:600;">
-      <svg class="icon-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-      Staging ${stagedUploadFiles.length} files onto server storage...
-    </span>`;
-  }
-
-  const fd = new FormData();
-  for (const f of stagedUploadFiles) fd.append('files', f);
-  fd.append('album_slug', albumSlug);
-  fd.append('action', action);
-  fd.append('auto_index', 'true');
+  const statusEl = $('gdriveStatusText');
+  if (statusEl) statusEl.textContent = action === 'now' ? 'Starting ingest...' : 'Adding to queue...';
 
   try {
-    const res = await fetch(`/api/admin/events/${activeSlug}/upload-queue`, {
+    const res = await fetch(`/api/admin/events/${activeSlug}/gdrive-queue`, {
       method: 'POST',
-      body: fd
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, album_slug: albumSlug, allowed_extensions: allowed, action })
     });
     const j = await res.json();
     if (res.ok) {
-      if (statusEl) {
-        statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ ${j.message || 'Task submitted successfully!'}</span>`;
-      }
-      stagedUploadFiles = [];
-      if ($('directFileInput')) $('directFileInput').value = '';
-      renderStagedFilesPreview();
+      if (statusEl) statusEl.textContent = j.message || 'Task submitted successfully!';
+      $('gdriveUrlInput').value = '';
       await loadUploadQueue();
       pollTaskStatus();
     } else {
-      if (statusEl) statusEl.innerHTML = `<span style="color:var(--err);">${j.detail || 'Upload submission failed.'}</span>`;
+      if (statusEl) statusEl.textContent = j.detail || 'Failed to submit Google Drive task.';
+    }
+  } catch (e) {
+    if (statusEl) statusEl.textContent = 'Server connection error.';
+  } finally {
+    if (btnSync) btnSync.disabled = false;
+    if (btnQueue) btnQueue.disabled = false;
+  }
+}
+
+// --- Scheduled Automations Management ---
+let currentAutomationsList = [];
+
+async function loadAutomations() {
+  try {
+    const res = await fetch(`/api/admin/automations?event_slug=${activeSlug}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    currentAutomationsList = data.automations || [];
+    renderAutomationsTable(currentAutomationsList);
+  } catch (err) {
+    console.error('Failed to load automations:', err);
+  }
+}
+
+function renderAutomationsTable(automations) {
+  const tbody = $('automationsTableBody');
+  if (!tbody) return;
+
+  if (!automations || automations.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align:center;padding:2.5rem 1rem;color:var(--muted);">
+          <div style="font-weight:600;font-size:0.95rem;color:#111827;margin-bottom:0.25rem;">No scheduled automations yet</div>
+          <div style="font-size:0.84rem;">Click "+ Create Automation" to schedule automatic Google Drive ingests into the queue.</div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.replaceChildren();
+  for (const a of automations) {
+    const tr = document.createElement('tr');
+    tr.style.cssText = 'border-bottom:1px solid #f1f5f9;transition:background 0.15s;';
+    tr.onmouseover = () => tr.style.background = '#f8fafc';
+    tr.onmouseout = () => tr.style.background = 'transparent';
+
+    const isActive = a.is_active == 1;
+    const statusBadge = isActive 
+      ? `<span class="q-badge badge-running" style="background:#ecfdf5;color:#047857;border-color:#a7f3d0;">ACTIVE</span>`
+      : `<span class="q-badge badge-cancelled" style="background:#f1f5f9;color:#64748b;border-color:#cbd5e1;">PAUSED</span>`;
+
+    const repeatLabel = a.repeat_interval === 'daily' ? 'Daily' : (a.repeat_interval === 'weekly' ? 'Weekly' : 'One-time');
+    const nextTrigger = a.next_trigger_at ? a.next_trigger_at : (isActive ? `${a.trigger_date} ${a.trigger_time}` : '—');
+    const lastResult = a.last_triggered_at 
+      ? `<div>${formatTimeShort(a.last_triggered_at)}</div><div style="font-size:0.75rem;color:var(--muted);">${a.last_status || 'queued'}</div>` 
+      : '<span style="color:var(--muted);">Never</span>';
+
+    // Source link formatting
+    let driveDisplay = a.gdrive_url;
+    if (driveDisplay.length > 32) driveDisplay = driveDisplay.substring(0, 16) + '...' + driveDisplay.substring(driveDisplay.length - 12);
+
+    tr.innerHTML = `
+      <td style="padding:0.75rem 1rem;">
+        <div style="font-weight:700;color:#111827;">${escapeHtml(a.name)}</div>
+        <div style="font-size:0.75rem;color:var(--muted);font-family:monospace;">#AUTO-${a.id}</div>
+      </td>
+      <td style="padding:0.75rem 0.75rem;">
+        <div style="font-size:0.8rem;color:#0f5c4d;font-weight:600;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(a.gdrive_url)}">${escapeHtml(driveDisplay)}</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Folder: <strong>${escapeHtml(a.target_album_slug || 'auto')}</strong></div>
+      </td>
+      <td style="padding:0.75rem 0.75rem;font-weight:600;color:#334155;white-space:nowrap;">
+        ${nextTrigger}
+      </td>
+      <td style="padding:0.75rem 0.75rem;color:#475569;">
+        <span style="display:inline-block;padding:2px 8px;background:#f1f5f9;border-radius:4px;font-size:0.78rem;font-weight:600;">${repeatLabel}</span>
+      </td>
+      <td style="padding:0.75rem 0.75rem;font-size:0.8rem;">
+        ${lastResult}
+      </td>
+      <td style="padding:0.75rem 0.75rem;">
+        ${statusBadge}
+      </td>
+      <td style="padding:0.75rem 1rem;text-align:right;white-space:nowrap;">
+        <button class="btn-primary" style="padding:0.25rem 0.55rem;font-size:0.75rem;background:#0f5c4d;margin-right:3px;" onclick="runAutomationNow(${a.id})" title="Trigger right now and queue">Run Now</button>
+        <button class="btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;margin-right:3px;" onclick="toggleAutomationStatus(${a.id})">${isActive ? 'Pause' : 'Resume'}</button>
+        <button class="btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;margin-right:3px;" onclick="openEditAutomationModal(${a.id})">Edit</button>
+        <button class="btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;margin-right:3px;" onclick="viewAutomationHistoryModal(${a.id})">History</button>
+        <button class="btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;color:#ef4444;border-color:#fca5a5;" onclick="deleteAutomationAction(${a.id})">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function openCreateAutomationModal() {
+  $('autoModalHeading').textContent = 'Create Automation';
+  $('autoEditId').value = '';
+  $('autoNameInput').value = '';
+  $('autoGdriveUrlInput').value = '';
+  $('autoCustomSlugInput').value = '';
+  $('autoRepeatSelect').value = 'none';
+  $('autoIsActiveInput').checked = true;
+
+  // Set default trigger date to today (or tomorrow) and next hour
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  $('autoTriggerDateInput').value = `${yyyy}-${mm}-${dd}`;
+  
+  now.setHours(now.getHours() + 1);
+  const hh = String(now.getHours()).padStart(2, '0');
+  $('autoTriggerTimeInput').value = `${hh}:00`;
+
+  openModal('createAutomationModal');
+}
+
+function openEditAutomationModal(autoId) {
+  const auto = currentAutomationsList.find(a => a.id === autoId);
+  if (!auto) return;
+
+  $('autoModalHeading').textContent = 'Edit Automation';
+  $('autoEditId').value = auto.id;
+  $('autoNameInput').value = auto.name || '';
+  $('autoGdriveUrlInput').value = auto.gdrive_url || '';
+  if ($('autoTargetAlbumSelect')) $('autoTargetAlbumSelect').value = auto.target_album_slug || 'auto';
+  $('autoCustomSlugInput').value = auto.target_album_slug === 'auto' ? '' : (auto.target_album_slug || '');
+  $('autoTriggerDateInput').value = auto.trigger_date || '';
+  $('autoTriggerTimeInput').value = auto.trigger_time || '';
+  $('autoRepeatSelect').value = auto.repeat_interval || 'none';
+  $('autoIsActiveInput').checked = auto.is_active == 1;
+
+  try {
+    const fmts = JSON.parse(auto.formats_json || '["jpg","png","webp"]');
+    $('autoFmtJpg').checked = fmts.includes('jpg') || fmts.includes('jpeg');
+    $('autoFmtPng').checked = fmts.includes('png');
+    $('autoFmtWebp').checked = fmts.includes('webp');
+    $('autoFmtHeic').checked = fmts.includes('heic') || fmts.includes('heif');
+  } catch(e) {}
+
+  openModal('createAutomationModal');
+}
+
+async function submitAutomationForm() {
+  const name = $('autoNameInput').value.trim();
+  const gdriveUrl = $('autoGdriveUrlInput').value.trim();
+  const triggerDate = $('autoTriggerDateInput').value.trim();
+  const triggerTime = $('autoTriggerTimeInput').value.trim();
+  const repeat = $('autoRepeatSelect').value;
+  const isActive = $('autoIsActiveInput').checked;
+  const editId = $('autoEditId').value;
+
+  if (!name) {
+    alert('Please enter an automation name.');
+    return;
+  }
+  if (!gdriveUrl) {
+    alert('Please enter a Google Drive folder URL or ID.');
+    return;
+  }
+  if (!triggerDate || !triggerTime) {
+    alert('Please select both trigger date and trigger time.');
+    return;
+  }
+
+  const customSlug = $('autoCustomSlugInput').value.trim();
+  const targetAlbum = customSlug || $('autoTargetAlbumSelect')?.value || 'auto';
+
+  const formats = [];
+  if ($('autoFmtJpg')?.checked) formats.push('jpg', 'jpeg');
+  if ($('autoFmtPng')?.checked) formats.push('png');
+  if ($('autoFmtWebp')?.checked) formats.push('webp');
+  if ($('autoFmtHeic')?.checked) formats.push('heic', 'heif');
+
+  const payload = {
+    name,
+    gdrive_url: gdriveUrl,
+    target_album_slug: targetAlbum,
+    formats,
+    trigger_date: triggerDate,
+    trigger_time: triggerTime,
+    repeat_interval: repeat,
+    is_active: isActive,
+    event_slug: activeSlug
+  };
+
+  const btn = $('btnSaveAutomation');
+  if (btn) btn.disabled = true;
+
+  try {
+    const url = editId ? `/api/admin/automations/${editId}` : '/api/admin/automations';
+    const method = editId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      closeModal('createAutomationModal');
+      await loadAutomations();
+    } else {
+      const j = await res.json();
+      alert(j.detail || 'Failed to save automation.');
     }
   } catch (err) {
-    if (statusEl) statusEl.innerHTML = `<span style="color:var(--err);">Network error: ${err.message}</span>`;
+    alert('Network error: ' + err.message);
   } finally {
-    if (btnNow) btnNow.disabled = false;
-    if (btnQueue) btnQueue.disabled = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function runAutomationNow(autoId) {
+  if (!confirm('Run this automation now? It will be immediately enqueued into the upload queue.')) return;
+  try {
+    const res = await fetch(`/api/admin/automations/${autoId}/run-now`, { method: 'POST' });
+    if (res.ok) {
+      await loadAutomations();
+      await loadUploadQueue();
+      pollTaskStatus();
+    } else {
+      const j = await res.json();
+      alert(j.detail || 'Could not trigger automation.');
+    }
+  } catch(e) {
+    alert('Error triggering automation: ' + e.message);
+  }
+}
+
+async function toggleAutomationStatus(autoId) {
+  try {
+    const res = await fetch(`/api/admin/automations/${autoId}/toggle`, { method: 'POST' });
+    if (res.ok) {
+      await loadAutomations();
+    }
+  } catch (e) {
+    alert('Error toggling automation: ' + e.message);
+  }
+}
+
+async function deleteAutomationAction(autoId) {
+  if (!confirm('Are you sure you want to delete this automation schedule?')) return;
+  try {
+    const res = await fetch(`/api/admin/automations/${autoId}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadAutomations();
+    }
+  } catch(e) {
+    alert('Error deleting automation: ' + e.message);
+  }
+}
+
+async function viewAutomationHistoryModal(autoId) {
+  const auto = currentAutomationsList.find(a => a.id === autoId);
+  if ($('autoHistoryModalTitle')) {
+    $('autoHistoryModalTitle').textContent = auto ? `History: ${auto.name}` : 'Automation History';
+  }
+  const tbody = $('autoHistoryTableBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--muted);">Loading history...</td></tr>';
+  openModal('automationHistoryModal');
+
+  try {
+    const res = await fetch(`/api/admin/automations/${autoId}/history`);
+    if (!res.ok) throw new Error('Failed to fetch history');
+    const data = await res.json();
+    const list = data.history || [];
+
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--muted);">No execution history recorded yet.</td></tr>';
+      return;
+    }
+
+    tbody.replaceChildren();
+    for (const h of list) {
+      const tr = document.createElement('tr');
+      tr.style.cssText = 'border-bottom:1px solid #f1f5f9;font-size:0.8rem;';
+      const triggerTime = h.triggered_at ? formatTimeShort(h.triggered_at) : '—';
+      const statusBadge = `<span class="q-badge badge-${h.status || 'queued'}">${(h.status || 'queued').toUpperCase()}</span>`;
+
+      tr.innerHTML = `
+        <td style="padding:0.55rem 0.75rem;white-space:nowrap;color:#475569;">${triggerTime}</td>
+        <td style="padding:0.55rem 0.75rem;font-family:monospace;font-weight:600;color:#0f5c4d;">#${h.task_id}</td>
+        <td style="padding:0.55rem 0.75rem;">${statusBadge}</td>
+        <td style="padding:0.55rem 0.75rem;color:#334155;">
+          <div>${escapeHtml(h.result_message || 'Task submitted to queue')}</div>
+          ${h.error_details ? `<div style="color:#ef4444;font-size:0.75rem;margin-top:2px;">${escapeHtml(h.error_details)}</div>` : ''}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  } catch(e) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:#ef4444;">${e.message}</td></tr>`;
   }
 }
 

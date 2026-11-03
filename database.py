@@ -5,8 +5,11 @@ Uses SQLite in WAL mode for microsecond reads and concurrent safety.
 import sqlite3
 import os
 import sys
-from datetime import datetime
+import re
+import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Optional
 
 BASE = Path(__file__).resolve().parent
 if str(BASE) not in sys.path:
@@ -14,7 +17,91 @@ if str(BASE) not in sys.path:
 STORAGE = Path(os.environ.get("STORAGE_DIR", BASE / "storage"))
 DATA_DIR = STORAGE / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+PHOTOS = STORAGE / "photos"
 DB_PATH = DATA_DIR / "magniwedding.db"
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def now_ist() -> datetime:
+    return datetime.now(IST)
+
+def parse_date_string(text: str) -> Optional[str]:
+    """Extracts an ISO date YYYY-MM-DD from various folder, album, or filename strings."""
+    if not text:
+        return None
+    # 1. Matches DD-MM-YYYY or DD-MM-YY (e.g. 29-10-2026, 29-10-26, 01-10-26)
+    m = re.search(r'\b(0?[1-9]|[12][0-9]|3[01])[-/.](0?[1-9]|1[0-2])[-/.](20\d\d|\d\d)\b', text)
+    if m:
+        day, month, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if year < 100:
+            year += 2000
+        return f"{year:04d}-{month:02d}-{day:02d}"
+    
+    # 2. Matches YYYY-MM-DD (e.g. 2026-10-29)
+    m = re.search(r'\b(20\d\d)[-/.](0?[1-9]|1[0-2])[-/.](0?[1-9]|[12][0-9]|3[01])\b', text)
+    if m:
+        year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        return f"{year:04d}-{month:02d}-{day:02d}"
+    
+    # 3. Matches DD MON (e.g. 01 JUN, 15 OCT 2026)
+    months = {'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+              'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12}
+    m = re.search(r'\b(0?[1-9]|[12][0-9]|3[01])[\s_-]+([a-zA-Z]{3,9})(?:[\s_-]+(20\d\d|\d\d))?\b', text)
+    if m:
+        day = int(m.group(1))
+        mon_str = m.group(2).lower()[:3]
+        if mon_str in months:
+            month = months[mon_str]
+            yr = int(m.group(3)) if m.group(3) else 2026
+            if yr < 100:
+                yr += 2000
+            return f"{yr:04d}-{month:02d}-{day:02d}"
+    return None
+
+def extract_photo_capture_date(file_path: Optional[Path] = None, rel_path: str = "", album_hint: str = "") -> str:
+    """
+    Extracts the most accurate ISO timestamp (YYYY-MM-DD HH:MM:SS) for a photograph:
+    1. EXIF DateTimeOriginal / DateTimeDigitized from file
+    2. Reliable date in album name or slug (e.g. 29-10-2026)
+    3. Date in rel_path or filename
+    4. Fallback to file creation timestamp or now
+    """
+    # 1. EXIF metadata
+    if file_path and file_path.exists():
+        try:
+            from PIL import Image
+            with Image.open(file_path) as img:
+                exif = img.getexif()
+                if exif:
+                    for tag_id in (36867, 36868, 306): # DateTimeOriginal, DateTimeDigitized, DateTime
+                        val = exif.get(tag_id)
+                        if val and isinstance(val, str) and len(val) >= 10:
+                            parts = val.strip().split()
+                            date_part = parts[0].replace(":", "-")
+                            time_part = parts[1] if len(parts) > 1 else "12:00:00"
+                            return f"{date_part} {time_part}"
+        except Exception:
+            pass
+
+    # 2. Date in album hint (e.g. 29-10-2026, 28-10-26, 01-10-26)
+    d = parse_date_string(album_hint)
+    if d:
+        return f"{d} 12:00:00"
+
+    # 3. Date in rel_path or filename
+    d = parse_date_string(rel_path)
+    if d:
+        return f"{d} 12:00:00"
+
+    # 4. Fallback to mtime or current time
+    if file_path and file_path.exists():
+        try:
+            mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+            return mtime.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            pass
+
+    return now_ist().strftime("%Y-%m-%d %H:%M:%S")
 
 def get_db():
     conn = sqlite3.connect(str(DB_PATH), timeout=20.0)
@@ -86,6 +173,7 @@ def init_db():
             is_hidden BOOLEAN DEFAULT 0,
             is_deleted BOOLEAN DEFAULT 0,
             deleted_at TIMESTAMP,
+            captured_at TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -150,6 +238,37 @@ def init_db():
             completed_at TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS automations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            event_slug TEXT NOT NULL DEFAULT 'brk-sir',
+            gdrive_url TEXT NOT NULL,
+            target_album_slug TEXT DEFAULT 'auto',
+            formats_json TEXT DEFAULT '["jpg","png","webp"]',
+            trigger_date TEXT NOT NULL,
+            trigger_time TEXT NOT NULL,
+            repeat_interval TEXT NOT NULL DEFAULT 'none',
+            is_active BOOLEAN NOT NULL DEFAULT 1,
+            last_triggered_at TIMESTAMP,
+            last_status TEXT,
+            last_task_id TEXT,
+            next_trigger_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS automation_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            automation_id INTEGER REFERENCES automations(id) ON DELETE CASCADE,
+            automation_name TEXT NOT NULL,
+            task_id TEXT NOT NULL,
+            triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status TEXT NOT NULL DEFAULT 'queued',
+            files_count INTEGER DEFAULT 0,
+            result_message TEXT,
+            error_details TEXT
+        );
+
         CREATE INDEX IF NOT EXISTS idx_events_slug ON events(slug);
         CREATE INDEX IF NOT EXISTS idx_albums_event ON albums(event_id);
         CREATE INDEX IF NOT EXISTS idx_photos_event_album ON photos(event_id, album_id);
@@ -159,13 +278,57 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_task_history_id ON task_history(task_id);
         CREATE INDEX IF NOT EXISTS idx_upload_queue_status ON upload_queue(status, id);
         CREATE INDEX IF NOT EXISTS idx_upload_queue_task_id ON upload_queue(task_id);
+        CREATE INDEX IF NOT EXISTS idx_automations_active ON automations(is_active, next_trigger_at);
+        CREATE INDEX IF NOT EXISTS idx_automation_history_task ON automation_history(task_id);
         """)
+        try:
+            conn.execute("ALTER TABLE photos ADD COLUMN captured_at TIMESTAMP;")
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_captured ON photos(captured_at);")
+            conn.commit()
+        except Exception:
+            pass
         try:
             conn.execute("ALTER TABLE face_detections ADD COLUMN crop_path TEXT;")
             conn.commit()
         except Exception:
             pass
     conn.close()
+    backfill_photo_dates()
+
+def backfill_photo_dates():
+    """Extracts and populates captured_at for any photos missing date metadata."""
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            SELECT p.id, p.rel_path, p.filename, p.created_at, a.name as album_name, a.slug as album_slug
+            FROM photos p
+            LEFT JOIN albums a ON p.album_id = a.id
+            WHERE p.captured_at IS NULL OR p.captured_at = ''
+        """)
+        rows = c.fetchall()
+        if not rows:
+            conn.close()
+            return 0
+        updated = 0
+        for r in rows:
+            d = extract_photo_capture_date(
+                file_path=PHOTOS / r["rel_path"] if (PHOTOS / r["rel_path"]).exists() else None,
+                rel_path=r["rel_path"],
+                album_hint=r["album_name"] or r["album_slug"] or ""
+            )
+            c.execute("UPDATE photos SET captured_at = ? WHERE id = ?", (d, r["id"]))
+            updated += 1
+        conn.commit()
+        conn.close()
+        return updated
+    except Exception:
+        conn.close()
+        return 0
 
 def create_task_record(task_id: str, task_type: str, event_slug: str, target_folder: str = "", source_url: str = ""):
     conn = get_db()
@@ -772,11 +935,12 @@ def list_people_for_event(event_slug: str):
     return people
 
 def get_person_photos(event_slug: str, person_id: int):
-    """Returns all photos containing a specific person, deduplicated by filename."""
+    """Returns all photos containing a specific person, deduplicated by filename, sorted latest date first."""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT ph.id, ph.filename, ph.rel_path, ph.drive_file_id, ph.is_featured,
+               ph.captured_at, ph.created_at,
                a.name as album_name, a.slug as album_slug,
                e.name as event_name, e.slug as event_slug
         FROM photos ph
@@ -785,11 +949,229 @@ def get_person_photos(event_slug: str, person_id: int):
         LEFT JOIN albums a ON ph.album_id = a.id
         WHERE e.slug = ? AND fd.person_id = ? AND ph.is_deleted = 0 AND ph.is_hidden = 0
         GROUP BY ph.filename
-        ORDER BY ph.is_featured DESC, ph.filename ASC
+        ORDER BY ph.is_featured DESC, COALESCE(ph.captured_at, ph.created_at) DESC, ph.id DESC
     """, (event_slug, person_id))
     photos = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return photos
+
+# --- Automation Helper Functions ---
+
+def compute_next_trigger(trigger_date: str, trigger_time: str, repeat_interval: str = "none") -> str:
+    """Calculates next trigger ISO string in IST (Asia/Kolkata)."""
+    try:
+        combined_str = f"{trigger_date} {trigger_time}:00"
+        dt = datetime.strptime(combined_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=IST)
+        now = now_ist()
+        if dt > now:
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        if repeat_interval == "daily":
+            while dt <= now:
+                dt += timedelta(days=1)
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        elif repeat_interval == "weekly":
+            while dt <= now:
+                dt += timedelta(weeks=1)
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return f"{trigger_date} {trigger_time}:00"
+
+def create_automation(name: str, event_slug: str, gdrive_url: str,
+                      target_album_slug: str = "auto", formats_list: list = None,
+                      trigger_date: str = "", trigger_time: str = "",
+                      repeat_interval: str = "none", is_active: int = 1):
+    conn = get_db()
+    c = conn.cursor()
+    formats_json = json.dumps(formats_list or ["jpg", "png", "webp"])
+    next_trigger = compute_next_trigger(trigger_date, trigger_time, repeat_interval)
+    c.execute("""
+        INSERT INTO automations (
+            name, event_slug, gdrive_url, target_album_slug, formats_json,
+            trigger_date, trigger_time, repeat_interval, is_active, next_trigger_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (name, event_slug, gdrive_url, target_album_slug, formats_json,
+          trigger_date, trigger_time, repeat_interval, is_active, next_trigger))
+    auto_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return auto_id
+
+def get_automations(event_slug: str = None):
+    conn = get_db()
+    c = conn.cursor()
+    if event_slug and event_slug not in {"all", "*"}:
+        c.execute("""
+            SELECT * FROM automations 
+            WHERE event_slug = ? OR ? IN ('wedding', 'default', 'brk-sir', 'brksir')
+            ORDER BY is_active DESC, next_trigger_at ASC, id DESC
+        """, (event_slug, event_slug))
+    else:
+        c.execute("SELECT * FROM automations ORDER BY is_active DESC, next_trigger_at ASC, id DESC")
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+def get_automation_by_id(auto_id: int):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM automations WHERE id = ?", (auto_id,))
+    r = c.fetchone()
+    conn.close()
+    return dict(r) if r else None
+
+def update_automation(auto_id: int, name: str, gdrive_url: str,
+                      target_album_slug: str, formats_list: list,
+                      trigger_date: str, trigger_time: str,
+                      repeat_interval: str, is_active: int):
+    conn = get_db()
+    c = conn.cursor()
+    formats_json = json.dumps(formats_list or ["jpg", "png", "webp"])
+    next_trigger = compute_next_trigger(trigger_date, trigger_time, repeat_interval)
+    c.execute("""
+        UPDATE automations
+        SET name = ?, gdrive_url = ?, target_album_slug = ?, formats_json = ?,
+            trigger_date = ?, trigger_time = ?, repeat_interval = ?,
+            is_active = ?, next_trigger_at = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (name, gdrive_url, target_album_slug, formats_json,
+          trigger_date, trigger_time, repeat_interval, is_active, next_trigger, auto_id))
+    affected = c.rowcount
+    conn.commit()
+    conn.close()
+    return affected > 0
+
+def delete_automation(auto_id: int):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM automations WHERE id = ?", (auto_id,))
+    affected = c.rowcount
+    conn.commit()
+    conn.close()
+    return affected > 0
+
+def toggle_automation(auto_id: int):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE automations SET is_active = (1 - is_active), updated_at = CURRENT_TIMESTAMP WHERE id = ?", (auto_id,))
+    affected = c.rowcount
+    conn.commit()
+    conn.close()
+    return affected > 0
+
+def record_automation_history(automation_id: int, automation_name: str, task_id: str,
+                              status: str = "queued", files_count: int = 0,
+                              result_message: str = "", error_details: str = None):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO automation_history (
+            automation_id, automation_name, task_id, status, files_count, result_message, error_details
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (automation_id, automation_name, task_id, status, files_count, result_message, error_details))
+    conn.commit()
+    conn.close()
+
+def get_automation_history(automation_id: int = None, limit: int = 50):
+    conn = get_db()
+    c = conn.cursor()
+    if automation_id:
+        c.execute("""
+            SELECT h.*, a.gdrive_url, a.target_album_slug
+            FROM automation_history h
+            LEFT JOIN automations a ON h.automation_id = a.id
+            WHERE h.automation_id = ?
+            ORDER BY h.id DESC
+            LIMIT ?
+        """, (automation_id, limit))
+    else:
+        c.execute("""
+            SELECT h.*, a.gdrive_url, a.target_album_slug
+            FROM automation_history h
+            LEFT JOIN automations a ON h.automation_id = a.id
+            ORDER BY h.id DESC
+            LIMIT ?
+        """, (limit,))
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+def get_due_automations(now_str: str):
+    """Fetches active automations whose next_trigger_at is <= now_str in IST."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT * FROM automations
+        WHERE is_active = 1 AND next_trigger_at IS NOT NULL AND next_trigger_at <= ?
+        ORDER BY next_trigger_at ASC
+    """, (now_str,))
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+def advance_automation_schedule(auto_id: int, task_id: str, status: str = "queued"):
+    """Advances schedule to the next interval or deactivates one-time automations."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM automations WHERE id = ?", (auto_id,))
+    auto = c.fetchone()
+    if not auto:
+        conn.close()
+        return
+    repeat_interval = auto["repeat_interval"]
+    now = now_ist()
+    time_str = auto["trigger_time"]
+
+    if repeat_interval == "daily":
+        next_dt = now + timedelta(days=1)
+        next_str = f"{next_dt.strftime('%Y-%m-%d')} {time_str}:00"
+        c.execute("""
+            UPDATE automations
+            SET last_triggered_at = CURRENT_TIMESTAMP,
+                last_status = ?,
+                last_task_id = ?,
+                trigger_date = ?,
+                next_trigger_at = ?
+            WHERE id = ?
+        """, (status, task_id, next_dt.strftime('%Y-%m-%d'), next_str, auto_id))
+    elif repeat_interval == "weekly":
+        next_dt = now + timedelta(weeks=1)
+        next_str = f"{next_dt.strftime('%Y-%m-%d')} {time_str}:00"
+        c.execute("""
+            UPDATE automations
+            SET last_triggered_at = CURRENT_TIMESTAMP,
+                last_status = ?,
+                last_task_id = ?,
+                trigger_date = ?,
+                next_trigger_at = ?
+            WHERE id = ?
+        """, (status, task_id, next_dt.strftime('%Y-%m-%d'), next_str, auto_id))
+    else:
+        # One-time: mark inactive after execution
+        c.execute("""
+            UPDATE automations
+            SET last_triggered_at = CURRENT_TIMESTAMP,
+                last_status = ?,
+                last_task_id = ?,
+                is_active = 0,
+                next_trigger_at = NULL
+            WHERE id = ?
+        """, (status, task_id, auto_id))
+    conn.commit()
+    conn.close()
+
+    try:
+        record_automation_history(
+            automation_id=auto_id,
+            automation_name=auto["name"],
+            task_id=task_id,
+            status=status,
+            result_message=f"Triggered by scheduler and enqueued as {task_id}"
+        )
+    except Exception as e:
+        print(f"Error auto-recording history: {e}")
 
 if __name__ == "__main__":
     init_db()

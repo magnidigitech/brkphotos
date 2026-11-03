@@ -1853,11 +1853,21 @@
         }
       }
 
-      // 2. Sort: Featured photos placed in the beginning, followed by remaining images in alphabetical order
+      // 2. Sort: Featured photos placed in the beginning, followed by remaining images in descending date order (newest first)
       uniquePhotos.sort((a, b) => {
         const featA = (typeof a === 'object' && a.is_featured) ? 1 : 0;
         const featB = (typeof b === 'object' && b.is_featured) ? 1 : 0;
         if (featA !== featB) return featB - featA; // Featured photos first
+        
+        // Descending date order (newest to oldest)
+        const dateA = (typeof a === 'object' && (a.captured_at || a.created_at)) ? (a.captured_at || a.created_at) : '';
+        const dateB = (typeof b === 'object' && (b.captured_at || b.created_at)) ? (b.captured_at || b.created_at) : '';
+        if (dateA && dateB && dateA !== dateB) {
+          return dateB.localeCompare(dateA); // Newer date first
+        }
+        if (dateB && !dateA) return 1;
+        if (dateA && !dateB) return -1;
+
         const nameA = (typeof a === 'string' ? a.split('/').pop() : (a.filename || a.rel_path.split('/').pop())).toLowerCase();
         const nameB = (typeof b === 'string' ? b.split('/').pop() : (b.filename || b.rel_path.split('/').pop())).toLowerCase();
         return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
