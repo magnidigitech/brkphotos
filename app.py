@@ -24,7 +24,10 @@ from database import (
     get_db, init_db, migrate_existing_data,
     cluster_and_sync_people, list_people_for_event, get_person_photos,
     create_task_record, update_task_progress, get_latest_task, list_task_history, get_task_by_id,
-    stop_running_tasks
+    stop_running_tasks,
+    enqueue_upload_task, claim_next_queued_task, update_queue_task,
+    get_queue_tasks, get_queue_task_by_id, cancel_queue_task, retry_queue_task,
+    clear_completed_queue_tasks, get_queue_stats, reset_stale_running_queue_tasks
 )
 
 BASE = Path(__file__).parent
@@ -32,9 +35,11 @@ STORAGE = Path(os.environ.get("STORAGE_DIR", BASE / "storage"))
 PHOTOS = STORAGE / "photos"
 DATA = STORAGE / "data"
 MODELS = STORAGE / "models"
+QUEUE_DIR = STORAGE / "queue"
 PHOTOS.mkdir(parents=True, exist_ok=True)
 MODELS.mkdir(parents=True, exist_ok=True)
 DATA.mkdir(parents=True, exist_ok=True)
+QUEUE_DIR.mkdir(parents=True, exist_ok=True)
 THRESHOLD = float(os.environ.get("MATCH_THRESHOLD", "0.40"))
 MAX_RESULTS = 300
 MAX_UPLOAD = 10 * 1024 * 1024
@@ -43,6 +48,7 @@ ADMIN_KEY = os.environ.get("ADMIN_KEY", "Magni@3939")
 # Initialize database on startup
 init_db()
 migrate_existing_data()
+reset_stale_running_queue_tasks()
 
 face_app = FaceAnalysis(name="buffalo_l", root=str(MODELS), providers=["CPUExecutionProvider"])
 face_app.prepare(ctx_id=-1, det_size=(640, 640))
@@ -446,12 +452,13 @@ def sync_photos_to_database(dest_dir: Path, event_slug: str, drive_map: dict, al
     conn.close()
     return registered_count
 
-def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: str, allowed_exts: list = None):
+def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: str, allowed_exts: list = None, task_id: str = None):
     global current_task, drive_map, active_process
     display_title = "BRK Sir" if event_slug in {"default", "wedding", "brk-sir", "brksir"} else event_slug
     task_cancel_event.clear()
-    task_id = f"gdrive_{secrets.token_hex(4)}"
-    create_task_record(task_id, "gdrive_ingest", display_title, dest_dir.name, url)
+    if not task_id:
+        task_id = f"gdrive_{secrets.token_hex(4)}"
+        create_task_record(task_id, "gdrive_ingest", display_title, dest_dir.name, url)
 
     if not allowed_exts:
         allowed_exts = ["jpg", "jpeg", "png", "webp"]
@@ -740,6 +747,227 @@ def run_gdrive_download(url: str, dest_dir: Path, rel_prefix: str, event_slug: s
         update_task_progress(task_id, status="failed", current_step=f"Error: {e}", log_line=f"ERROR: {e}")
     finally:
         active_process = None
+
+# --- Background Upload Task Queue Worker (FIFO Sequential Processing) ---
+
+queue_worker_running = False
+queue_worker_lock = threading.Lock()
+
+def trigger_queue_worker():
+    global queue_worker_running
+    with queue_worker_lock:
+        if not queue_worker_running:
+            queue_worker_running = True
+            threading.Thread(target=_queue_worker_loop, daemon=True).start()
+
+def _queue_worker_loop():
+    global queue_worker_running
+    append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Upload task queue worker loop started.")
+    try:
+        while True:
+            # Check if any manual/active task is currently running in current_task
+            with task_lock:
+                busy = current_task.get("status") == "running"
+            if busy:
+                time.sleep(1.5)
+                continue
+
+            # Atomically claim the next queued task in FIFO order
+            job = claim_next_queued_task()
+            if not job:
+                # No pending queued jobs
+                break
+
+            try:
+                execute_queued_job(job)
+            except Exception as ex:
+                append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Queue worker uncaught exception on task #{job.get('task_id')}: {ex}")
+            time.sleep(1)
+    finally:
+        with queue_worker_lock:
+            queue_worker_running = False
+        append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Upload task queue worker idle (all tasks processed).")
+
+def execute_queued_job(job: dict):
+    global current_task, active_process
+    task_id = job["task_id"]
+    task_name = job["task_name"]
+    task_type = job["task_type"]
+    event_slug = job["event_slug"]
+    target_album_slug = job["target_album_slug"]
+    target_album_name = job["target_album_name"] or target_album_slug
+    staged_dir_str = job.get("staged_dir")
+    staged_dir = Path(staged_dir_str) if staged_dir_str else None
+    display_title = "BRK Sir" if event_slug in {"default", "wedding", "brk-sir", "brksir"} else event_slug
+
+    task_cancel_event.clear()
+    now_str = datetime.now().strftime('%H:%M:%S')
+    append_log(f"[{now_str}] Starting queued task #{task_id}: {task_name}")
+
+    create_task_record(task_id, "upload_queue", display_title, target_album_name, f"Queue: {task_name}")
+
+    with task_lock:
+        current_task.update({
+            "task_id": task_id,
+            "status": "running",
+            "type": "upload",
+            "event": display_title,
+            "progress_pct": 5,
+            "message": f"Processing queue task '{task_name}'...",
+            "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+
+    update_queue_task(task_id, status="running", progress_pct=5, current_step="Staging and preparing files...",
+                      log_line=f"Processing started for {task_name}")
+
+    try:
+        if task_type == "gdrive_sync":
+            source_url = job.get("source_info", "")
+            allowed_exts = ["jpg", "jpeg", "png", "webp"]
+            safe_album = "".join(c for c in target_album_slug.strip() if c.isalnum() or c in "-_") or "highlights"
+            if safe_album == "auto":
+                if event_slug in {"default", "wedding", "brk-sir", "brksir"}:
+                    dest_dir = PHOTOS
+                    rel_prefix = ""
+                else:
+                    dest_dir = PHOTOS / "events" / event_slug
+                    rel_prefix = f"events/{event_slug}"
+            elif event_slug in {"default", "wedding", "brk-sir", "brksir"}:
+                dest_dir = PHOTOS / safe_album
+                rel_prefix = safe_album
+            else:
+                dest_dir = PHOTOS / "events" / event_slug / safe_album
+                rel_prefix = f"events/{event_slug}/{safe_album}"
+
+            run_gdrive_download(source_url, dest_dir, rel_prefix, event_slug, allowed_exts, task_id=task_id)
+            update_queue_task(task_id, status="completed", progress_pct=100, current_step="Completed successfully",
+                              log_line=f"Google Drive sync completed for task #{task_id}")
+        else:
+            # direct_upload / zip_upload
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM events WHERE slug = ?", (event_slug,))
+            event = cursor.fetchone()
+            if not event:
+                cursor.execute("SELECT id FROM events WHERE slug = 'brk-sir' OR slug = 'wedding' LIMIT 1")
+                event = cursor.fetchone()
+            eid = event["id"] if event else 1
+
+            cursor.execute("SELECT id FROM albums WHERE event_id = ? AND slug = ?", (eid, target_album_slug))
+            arow = cursor.fetchone()
+            album_id = arow["id"] if arow else None
+
+            safe_album = "".join(c for c in target_album_slug.strip() if c.isalnum() or c in "-_") or "highlights"
+            if event_slug in {"default", "wedding", "brk-sir", "brksir"}:
+                dest_dir = PHOTOS / safe_album
+                rel_prefix = safe_album
+            else:
+                dest_dir = PHOTOS / "events" / event_slug / safe_album
+                rel_prefix = f"events/{event_slug}/{safe_album}"
+            dest_dir.mkdir(parents=True, exist_ok=True)
+
+            valid_exts = {".jpg", ".jpeg", ".png", ".webp"}
+            saved_count = 0
+
+            staged_files = []
+            if staged_dir and staged_dir.exists():
+                for p in staged_dir.iterdir():
+                    if p.is_file():
+                        staged_files.append(p)
+
+            total_staged = len(staged_files)
+            update_queue_task(task_id, file_count=total_staged, progress_pct=15,
+                              current_step=f"Processing {total_staged} staged files...",
+                              log_line=f"Found {total_staged} files in staging area.")
+            append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Task #{task_id}: Processing {total_staged} staged files into '{safe_album}'")
+
+            for idx, fpath in enumerate(staged_files, 1):
+                if task_cancel_event.is_set():
+                    update_queue_task(task_id, status="cancelled", current_step="Cancelled by administrator",
+                                      log_line="Upload task cancelled during file ingestion.")
+                    return
+
+                ext = fpath.suffix.lower()
+                if ext == ".zip":
+                    try:
+                        with zipfile.ZipFile(fpath) as z:
+                            infolist = [info for info in z.infolist() if not info.is_dir() and Path(info.filename).suffix.lower() in valid_exts]
+                            for z_idx, info in enumerate(infolist, 1):
+                                if task_cancel_event.is_set():
+                                    break
+                                sub_name = Path(info.filename).name
+                                dest_path = dest_dir / sub_name
+                                with z.open(info) as src, open(dest_path, "wb") as dst:
+                                    shutil.copyfileobj(src, dst)
+                                optimize_photo_inplace(dest_path)
+                                rel_p = f"{rel_prefix}/{sub_name}"
+                                cursor.execute("""
+                                    INSERT INTO photos (event_id, album_id, filename, rel_path, file_size_bytes, is_deleted)
+                                    VALUES (?, ?, ?, ?, ?, 0)
+                                    ON CONFLICT(rel_path) DO UPDATE SET
+                                        event_id = excluded.event_id,
+                                        album_id = excluded.album_id,
+                                        file_size_bytes = excluded.file_size_bytes,
+                                        is_deleted = 0
+                                """, (eid, album_id, sub_name, rel_p, dest_path.stat().st_size))
+                                saved_count += 1
+                                if z_idx % 10 == 0 or z_idx == len(infolist):
+                                    pct = int(15 + (z_idx / max(len(infolist), 1)) * 40)
+                                    update_queue_task(task_id, processed_count=saved_count, progress_pct=pct,
+                                                      current_step=f"Extracted {saved_count} photos from ZIP...")
+                    except Exception as ze:
+                        append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Task #{task_id} ZIP error: {ze}")
+                elif ext in valid_exts:
+                    dest_path = dest_dir / fpath.name
+                    shutil.copy2(fpath, dest_path)
+                    optimize_photo_inplace(dest_path)
+                    rel_p = f"{rel_prefix}/{fpath.name}"
+                    cursor.execute("""
+                        INSERT INTO photos (event_id, album_id, filename, rel_path, file_size_bytes, is_deleted)
+                        VALUES (?, ?, ?, ?, ?, 0)
+                        ON CONFLICT(rel_path) DO UPDATE SET
+                            event_id = excluded.event_id,
+                            album_id = excluded.album_id,
+                            file_size_bytes = excluded.file_size_bytes,
+                            is_deleted = 0
+                    """, (eid, album_id, fpath.name, rel_p, dest_path.stat().st_size))
+                    saved_count += 1
+                    if idx % 10 == 0 or idx == total_staged:
+                        pct = int(15 + (idx / max(total_staged, 1)) * 45)
+                        update_queue_task(task_id, processed_count=saved_count, progress_pct=pct,
+                                          current_step=f"Optimized {saved_count}/{total_staged} photos...")
+
+            conn.commit()
+            conn.close()
+
+            update_queue_task(task_id, processed_count=saved_count, file_count=saved_count, progress_pct=60,
+                              current_step="Starting AI face indexing...",
+                              log_line=f"Saved {saved_count} photos. Proceeding to face recognition indexing.")
+            append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Task #{task_id}: Saved {saved_count} photos. Starting face indexing.")
+
+            # Step 2: Face indexing
+            if saved_count > 0:
+                run_indexing_task(event_slug, task_id=task_id)
+
+            update_queue_task(task_id, status="completed", progress_pct=100, current_step="Completed successfully",
+                              log_line=f"Task #{task_id} completed successfully ({saved_count} photos indexed).")
+            append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Task #{task_id} completed successfully.")
+
+            # Clean up staged files on success
+            if staged_dir and staged_dir.exists():
+                shutil.rmtree(staged_dir, ignore_errors=True)
+
+    except Exception as e:
+        now_err = datetime.now().strftime('%H:%M:%S')
+        append_log(f"[{now_err}] Task #{task_id} error: {e}")
+        update_queue_task(task_id, status="failed", error_message=str(e),
+                          current_step="Task failed", log_line=f"Error: {e}")
+        update_task_progress(task_id, status="failed", current_step=f"Error: {e}")
+    finally:
+        with task_lock:
+            current_task["status"] = "idle"
+            current_task["message"] = "Ready"
+        append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Finished task #{task_id}. Checking next queued task...")
 
 app = FastAPI()
 
@@ -2049,116 +2277,208 @@ def admin_permanent_delete_trash(payload: dict, token: str = Depends(get_auth_to
     return {"status": "ok", "message": "Permanently deleted from disk."}
 
 @app.post("/api/admin/events/{slug}/upload")
+@app.post("/api/admin/events/{slug}/upload-queue")
 async def admin_upload_to_event(
     slug: str,
     files: list[UploadFile] = File(...),
     album_slug: str = Form("highlights"),
+    action: str = Form("now"),
     auto_index: bool = Form(True),
     token: str = Depends(get_auth_token)
 ):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM events WHERE slug = ?", (slug,))
+    cursor.execute("SELECT id, name FROM events WHERE slug = ?", (slug,))
     event = cursor.fetchone()
+    if not event:
+        cursor.execute("SELECT id, name FROM events WHERE slug = 'brk-sir' OR slug = 'wedding' LIMIT 1")
+        event = cursor.fetchone()
     if not event:
         conn.close()
         raise HTTPException(404, "Event not found")
         
     eid = event["id"]
-    cursor.execute("SELECT id FROM albums WHERE event_id = ? AND slug = ?", (eid, album_slug))
+    cursor.execute("SELECT id, name FROM albums WHERE event_id = ? AND slug = ?", (eid, album_slug))
     arow = cursor.fetchone()
-    album_id = arow["id"] if arow else None
-    
-    safe_album = "".join(c for c in album_slug.strip() if c.isalnum() or c in "-_") or "highlights"
-    if slug in {"default", "wedding", "brk-sir", "brksir"}:
-        target_dir = PHOTOS / safe_album
-        rel_prefix = safe_album
-    else:
-        target_dir = PHOTOS / "events" / slug / safe_album
-        rel_prefix = f"events/{slug}/{safe_album}"
-        
-    target_dir.mkdir(parents=True, exist_ok=True)
-    
-    saved_count = 0
-    valid_exts = {".jpg", ".jpeg", ".png", ".webp"}
-    
-    for f in files:
-        filename = Path(f.filename or "upload").name
-        ext = Path(filename).suffix.lower()
-        if ext == ".zip":
-            content = await f.read()
-            try:
-                with zipfile.ZipFile(io.BytesIO(content)) as z:
-                    for info in z.infolist():
-                        if info.is_dir() or ".." in info.filename or info.filename.startswith(("/", "\\")):
-                            continue
-                        sub_ext = Path(info.filename).suffix.lower()
-                        if sub_ext in valid_exts:
-                            sub_name = Path(info.filename).name
-                            dest_path = target_dir / sub_name
-                            with z.open(info) as src, open(dest_path, "wb") as dst:
-                                shutil.copyfileobj(src, dst)
-                            optimize_photo_inplace(dest_path)
-                            rel_p = f"{rel_prefix}/{sub_name}"
-                            cursor.execute("""
-                                INSERT OR IGNORE INTO photos (event_id, album_id, filename, rel_path, file_size_bytes)
-                                VALUES (?, ?, ?, ?, ?)
-                            """, (eid, album_id, sub_name, rel_p, dest_path.stat().st_size))
-                            saved_count += 1
-            except Exception as e:
-                append_log(f"ZIP extraction error: {e}")
-        elif ext in valid_exts:
-            content = await f.read()
-            dest_path = target_dir / filename
-            with open(dest_path, "wb") as dst:
-                dst.write(content)
-            optimize_photo_inplace(dest_path)
-            rel_p = f"{rel_prefix}/{filename}"
-            cursor.execute("""
-                INSERT OR IGNORE INTO photos (event_id, album_id, filename, rel_path, file_size_bytes)
-                VALUES (?, ?, ?, ?, ?)
-            """, (eid, album_id, filename, rel_p, dest_path.stat().st_size))
-            saved_count += 1
-            
-    conn.commit()
+    album_name = arow["name"] if arow else album_slug
     conn.close()
     
-    append_log(f"Uploaded {saved_count} photos to event '{slug}', album '{safe_album}'.")
-    if auto_index and saved_count > 0 and current_task["status"] != "running":
-        threading.Thread(target=run_indexing_task, args=(slug,), daemon=True).start()
+    task_id = f"up_{secrets.token_hex(4)}"
+    staged_dir = QUEUE_DIR / task_id
+    staged_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_count = 0
+    valid_exts = {".jpg", ".jpeg", ".png", ".webp", ".zip"}
+    
+    for f in files:
+        fname = Path(f.filename or "upload").name
+        ext = Path(fname).suffix.lower()
+        if ext in valid_exts:
+            content = await f.read()
+            dest_file = staged_dir / fname
+            with open(dest_file, "wb") as dst:
+                dst.write(content)
+            file_count += 1
+            
+    if file_count == 0:
+        shutil.rmtree(staged_dir, ignore_errors=True)
+        raise HTTPException(400, "No supported image or ZIP files provided.")
         
-    return {"status": "ok", "saved_count": saved_count, "album": safe_album}
+    task_name = f"Upload to {album_name} ({file_count} files)"
+    enqueue_upload_task(
+        task_id=task_id,
+        task_name=task_name,
+        task_type="direct_upload",
+        event_slug=slug,
+        target_album_slug=album_slug,
+        target_album_name=album_name,
+        source_info=f"{file_count} files",
+        staged_dir=str(staged_dir),
+        file_count=file_count
+    )
+    
+    now_str = datetime.now().strftime('%H:%M:%S')
+    append_log(f"[{now_str}] Upload task #{task_id} created with {file_count} files for '{album_name}'.")
+    append_log(f"[{now_str}] Task #{task_id} added to queue.")
+    
+    with task_lock:
+        is_running = current_task.get("status") == "running"
+        
+    trigger_queue_worker()
+    
+    if action == "now" and not is_running:
+        msg = f"Upload #{task_id} started immediately."
+        res_status = "started"
+    else:
+        msg = f"Task #{task_id} added to upload queue (FIFO order)."
+        res_status = "queued"
+        
+    return {
+        "status": res_status,
+        "task_id": task_id,
+        "file_count": file_count,
+        "album": album_slug,
+        "message": msg
+    }
 
 @app.post("/api/admin/events/{slug}/gdrive")
+@app.post("/api/admin/events/{slug}/gdrive-queue")
 def admin_event_gdrive(slug: str, payload: dict, token: str = Depends(get_auth_token)):
-    if current_task["status"] == "running":
-        raise HTTPException(409, "A task is already running. You can stop it from the progress banner.")
     url = payload.get("url", "").strip()
     if not url:
         raise HTTPException(400, "Google Drive URL is required.")
         
     album_slug = payload.get("album_slug", "").strip() or "auto"
     allowed_exts = payload.get("allowed_extensions") or ["jpg", "jpeg", "png", "webp"]
+    action = payload.get("action", "now")
     
-    if album_slug == "auto" or not album_slug:
-        if slug in {"default", "wedding", "brk-sir", "brksir"}:
-            dest_dir = PHOTOS
-            rel_prefix = ""
-        else:
-            dest_dir = PHOTOS / "events" / slug
-            rel_prefix = f"events/{slug}"
-        safe_album = "auto"
-    elif slug in {"default", "wedding", "brk-sir", "brksir"}:
-        safe_album = "".join(c for c in album_slug if c.isalnum() or c in "-_") or "brk-photos"
-        dest_dir = PHOTOS / safe_album
-        rel_prefix = safe_album
-    else:
-        safe_album = "".join(c for c in album_slug if c.isalnum() or c in "-_") or "brk-photos"
-        dest_dir = PHOTOS / "events" / slug / safe_album
-        rel_prefix = f"events/{slug}/{safe_album}"
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name FROM events WHERE slug = ?", (slug,))
+    event = cursor.fetchone()
+    eid = event["id"] if event else 1
+    cursor.execute("SELECT id, name FROM albums WHERE event_id = ? AND slug = ?", (eid, album_slug))
+    arow = cursor.fetchone()
+    album_name = arow["name"] if arow else album_slug
+    conn.close()
+    
+    task_id = f"gd_{secrets.token_hex(4)}"
+    task_name = f"Google Drive Ingest ({album_name})"
+    enqueue_upload_task(
+        task_id=task_id,
+        task_name=task_name,
+        task_type="gdrive_sync",
+        event_slug=slug,
+        target_album_slug=album_slug,
+        target_album_name=album_name,
+        source_info=url,
+        staged_dir="",
+        file_count=0
+    )
+    
+    now_str = datetime.now().strftime('%H:%M:%S')
+    append_log(f"[{now_str}] Google Drive task #{task_id} created for '{album_name}'.")
+    append_log(f"[{now_str}] Task #{task_id} added to queue.")
+    
+    with task_lock:
+        is_running = current_task.get("status") == "running"
         
-    threading.Thread(target=run_gdrive_download, args=(url, dest_dir, rel_prefix, slug, allowed_exts), daemon=True).start()
-    return {"status": "started", "album": safe_album, "allowed_formats": allowed_exts}
+    trigger_queue_worker()
+    
+    if action == "now" and not is_running:
+        msg = f"Google Drive ingest #{task_id} started immediately."
+        res_status = "started"
+    else:
+        msg = f"Google Drive task #{task_id} added to upload queue."
+        res_status = "queued"
+        
+    return {
+        "status": res_status,
+        "task_id": task_id,
+        "album": album_slug,
+        "message": msg
+    }
+
+@app.get("/api/admin/queue")
+def admin_get_queue(token: str = Depends(get_auth_token)):
+    tasks = get_queue_tasks(limit=100)
+    stats = get_queue_stats()
+    with task_lock:
+        mem_task = dict(current_task)
+    return {
+        "tasks": tasks,
+        "stats": stats,
+        "current_task": mem_task,
+        "is_worker_running": queue_worker_running
+    }
+
+@app.get("/api/admin/queue/{task_id}")
+def admin_get_queue_task(task_id: str, token: str = Depends(get_auth_token)):
+    task = get_queue_task_by_id(task_id)
+    if not task:
+        raise HTTPException(404, "Queue task not found")
+    return {"task": task}
+
+@app.post("/api/admin/queue/{task_id}/cancel")
+def admin_cancel_queue_task(task_id: str, token: str = Depends(get_auth_token)):
+    global active_process
+    with task_lock:
+        if current_task.get("task_id") == task_id and current_task.get("status") == "running":
+            task_cancel_event.set()
+            if active_process and active_process.poll() is None:
+                try:
+                    active_process.terminate()
+                    time.sleep(0.3)
+                    if active_process.poll() is None:
+                        active_process.kill()
+                except Exception:
+                    pass
+            active_process = None
+            current_task["status"] = "cancelled"
+            current_task["message"] = "Task stopped by admin."
+            
+    ok = cancel_queue_task(task_id)
+    now_str = datetime.now().strftime('%H:%M:%S')
+    append_log(f"[{now_str}] Task #{task_id} cancelled by administrator.")
+    trigger_queue_worker()
+    return {"status": "ok", "task_id": task_id, "cancelled": ok}
+
+@app.post("/api/admin/queue/{task_id}/retry")
+def admin_retry_queue_task(task_id: str, token: str = Depends(get_auth_token)):
+    ok = retry_queue_task(task_id)
+    if not ok:
+        raise HTTPException(400, "Task cannot be retried (must be failed or cancelled).")
+    now_str = datetime.now().strftime('%H:%M:%S')
+    append_log(f"[{now_str}] Task #{task_id} re-queued for retry by administrator.")
+    trigger_queue_worker()
+    return {"status": "ok", "task_id": task_id}
+
+@app.post("/api/admin/queue/clear-completed")
+def admin_clear_completed_queue(token: str = Depends(get_auth_token)):
+    cleared = clear_completed_queue_tasks()
+    now_str = datetime.now().strftime('%H:%M:%S')
+    append_log(f"[{now_str}] Administrator cleared {cleared} completed/cancelled tasks from queue.")
+    return {"status": "ok", "cleared_count": cleared}
 
 @app.post("/api/admin/tasks/stop")
 def admin_stop_task(token: str = Depends(get_auth_token)):
@@ -2179,6 +2499,7 @@ def admin_stop_task(token: str = Depends(get_auth_token)):
     
     stop_running_tasks("Task stopped by administrator.")
     append_log("--- Active background task was stopped by administrator ---")
+    trigger_queue_worker()
     return {"status": "stopped", "message": "Background task successfully terminated."}
 
 @app.post("/api/admin/events/{slug}/index")

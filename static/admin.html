@@ -455,6 +455,43 @@
     text-overflow: ellipsis;
   }
 
+  /* Upload Task Queue Styles */
+  .q-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .q-badge.badge-running {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+  }
+  .q-badge.badge-queued {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+  }
+  .q-badge.badge-completed {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+  }
+  .q-badge.badge-failed {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+  .q-badge.badge-cancelled {
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+  }
+
   /* Main Workspace Stage */
   .workspace-canvas {
     flex: 1;
@@ -1570,14 +1607,37 @@
               <select id="uploadTargetAlbumSelect" style="max-width:320px;" hidden></select>
             </div>
 
-            <div style="border:2px dashed var(--line);border-radius:12px;padding:2.5rem 1rem;text-align:center;cursor:pointer;margin-bottom:1rem;background:#fbfcfd;" id="uploadDropArea">
+            <div style="border:2px dashed var(--line);border-radius:12px;padding:2.2rem 1rem;text-align:center;cursor:pointer;margin-bottom:1rem;background:#fbfcfd;transition:border-color 0.2s, background 0.2s;" id="uploadDropArea">
               <input type="file" id="directFileInput" multiple accept="image/*,.zip" style="display:none;">
               <div style="margin-bottom:0.5rem;color:var(--muted);">
                 <svg style="width:36px;height:36px;stroke-width:1.5;stroke:currentColor;fill:none;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               </div>
               <strong style="font-size:0.95rem;color:var(--ink);">Drag & drop files or click to browse</strong>
-              <p style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem;">Supports JPG, PNG, WEBP, and .ZIP archives</p>
+              <p style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem;">Supports JPG, PNG, WEBP, and .ZIP archives (N batches supported)</p>
             </div>
+
+            <!-- Staged File Selection Preview & Dual Action Buttons (Upload Now vs Add to Queue) -->
+            <div id="stagedFilesContainer" style="margin-bottom:1rem;padding:1rem 1.15rem;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;" hidden>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem;flex-wrap:wrap;gap:0.5rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <svg class="icon" viewBox="0 0 24 24" style="color:var(--emerald);"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span id="stagedFilesSummaryText" style="font-weight:700;font-size:0.92rem;color:#111827;">0 files selected</span>
+                </div>
+                <button type="button" id="clearStagedFilesBtn" class="btn-outline" style="padding:0.25rem 0.65rem;font-size:0.76rem;">Clear Selection</button>
+              </div>
+              <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+                <button type="button" class="btn-primary" id="btnUploadNow" style="background:#0f5c4d;border-color:#0f5c4d;">
+                  <svg class="icon" viewBox="0 0 24 24"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span>Upload Now</span>
+                </button>
+                <button type="button" class="btn-outline" id="btnAddToQueue" style="border-color:#0f5c4d;color:#0f5c4d;font-weight:700;background:#ffffff;">
+                  <svg class="icon" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  <span>Add to Queue</span>
+                </button>
+                <span style="font-size:0.78rem;color:var(--muted);">Add to queue allows preparing multiple batches without waiting.</span>
+              </div>
+            </div>
+
             <div id="uploadStatusText" style="font-size:0.85rem;font-weight:600;color:var(--emerald);"></div>
           </div>
         </div>
@@ -1626,12 +1686,79 @@
                 </label>
               </div>
             </div>
-            <div style="display:flex;gap:0.75rem;align-items:center;">
+            <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
               <button class="btn-primary" id="startGdriveSyncBtn">
                 <svg class="icon" viewBox="0 0 24 24"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span>Start Ingest Task</span>
               </button>
+              <button class="btn-outline" id="btnGdriveAddToQueue" style="border-color:#0f5c4d;color:#0f5c4d;font-weight:700;background:#ffffff;">
+                <svg class="icon" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                <span>Add to Queue</span>
+              </button>
               <span id="gdriveStatusText" style="font-size:0.85rem;color:var(--muted);"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dedicated Upload Task Queue Management Section -->
+        <div class="card-block" id="uploadQueueSection">
+          <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+            <div>
+              <span class="card-block-title">Upload Background Task Queue</span>
+              <p style="font-size:0.8rem;color:var(--muted);margin-top:2px;">
+                Sequential FIFO task queue. Tasks run automatically one after another without interrupting active jobs.
+              </p>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <button type="button" class="btn-outline" id="btnRefreshQueue" style="font-size:0.78rem;padding:0.35rem 0.75rem;">
+                <svg class="icon-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                <span>Refresh Queue</span>
+              </button>
+              <button type="button" class="btn-outline" id="btnClearCompletedQueue" style="font-size:0.78rem;padding:0.35rem 0.75rem;">
+                <span>Clear Completed</span>
+              </button>
+            </div>
+          </div>
+          <div class="card-block-body">
+            <!-- Queue Metrics Badges Strip -->
+            <div class="queue-metrics-strip" style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+              <div style="background:#f3f4f6;padding:0.45rem 0.85rem;border-radius:8px;font-size:0.82rem;border:1px solid #e5e7eb;">
+                <span style="color:#6b7280;">Total Tasks:</span> <strong id="qStatTotal" style="color:#111827;">0</strong>
+              </div>
+              <div style="background:#ecfdf5;padding:0.45rem 0.85rem;border-radius:8px;font-size:0.82rem;border:1px solid #a7f3d0;">
+                <span style="color:#047857;">Running:</span> <strong id="qStatRunning" style="color:#065f46;">0</strong>
+              </div>
+              <div style="background:#eff6ff;padding:0.45rem 0.85rem;border-radius:8px;font-size:0.82rem;border:1px solid #bfdbfe;">
+                <span style="color:#1d4ed8;">Queued:</span> <strong id="qStatQueued" style="color:#1e40af;">0</strong>
+              </div>
+              <div style="background:#f0fdf4;padding:0.45rem 0.85rem;border-radius:8px;font-size:0.82rem;border:1px solid #bbf7d0;">
+                <span style="color:#15803d;">Completed:</span> <strong id="qStatCompleted" style="color:#166534;">0</strong>
+              </div>
+              <div style="background:#fef2f2;padding:0.45rem 0.85rem;border-radius:8px;font-size:0.82rem;border:1px solid #fecaca;">
+                <span style="color:#b91c1c;">Failed:</span> <strong id="qStatFailed" style="color:#991b1b;">0</strong>
+              </div>
+            </div>
+
+            <!-- Queue Tasks Table -->
+            <div class="table-responsive" style="overflow-x:auto;">
+              <table class="data-table" style="width:100%;border-collapse:collapse;font-size:0.84rem;">
+                <thead>
+                  <tr style="border-bottom:1.5px solid var(--line);text-align:left;color:var(--muted);">
+                    <th style="padding:0.6rem 0.75rem;">Task Name & Album</th>
+                    <th style="padding:0.6rem 0.75rem;">Files</th>
+                    <th style="padding:0.6rem 0.75rem;">Status</th>
+                    <th style="padding:0.6rem 0.75rem;min-width:180px;">Progress</th>
+                    <th style="padding:0.6rem 0.75rem;">Submitted</th>
+                    <th style="padding:0.6rem 0.75rem;">Timing</th>
+                    <th style="padding:0.6rem 0.75rem;text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="uploadQueueTableBody">
+                  <tr>
+                    <td colspan="7" style="text-align:center;padding:2rem;color:var(--muted);">Loading upload queue...</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1937,6 +2064,25 @@
   </div>
 </div>
 
+<!-- Queue Task Details Modal -->
+<div id="queueTaskDetailsModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width:680px;max-height:85vh;display:flex;flex-direction:column;">
+    <button class="modal-close" onclick="closeModal('queueTaskDetailsModal')">&times;</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;padding-right:2rem;flex-wrap:wrap;gap:0.5rem;">
+      <h3 style="font-size:1.15rem;font-weight:700;margin:0;" id="qModalTitle">Task Details</h3>
+      <span id="qModalStatusBadge" class="q-badge badge-queued">Queued</span>
+    </div>
+    <div id="qModalMeta" style="font-size:0.82rem;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.75rem;background:#f8fafc;padding:0.75rem;border-radius:8px;border:1px solid #e2e8f0;">
+      <!-- Injected via JS -->
+    </div>
+    <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:0.35rem;">Live Logs & Console Output:</div>
+    <pre id="qModalLogText" style="flex:1;background:#0f172a;color:#f8fafc;font-family:monospace;font-size:0.78rem;padding:0.85rem;border-radius:8px;overflow-y:auto;max-height:300px;margin-bottom:1rem;white-space:pre-wrap;word-break:break-all;"></pre>
+    <div style="display:flex;justify-content:flex-end;gap:0.5rem;">
+      <button type="button" class="btn-outline" onclick="closeModal('queueTaskDetailsModal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
 
@@ -1986,6 +2132,8 @@ let activeFilterAlbumId = '';
 let activeUploadAlbumSlug = '';
 let lastHistoryRefreshTime = 0;
 let lastSidebarAutoSyncTime = 0;
+let lastQueueRefreshTime = 0;
+let hasActiveQueueTasks = false;
 
 // Navigation Tabs Handling with State Persistence
 function switchTab(tabName) {
@@ -3381,72 +3529,387 @@ function setupUploadTab() {
       gdSel.append(o);
     }
   }
+  // Load Upload Queue list on tab setup
+  loadUploadQueue();
 }
 
-$('startGdriveSyncBtn')?.addEventListener('click', async () => {
-  const url = $('gdriveUrlInput').value.trim();
-  if (!url) { alert('Please enter a Google Drive folder URL'); return; }
-  const albumSlug = $('gdriveCustomSlugInput').value.trim() || $('gdriveTargetAlbumSelect').value || 'gdrive_photos';
-  
-  const allowed = [];
-  if ($('gdriveFmtJpg') && $('gdriveFmtJpg').checked) allowed.push('jpg', 'jpeg');
-  if ($('gdriveFmtPng') && $('gdriveFmtPng').checked) allowed.push('png');
-  if ($('gdriveFmtWebp') && $('gdriveFmtWebp').checked) allowed.push('webp');
-  if ($('gdriveFmtHeic') && $('gdriveFmtHeic').checked) allowed.push('heic', 'heif');
-  
-  if (allowed.length === 0) {
-    alert('Please select at least one accepted image format.');
+// Staged Direct Upload Files State
+let stagedUploadFiles = [];
+
+function renderStagedFilesPreview() {
+  const container = $('stagedFilesContainer');
+  const summary = $('stagedFilesSummaryText');
+  if (!container || !summary) return;
+
+  if (stagedUploadFiles.length === 0) {
+    container.hidden = true;
     return;
   }
 
-  $('startGdriveSyncBtn').disabled = true;
-  $('gdriveStatusText').textContent = `Starting background sync into '${albumSlug}'...`;
-  try {
-    const res = await fetch(`/api/admin/events/${activeSlug}/gdrive`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, album_slug: albumSlug, allowed_extensions: allowed })
-    });
-    if (res.ok) {
-      $('gdriveStatusText').textContent = 'Sync started in background! Tracking live progress...';
-      pollTaskStatus();
-      switchTab('logs');
-    } else {
-      const j = await res.json();
-      $('gdriveStatusText').textContent = j.detail || 'Sync failed to start';
+  const totalBytes = stagedUploadFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+  const sizeMb = (totalBytes / (1024 * 1024)).toFixed(1);
+  const targetAlbum = activeUploadAlbumSlug || $('uploadTargetAlbumSelect')?.value || 'highlights';
+
+  summary.textContent = `Selected ${stagedUploadFiles.length} file${stagedUploadFiles.length === 1 ? '' : 's'} (${sizeMb} MB) for folder '${targetAlbum}'`;
+  container.hidden = false;
+}
+
+$('clearStagedFilesBtn')?.addEventListener('click', () => {
+  stagedUploadFiles = [];
+  if ($('directFileInput')) $('directFileInput').value = '';
+  renderStagedFilesPreview();
+  const statusEl = $('uploadStatusText');
+  if (statusEl) statusEl.textContent = '';
+});
+
+// Drag & drop support for upload drop area
+const dropArea = $('uploadDropArea');
+if (dropArea) {
+  dropArea.addEventListener('click', () => $('directFileInput')?.click());
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropArea.addEventListener(eventName, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropArea.style.borderColor = '#0f5c4d';
+      dropArea.style.background = '#f0fdf4';
+    }, false);
+  });
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropArea.style.borderColor = 'var(--line)';
+      dropArea.style.background = '#fbfcfd';
+    }, false);
+  });
+  dropArea.addEventListener('drop', e => {
+    const dt = e.dataTransfer;
+    const files = Array.from(dt.files || []);
+    if (files.length > 0) {
+      stagedUploadFiles = files;
+      renderStagedFilesPreview();
     }
-  } catch (e) {
-    $('gdriveStatusText').textContent = 'Error connecting to server';
-  } finally {
-    $('startGdriveSyncBtn').disabled = false;
+  }, false);
+}
+
+$('directFileInput')?.addEventListener('change', e => {
+  const files = Array.from(e.target.files || []);
+  if (files.length > 0) {
+    stagedUploadFiles = files;
+    renderStagedFilesPreview();
   }
 });
 
-$('uploadDropArea')?.addEventListener('click', () => $('directFileInput')?.click());
-$('directFileInput')?.addEventListener('change', async () => {
-  const files = $('directFileInput').files;
-  if (!files || files.length === 0) return;
-  const albumSlug = activeUploadAlbumSlug || $('uploadTargetAlbumSelect').value || 'highlights';
+// Dual Upload Action Buttons: "Upload Now" vs "Add to Queue"
+$('btnUploadNow')?.addEventListener('click', async () => {
+  await submitUploadTask('now');
+});
+
+$('btnAddToQueue')?.addEventListener('click', async () => {
+  await submitUploadTask('queue');
+});
+
+async function submitUploadTask(action) {
+  if (stagedUploadFiles.length === 0) {
+    alert('Please choose or drop files first.');
+    return;
+  }
+  const btnNow = $('btnUploadNow');
+  const btnQueue = $('btnAddToQueue');
+  if (btnNow) btnNow.disabled = true;
+  if (btnQueue) btnQueue.disabled = true;
+
+  const albumSlug = activeUploadAlbumSlug || $('uploadTargetAlbumSelect')?.value || 'highlights';
+  const statusEl = $('uploadStatusText');
+  if (statusEl) {
+    statusEl.innerHTML = `<span style="color:#0f5c4d;display:inline-flex;align-items:center;gap:6px;font-weight:600;">
+      <svg class="icon-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      Staging ${stagedUploadFiles.length} files onto server storage...
+    </span>`;
+  }
 
   const fd = new FormData();
-  for (const f of files) fd.append('files', f);
+  for (const f of stagedUploadFiles) fd.append('files', f);
   fd.append('album_slug', albumSlug);
+  fd.append('action', action);
   fd.append('auto_index', 'true');
 
-  $('uploadStatusText').textContent = `Uploading ${files.length} files to '${albumSlug}'...`;
   try {
-    const res = await fetch(`/api/admin/events/${activeSlug}/upload`, { method: 'POST', body: fd });
+    const res = await fetch(`/api/admin/events/${activeSlug}/upload-queue`, {
+      method: 'POST',
+      body: fd
+    });
     const j = await res.json();
     if (res.ok) {
-      $('uploadStatusText').textContent = `Saved ${j.saved_count} photos to '${albumSlug}'. Indexing initiated.`;
-      await setEventWorkspace(activeSlug, false);
-      loadAlbums();
+      if (statusEl) {
+        statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ ${j.message || 'Task submitted successfully!'}</span>`;
+      }
+      stagedUploadFiles = [];
+      if ($('directFileInput')) $('directFileInput').value = '';
+      renderStagedFilesPreview();
+      await loadUploadQueue();
+      pollTaskStatus();
     } else {
-      $('uploadStatusText').textContent = j.detail || 'Upload failed';
+      if (statusEl) statusEl.innerHTML = `<span style="color:var(--err);">${j.detail || 'Upload submission failed.'}</span>`;
+    }
+  } catch (err) {
+    if (statusEl) statusEl.innerHTML = `<span style="color:var(--err);">Network error: ${err.message}</span>`;
+  } finally {
+    if (btnNow) btnNow.disabled = false;
+    if (btnQueue) btnQueue.disabled = false;
+  }
+}
+
+// Google Drive Ingest & Queue Submissions
+$('startGdriveSyncBtn')?.addEventListener('click', async () => {
+  await submitGdriveTask('now');
+});
+
+$('btnGdriveAddToQueue')?.addEventListener('click', async () => {
+  await submitGdriveTask('queue');
+});
+
+async function submitGdriveTask(action) {
+  const url = $('gdriveUrlInput').value.trim();
+  if (!url) {
+    alert('Please enter a Google Drive folder URL or ID.');
+    return;
+  }
+  const customSlug = $('gdriveCustomSlugInput').value.trim();
+  const selectSlug = $('gdriveTargetAlbumSelect').value;
+  const albumSlug = customSlug || selectSlug || 'auto';
+
+  const allowed = [];
+  if ($('gdriveFmtJpg')?.checked) allowed.push('jpg', 'jpeg');
+  if ($('gdriveFmtPng')?.checked) allowed.push('png');
+  if ($('gdriveFmtWebp')?.checked) allowed.push('webp');
+  if ($('gdriveFmtHeic')?.checked) allowed.push('heic', 'heif');
+
+  const btnSync = $('startGdriveSyncBtn');
+  const btnQueue = $('btnGdriveAddToQueue');
+  if (btnSync) btnSync.disabled = true;
+  if (btnQueue) btnQueue.disabled = true;
+
+  const statusEl = $('gdriveStatusText');
+  if (statusEl) statusEl.textContent = action === 'now' ? 'Starting ingest...' : 'Adding to queue...';
+
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}/gdrive-queue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, album_slug: albumSlug, allowed_extensions: allowed, action })
+    });
+    const j = await res.json();
+    if (res.ok) {
+      if (statusEl) statusEl.textContent = j.message || 'Task submitted successfully!';
+      $('gdriveUrlInput').value = '';
+      await loadUploadQueue();
+      pollTaskStatus();
+    } else {
+      if (statusEl) statusEl.textContent = j.detail || 'Failed to submit Google Drive task.';
     }
   } catch (e) {
-    $('uploadStatusText').textContent = 'Upload failed';
+    if (statusEl) statusEl.textContent = 'Server connection error.';
+  } finally {
+    if (btnSync) btnSync.disabled = false;
+    if (btnQueue) btnQueue.disabled = false;
   }
+}
+
+// --- Upload Task Queue Management & Live Polling ---
+function formatTimeShort(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr.endsWith('Z') || dateStr.includes('+') ? dateStr : dateStr + 'Z');
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch(e) {
+    return dateStr;
+  }
+}
+
+async function loadUploadQueue() {
+  try {
+    const res = await fetch('/api/admin/queue');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderUploadQueueUI(data);
+  } catch (e) {
+    console.error('Error loading upload queue:', e);
+  }
+}
+
+function renderUploadQueueUI(data) {
+  const stats = data.stats || { total: 0, running: 0, queued: 0, completed: 0, failed: 0 };
+  const tasks = data.tasks || [];
+  hasActiveQueueTasks = ((stats.running || 0) > 0 || (stats.queued || 0) > 0);
+
+  if ($('qStatTotal')) $('qStatTotal').textContent = stats.total;
+  if ($('qStatRunning')) $('qStatRunning').textContent = stats.running;
+  if ($('qStatQueued')) $('qStatQueued').textContent = stats.queued;
+  if ($('qStatCompleted')) $('qStatCompleted').textContent = stats.completed;
+  if ($('qStatFailed')) $('qStatFailed').textContent = stats.failed;
+
+  const tbody = $('uploadQueueTableBody');
+  if (!tbody) return;
+
+  if (tasks.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align:center;padding:2.5rem 1rem;color:var(--muted,#6b7280);">
+          <div style="font-weight:600;font-size:0.95rem;color:#111827;margin-bottom:0.25rem;">No upload tasks in queue</div>
+          <div style="font-size:0.84rem;">Drop files above or add a Google Drive folder to submit sequential upload jobs.</div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.replaceChildren();
+  for (const t of tasks) {
+    const tr = document.createElement('tr');
+    tr.style.cssText = 'border-bottom:1px solid #f1f5f9;transition:background 0.15s;';
+    tr.onmouseover = () => tr.style.background = '#f8fafc';
+    tr.onmouseout = () => tr.style.background = 'transparent';
+
+    let badgeClass = 'badge-queued';
+    let statusLabel = 'Queued';
+    if (t.status === 'running') {
+      badgeClass = 'badge-running';
+      statusLabel = 'Running';
+    } else if (t.status === 'completed') {
+      badgeClass = 'badge-completed';
+      statusLabel = 'Completed';
+    } else if (t.status === 'failed') {
+      badgeClass = 'badge-failed';
+      statusLabel = 'Failed';
+    } else if (t.status === 'cancelled') {
+      badgeClass = 'badge-cancelled';
+      statusLabel = 'Cancelled';
+    }
+
+    const pct = t.progress_pct || 0;
+    const stepText = t.current_step || 'Waiting in queue...';
+    const filesCount = t.file_count || t.processed_count || 0;
+    const createdAt = t.created_at ? formatTimeShort(t.created_at) : '—';
+    const timing = t.completed_at ? `Done ${formatTimeShort(t.completed_at)}` : (t.started_at ? `Started ${formatTimeShort(t.started_at)}` : 'Waiting');
+
+    tr.innerHTML = `
+      <td style="padding:0.65rem 0.75rem;">
+        <div style="font-weight:700;color:#111827;">${escapeHtml(t.task_name)}</div>
+        <div style="font-size:0.75rem;color:var(--muted);font-family:monospace;">#${t.task_id} • Folder: ${escapeHtml(t.target_album_slug || 'auto')}</div>
+      </td>
+      <td style="padding:0.65rem 0.75rem;font-weight:600;color:#374151;">
+        ${filesCount} photo${filesCount === 1 ? '' : 's'}
+      </td>
+      <td style="padding:0.65rem 0.75rem;">
+        <span class="q-badge ${badgeClass}">${statusLabel}</span>
+      </td>
+      <td style="padding:0.65rem 0.75rem;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+          <div style="flex:1;background:#e2e8f0;height:6px;border-radius:99px;overflow:hidden;">
+            <div style="width:${pct}%;background:${t.status === 'failed' ? '#ef4444' : '#0f5c4d'};height:100%;transition:width 0.3s;"></div>
+          </div>
+          <span style="font-size:0.75rem;font-weight:700;color:#475569;min-width:32px;">${pct}%</span>
+        </div>
+        <div style="font-size:0.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;" title="${escapeHtml(stepText)}">${escapeHtml(stepText)}</div>
+      </td>
+      <td style="padding:0.65rem 0.75rem;color:#64748b;font-size:0.8rem;">
+        ${createdAt}
+      </td>
+      <td style="padding:0.65rem 0.75rem;color:#64748b;font-size:0.8rem;">
+        ${timing}
+      </td>
+      <td style="padding:0.65rem 0.75rem;text-align:right;white-space:nowrap;">
+        <button class="btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;" onclick="viewQueueTaskDetails('${t.task_id}')">Details</button>
+        ${(t.status === 'queued' || t.status === 'running') ? `<button class="btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;color:#ef4444;border-color:#fca5a5;margin-left:4px;" onclick="cancelQueueTaskAction('${t.task_id}')">Cancel</button>` : ''}
+        ${(t.status === 'failed' || t.status === 'cancelled') ? `<button class="btn-primary" style="padding:0.25rem 0.55rem;font-size:0.75rem;margin-left:4px;background:#0f5c4d;" onclick="retryQueueTaskAction('${t.task_id}')">Retry</button>` : ''}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+async function viewQueueTaskDetails(taskId) {
+  try {
+    const res = await fetch(`/api/admin/queue/${taskId}`);
+    if (!res.ok) throw new Error('Task not found');
+    const data = await res.json();
+    const t = data.task;
+
+    if ($('qModalTitle')) $('qModalTitle').textContent = t.task_name || `Task #${t.task_id}`;
+    const badge = $('qModalStatusBadge');
+    if (badge) {
+      badge.className = `q-badge badge-${t.status}`;
+      badge.textContent = t.status.toUpperCase();
+    }
+    const meta = $('qModalMeta');
+    if (meta) {
+      meta.innerHTML = `
+        <div><strong>Task ID:</strong> <span style="font-family:monospace;">${t.task_id}</span></div>
+        <div><strong>Task Type:</strong> ${t.task_type}</div>
+        <div><strong>Target Album:</strong> ${escapeHtml(t.target_album_name || t.target_album_slug)}</div>
+        <div><strong>Files Count:</strong> ${t.file_count || 0}</div>
+        <div><strong>Created At:</strong> ${t.created_at || '—'}</div>
+        <div><strong>Completed At:</strong> ${t.completed_at || 'In progress / waiting'}</div>
+        ${t.error_message ? `<div style="grid-column:1/-1;color:#b91c1c;"><strong>Error:</strong> ${escapeHtml(t.error_message)}</div>` : ''}
+      `;
+    }
+    const logBox = $('qModalLogText');
+    if (logBox) {
+      logBox.textContent = t.log_text || 'No logs recorded for this task yet.';
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+    openModal('queueTaskDetailsModal');
+  } catch (err) {
+    alert('Could not load task details: ' + err.message);
+  }
+}
+
+async function cancelQueueTaskAction(taskId) {
+  if (!confirm(`Cancel upload task #${taskId}?`)) return;
+  try {
+    const res = await fetch(`/api/admin/queue/${taskId}/cancel`, { method: 'POST' });
+    if (res.ok) {
+      await loadUploadQueue();
+      pollTaskStatus();
+    } else {
+      const j = await res.json();
+      alert(j.detail || 'Could not cancel task.');
+    }
+  } catch (err) {
+    alert('Error cancelling task: ' + err.message);
+  }
+}
+
+async function retryQueueTaskAction(taskId) {
+  try {
+    const res = await fetch(`/api/admin/queue/${taskId}/retry`, { method: 'POST' });
+    if (res.ok) {
+      await loadUploadQueue();
+      pollTaskStatus();
+    } else {
+      const j = await res.json();
+      alert(j.detail || 'Could not retry task.');
+    }
+  } catch (err) {
+    alert('Error retrying task: ' + err.message);
+  }
+}
+
+$('btnClearCompletedQueue')?.addEventListener('click', async () => {
+  try {
+    const res = await fetch('/api/admin/queue/clear-completed', { method: 'POST' });
+    if (res.ok) {
+      await loadUploadQueue();
+    }
+  } catch (err) {
+    console.error('Error clearing completed queue:', err);
+  }
+});
+
+$('btnRefreshQueue')?.addEventListener('click', async () => {
+  await loadUploadQueue();
 });
 
 // Storage
@@ -3559,6 +4022,17 @@ async function pollTaskStatus() {
 
     // Auto-update task history table, log viewer console, and sidebar albums live without manual refresh
     const nowMs = Date.now();
+
+    // Auto-update Upload Queue if upload panel is active or if tasks are running/queued
+    const uploadPanel = $('panel-upload');
+    const isUploadPanelVisible = uploadPanel && !uploadPanel.hidden;
+    if (isUploadPanelVisible || hasActiveQueueTasks) {
+      if (nowMs - lastQueueRefreshTime > 2500) {
+        lastQueueRefreshTime = nowMs;
+        loadUploadQueue();
+      }
+    }
+
     if (isRunning || status === 'running') {
       if (nowMs - lastHistoryRefreshTime > 3000) {
         lastHistoryRefreshTime = nowMs;
@@ -3582,7 +4056,7 @@ async function pollTaskStatus() {
 
     // Polling rate and auto-close timer on completion
     clearTimeout(pollTimer);
-    if (isRunning || status === 'running') {
+    if (isRunning || status === 'running' || hasActiveQueueTasks) {
       pollTimer = setTimeout(pollTaskStatus, 2000);
     } else {
       // Completed or failed: show for 6 seconds then automatically dismiss
