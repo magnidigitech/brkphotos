@@ -204,18 +204,28 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
     # CRITICAL: Always reset task_cancel_event so new tasks run cleanly without prior cancel flags
     task_cancel_event.clear()
 
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM photos WHERE is_deleted = 0")
+    total_lib_photos = c.fetchone()[0] or 0
+    conn.close()
+
+    init_pct = 80 if not owns_task else 5
     with task_lock:
         current_task["task_id"] = task_id
         current_task["status"] = "running"
         current_task["type"] = "indexing"
         current_task["event"] = display_title
-        current_task["progress_pct"] = 80 if not owns_task else 20
-        current_task["message"] = f"Face indexing for '{display_title}' in progress..."
+        current_task["progress_pct"] = init_pct
+        current_task["total_files"] = total_lib_photos
+        current_task["processed_files"] = 0
+        current_task["message"] = f"Initializing AI face indexing for '{display_title}'..."
 
     append_log(f"[{datetime.now().strftime('%H:%M:%S')}] Starting face indexing for '{display_title}'")
-    update_task_progress(task_id, progress_pct=80 if not owns_task else 20,
-                         current_step=f"Analyzing faces with InsightFace for '{display_title}'...",
-                         log_line=f"Face indexing started for '{display_title}'")
+    update_task_progress(task_id, progress_pct=init_pct,
+                         total_files=total_lib_photos, processed_files=0,
+                         current_step=f"Scanning library photos for '{display_title}'...",
+                         log_line=f"Face indexing started for '{display_title}' ({total_lib_photos} photos in library)")
 
     try:
         idx_env = os.environ.copy()
@@ -237,13 +247,65 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
             txt = line.rstrip()
             append_log(txt)
 
+            # Match total scan count
+            m_scan = re.search(r"Scan complete:\s*(\d+)\s*total photos found", txt)
+            if m_scan:
+                tot_p = int(m_scan.group(1))
+                with task_lock:
+                    current_task["total_files"] = tot_p
+                update_task_progress(task_id, total_files=tot_p, log_line=txt)
+                continue
+
+            # Match already indexed and pending
+            m_pending = re.search(r"(\d+)\s*already indexed\.\s*(\d+)\s*pending", txt)
+            if m_pending:
+                done_cnt = int(m_pending.group(1))
+                pending_cnt = int(m_pending.group(2))
+                tot_p = done_cnt + pending_cnt
+                if pending_cnt == 0:
+                    pct = 90 if not owns_task else 75
+                    msg = f"All {done_cnt} photos indexed. Running facial clustering check..."
+                    with task_lock:
+                        current_task["processed_files"] = done_cnt
+                        current_task["total_files"] = tot_p
+                        current_task["progress_pct"] = pct
+                        current_task["message"] = msg
+                    update_task_progress(task_id, progress_pct=pct, processed_files=done_cnt,
+                                         total_files=tot_p, current_step=msg, log_line=txt)
+                else:
+                    pct = int(80 + (done_cnt / max(tot_p, 1)) * 16) if not owns_task else int(5 + (done_cnt / max(tot_p, 1)) * 75)
+                    msg = f"Resuming: {done_cnt}/{tot_p} photos indexed ({pending_cnt} pending)..."
+                    with task_lock:
+                        current_task["processed_files"] = done_cnt
+                        current_task["total_files"] = tot_p
+                        current_task["progress_pct"] = pct
+                        current_task["message"] = msg
+                    update_task_progress(task_id, progress_pct=pct, processed_files=done_cnt,
+                                         total_files=tot_p, current_step=msg, log_line=txt)
+                continue
+
+            # Match "All X photos are already indexed! Running clustering check..."
+            m_all = re.search(r"All\s*(\d+)\s*photos are already indexed", txt)
+            if m_all:
+                done_cnt = int(m_all.group(1))
+                pct = 92 if not owns_task else 80
+                msg = f"All {done_cnt} photos indexed. Running facial clustering..."
+                with task_lock:
+                    current_task["processed_files"] = done_cnt
+                    current_task["total_files"] = done_cnt
+                    current_task["progress_pct"] = pct
+                    current_task["message"] = msg
+                update_task_progress(task_id, progress_pct=pct, processed_files=done_cnt,
+                                     total_files=done_cnt, current_step=msg, log_line=txt)
+                continue
+
             # Parse live progress e.g. "Progress: 25/100 (25%)"
             m_prog = re.search(r"Progress:\s*(\d+)/(\d+)", txt)
             if m_prog:
                 cur_p = int(m_prog.group(1))
                 tot_p = int(m_prog.group(2))
-                calc_pct = int(80 + (cur_p / max(tot_p, 1)) * 19) if not owns_task else int((cur_p / max(tot_p, 1)) * 95)
-                step_msg = f"Indexed {cur_p}/{tot_p} photos with InsightFace..."
+                calc_pct = int(80 + (cur_p / max(tot_p, 1)) * 16) if not owns_task else int(5 + (cur_p / max(tot_p, 1)) * 75)
+                step_msg = f"Indexed {cur_p}/{tot_p} photos ({int((cur_p / max(tot_p, 1)) * 100)}%)..."
                 with task_lock:
                     current_task["processed_files"] = cur_p
                     current_task["total_files"] = tot_p
@@ -251,8 +313,37 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
                     current_task["message"] = step_msg
                 update_task_progress(task_id, progress_pct=calc_pct, processed_files=cur_p, total_files=tot_p,
                                      current_step=step_msg, log_line=txt)
-            else:
-                update_task_progress(task_id, log_line=txt)
+                continue
+
+            # Parse clustering milestones
+            if "Running facial clustering" in txt or "Running clustering check" in txt:
+                pct = 94 if not owns_task else 88
+                msg = "Clustering facial embeddings into people profiles..."
+                with task_lock:
+                    current_task["progress_pct"] = pct
+                    current_task["message"] = msg
+                update_task_progress(task_id, progress_pct=pct, current_step=msg, log_line=txt)
+                continue
+
+            if "Clustering complete" in txt:
+                pct = 97 if not owns_task else 94
+                msg = "Face clustering finished. Validating face avatars..."
+                with task_lock:
+                    current_task["progress_pct"] = pct
+                    current_task["message"] = msg
+                update_task_progress(task_id, progress_pct=pct, current_step=msg, log_line=txt)
+                continue
+
+            if "Face crop" in txt or "face_crop" in txt.lower():
+                pct = 99 if not owns_task else 97
+                msg = "Face crops and avatars synced successfully."
+                with task_lock:
+                    current_task["progress_pct"] = pct
+                    current_task["message"] = msg
+                update_task_progress(task_id, progress_pct=pct, current_step=msg, log_line=txt)
+                continue
+
+            update_task_progress(task_id, log_line=txt)
 
         proc.wait()
         active_process = None
@@ -279,11 +370,15 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
         append_log(f"--- Face Indexing for '{event_slug}' Completed (exit code {proc.returncode}) ---")
         
         if owns_task:
+            final_files = current_task.get("total_files") or total_lib_photos
             with task_lock:
                 current_task["status"] = "completed"
                 current_task["progress_pct"] = 100
+                current_task["total_files"] = final_files
+                current_task["processed_files"] = final_files
                 current_task["message"] = f"Face indexing completed successfully for '{event_slug}'."
             update_task_progress(task_id, progress_pct=100, status="completed",
+                                 processed_files=final_files, total_files=final_files,
                                  current_step=f"Face indexing & clustering completed successfully for '{event_slug}'.",
                                  log_line="Face indexing and clustering finished successfully.")
     except Exception as e:
@@ -300,6 +395,12 @@ def run_reclustering_task(event_slug="brk-sir", threshold=0.48, task_id=None):
     if not task_id:
         task_id = f"cl_{secrets.token_hex(4)}"
 
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM photos WHERE is_deleted = 0")
+    total_lib_photos = c.fetchone()[0] or 0
+    conn.close()
+
     create_task_record(task_id, "recluster", display_title, "All People & Faces", "Existing Embeddings")
     task_cancel_event.clear()
 
@@ -309,11 +410,14 @@ def run_reclustering_task(event_slug="brk-sir", threshold=0.48, task_id=None):
         current_task["type"] = "reclustering"
         current_task["event"] = display_title
         current_task["progress_pct"] = 15
+        current_task["total_files"] = total_lib_photos
+        current_task["processed_files"] = total_lib_photos
         current_task["message"] = f"Face reclustering in progress for '{display_title}'..."
 
     now_ts = datetime.now().strftime("%H:%M:%S")
     append_log(f"[{now_ts}] Recluster requested by admin for '{display_title}' (threshold: {threshold})")
-    update_task_progress(task_id, progress_pct=15, current_step="Loading existing face embeddings...",
+    update_task_progress(task_id, progress_pct=15, total_files=total_lib_photos, processed_files=total_lib_photos,
+                         current_step="Loading existing face embeddings...",
                          log_line=f"Recluster requested by admin for '{display_title}'")
 
     try:
@@ -369,8 +473,12 @@ def run_reclustering_task(event_slug="brk-sir", threshold=0.48, task_id=None):
         with task_lock:
             current_task["status"] = "completed"
             current_task["progress_pct"] = 100
+            current_task["total_files"] = unique_photos
+            current_task["processed_files"] = unique_photos
             current_task["message"] = f"Clustering completed ({people_count} people)"
-        update_task_progress(task_id, status="completed", progress_pct=100, current_step=f"Clustering completed ({people_count} people)",
+        update_task_progress(task_id, status="completed", progress_pct=100,
+                             total_files=unique_photos, processed_files=unique_photos,
+                             current_step=f"Clustering completed ({people_count} people)",
                              log_line=f"Clustering completed successfully. {people_count} people updated.")
 
     except Exception as e:

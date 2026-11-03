@@ -1672,7 +1672,7 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
               <span>Stop Task</span>
             </button>
-            <button class="btn-outline" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="switchTab('logs')">View Logs &rarr;</button>
+            <button class="btn-outline" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="viewRunningTaskLogsFromBanner()">View Logs &rarr;</button>
             <button class="btn-icon-sub" style="width:24px;height:24px;border:0;background:transparent;font-size:1.1rem;cursor:pointer;" onclick="dismissTaskCard()" title="Dismiss">&times;</button>
           </div>
         </div>
@@ -2154,8 +2154,8 @@
           </div>
         </div>
 
-        <!-- Selected Task Isolated Inspector Card -->
-        <div class="card-block" id="taskLogViewerBlock">
+        <!-- Selected Task Isolated Inspector Card (Hidden: logs now open inline under clicked task row) -->
+        <div class="card-block" id="taskLogViewerBlock" hidden>
           <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:center;">
             <div style="display:flex;align-items:center;gap:0.75rem;">
               <h3 style="font-size:1.05rem;font-weight:700;" id="taskLogViewerTitle">Isolated Task Log Stream</h3>
@@ -4669,6 +4669,7 @@ async function pollTaskStatus() {
     }
 
     const taskId = task.task_id || task.id;
+    currentRunningTaskId = taskId;
     if (sessionStorage.getItem('dismissed_task_' + taskId)) {
       $('visualTaskCard').hidden = true;
       return;
@@ -4746,9 +4747,8 @@ async function pollTaskStatus() {
         lastHistoryRefreshTime = nowMs;
         loadTaskHistory(true);
       }
-      const curViewingId = $('taskLogViewerId')?.textContent?.trim();
-      if (curViewingId && curViewingId !== '--') {
-        viewTaskLogs(curViewingId, true);
+      if (currentInlineLogTaskId) {
+        openInlineTaskLogs(currentInlineLogTaskId, true);
       }
       if (nowMs - lastSidebarAutoSyncTime > 30000) {
         lastSidebarAutoSyncTime = nowMs;
@@ -4815,13 +4815,128 @@ async function stopActiveTask() {
   }
 }
 
+let currentInlineLogTaskId = null;
+let currentRunningTaskId = null;
+
+function viewRunningTaskLogsFromBanner() {
+  switchTab('logs');
+  if (currentRunningTaskId) {
+    setTimeout(() => {
+      openInlineTaskLogs(currentRunningTaskId);
+      const row = document.getElementById(`task-row-${currentRunningTaskId}`);
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+  }
+}
+
+function toggleTaskLogs(taskId) {
+  if (currentInlineLogTaskId === taskId) {
+    closeInlineTaskLogs();
+  } else {
+    openInlineTaskLogs(taskId);
+  }
+}
+
+function closeInlineTaskLogs() {
+  if (!currentInlineLogTaskId) return;
+  const oldRow = document.getElementById(`inline-log-row-${currentInlineLogTaskId}`);
+  if (oldRow) oldRow.remove();
+  const oldBtn = document.getElementById(`btn-view-logs-${currentInlineLogTaskId}`);
+  if (oldBtn) {
+    oldBtn.textContent = 'View Logs';
+    oldBtn.className = 'btn-outline';
+    oldBtn.style.background = '';
+    oldBtn.style.color = '';
+    oldBtn.style.borderColor = '';
+  }
+  currentInlineLogTaskId = null;
+}
+
+async function openInlineTaskLogs(taskId, isLivePoll = false) {
+  // If another task was open, close it first
+  if (currentInlineLogTaskId && currentInlineLogTaskId !== taskId) {
+    closeInlineTaskLogs();
+  }
+
+  currentInlineLogTaskId = taskId;
+  const targetTr = document.getElementById(`task-row-${taskId}`);
+  const btn = document.getElementById(`btn-view-logs-${taskId}`);
+  if (btn) {
+    btn.textContent = 'Hide Logs';
+    btn.className = 'btn-primary';
+    btn.style.background = '#0f5c4d';
+    btn.style.borderColor = '#0f5c4d';
+    btn.style.color = '#ffffff';
+  }
+
+  let logRow = document.getElementById(`inline-log-row-${taskId}`);
+  if (!logRow && targetTr) {
+    logRow = document.createElement('tr');
+    logRow.id = `inline-log-row-${taskId}`;
+    logRow.className = 'inline-task-log-row';
+    logRow.innerHTML = `
+      <td colspan="7" style="padding:0;background:#0d1117;border-bottom:2px solid #0f5c4d;">
+        <div style="padding:0.85rem 1.15rem 1rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;color:#f8fafc;flex-wrap:wrap;gap:0.5rem;">
+            <div style="display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;">
+              <span style="font-weight:700;font-size:0.88rem;color:#6ee7b7;" id="inlineLogTitle-${taskId}">Task Execution Logs</span>
+              <span style="background:rgba(255,255,255,0.12);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:0.75rem;color:#94a3b8;">#${taskId}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <span style="font-size:0.78rem;color:#94a3b8;font-family:monospace;" id="inlineLogMeta-${taskId}">Loading logs...</span>
+              <button type="button" class="btn-outline" style="padding:0.2rem 0.55rem;font-size:0.72rem;color:#ffffff;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25);cursor:pointer;" onclick="closeInlineTaskLogs()">✕ Close</button>
+            </div>
+          </div>
+          <pre class="console" id="inlineLogConsole-${taskId}" style="min-height:160px;max-height:380px;overflow-y:auto;background:#06090e;color:#4ade80;padding:0.85rem 1rem;border-radius:8px;font-family:monospace;font-size:0.78rem;line-height:1.55;white-space:pre-wrap;word-break:break-all;margin:0;border:1px solid rgba(255,255,255,0.12);">Loading execution logs...</pre>
+        </div>
+      </td>
+    `;
+    targetTr.after(logRow);
+  }
+
+  try {
+    const res = await fetch(`/api/admin/tasks/${taskId}/logs`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const t = data.task;
+    if (!t) return;
+
+    const evDisp = ['wedding', 'default', 'brk-sir', 'brksir'].includes(t.event_slug) ? 'BRK Sir' : t.event_slug;
+    const titleEl = $(`inlineLogTitle-${taskId}`);
+    if (titleEl) {
+      titleEl.textContent = `${t.task_type === 'gdrive_ingest' ? 'Google Drive Ingest' : 'AI Facial Index'} (${evDisp} > ${t.target_folder || 'All'})`;
+    }
+    const metaEl = $(`inlineLogMeta-${taskId}`);
+    if (metaEl) {
+      metaEl.textContent = `Started: ${t.started_at} | Files: ${t.processed_files || 0} / ${t.total_files || '?'} | Saved: ${(t.storage_saved_mb || 0).toFixed(1)} MB | Status: ${t.status.toUpperCase()}`;
+    }
+
+    const consoleEl = $(`inlineLogConsole-${taskId}`);
+    if (consoleEl) {
+      const logs = t.log_text ? t.log_text.trim() : 'No log entries recorded for this task.';
+      if (consoleEl.textContent !== logs) {
+        const isScrolledToBottom = (consoleEl.scrollHeight - consoleEl.clientHeight) <= (consoleEl.scrollTop + 80);
+        consoleEl.textContent = logs;
+        if (isScrolledToBottom || !isLivePoll) {
+          consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error fetching inline task logs:', e);
+  }
+}
+
 async function loadTaskHistory(isLiveUpdate = false) {
   try {
-    const res = await fetch('/api/admin/tasks/history');
+    const res = await fetch('/api/admin/tasks/history?limit=30');
     if (!res.ok) return;
     const data = await res.json();
     const tasks = data.tasks || [];
-    $('taskHistoryCountBadge').textContent = `${tasks.length} tasks`;
+    
+    if ($('taskHistoryCountBadge')) {
+      $('taskHistoryCountBadge').textContent = `${tasks.length} tasks`;
+    }
 
     const tbody = $('taskHistoryTableBody');
     tbody.replaceChildren();
@@ -4832,7 +4947,9 @@ async function loadTaskHistory(isLiveUpdate = false) {
     }
 
     for (const t of tasks) {
+      const isExpanded = currentInlineLogTaskId === t.task_id;
       const tr = document.createElement('tr');
+      tr.id = `task-row-${t.task_id}`;
       const isRunning = t.status === 'running';
       const isFailed = t.status === 'failed';
       const statusClass = isRunning ? 'running' : (isFailed ? 'failed' : 'completed');
@@ -4868,47 +4985,39 @@ async function loadTaskHistory(isLiveUpdate = false) {
           </span>
         </td>
         <td style="padding:0.75rem 1rem;text-align:right;">
-          <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="viewTaskLogs('${t.task_id}')">View Logs</button>
+          <button id="btn-view-logs-${t.task_id}" class="${isExpanded ? 'btn-primary' : 'btn-outline'}" style="padding:0.25rem 0.6rem;font-size:0.75rem;${isExpanded ? 'background:#0f5c4d;border-color:#0f5c4d;color:#fff;' : ''}" onclick="toggleTaskLogs('${t.task_id}')">${isExpanded ? 'Hide Logs' : 'View Logs'}</button>
         </td>
       `;
       tbody.append(tr);
-    }
 
-    if (!isLiveUpdate && tasks.length > 0 && (!$('taskLogViewerId').textContent || $('taskLogViewerId').textContent === '--')) {
-      viewTaskLogs(tasks[0].task_id);
-    }
-  } catch (e) {
-    console.error('Error loading task history:', e);
-  }
-}
-
-async function viewTaskLogs(taskId, isLiveUpdate = false) {
-  try {
-    $('taskLogViewerId').textContent = taskId;
-    if (!isLiveUpdate) {
-      $('taskLogsConsole').textContent = 'Loading logs for task ' + taskId + '...';
-    }
-    const res = await fetch(`/api/admin/tasks/${taskId}/logs`);
-    if (!res.ok) return;
-    const data = await res.json();
-    const t = data.task;
-    if (!t) return;
-
-    const evDisp = ['wedding', 'default', 'brk-sir', 'brksir'].includes(t.event_slug) ? 'BRK Sir' : t.event_slug;
-    $('taskLogViewerTitle').textContent = `${t.task_type === 'gdrive_ingest' ? 'Google Drive Ingest' : 'AI Facial Index'} (${evDisp} > ${t.target_folder || 'All'})`;
-    $('taskLogViewerMeta').textContent = `Started: ${t.started_at} | Processed: ${t.processed_files || 0} / ${t.total_files || '?'} files | Saved: ${(t.storage_saved_mb || 0).toFixed(1)} MB | Status: ${t.status.toUpperCase()}`;
-
-    const logs = t.log_text ? t.log_text.trim() : 'No log entries recorded for this task.';
-    const prevLogs = $('taskLogsConsole').textContent;
-    if (logs !== prevLogs) {
-      const isScrolledToBottom = ($('taskLogsConsole').scrollHeight - $('taskLogsConsole').clientHeight) <= ($('taskLogsConsole').scrollTop + 80);
-      $('taskLogsConsole').textContent = logs;
-      if (isScrolledToBottom || !isLiveUpdate) {
-        $('taskLogsConsole').scrollTop = $('taskLogsConsole').scrollHeight;
+      // If this task was open, re-render the inline log row right underneath it
+      if (isExpanded) {
+        const logRow = document.createElement('tr');
+        logRow.id = `inline-log-row-${t.task_id}`;
+        logRow.className = 'inline-task-log-row';
+        logRow.innerHTML = `
+          <td colspan="7" style="padding:0;background:#0d1117;border-bottom:2px solid #0f5c4d;">
+            <div style="padding:0.85rem 1.15rem 1rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;color:#f8fafc;flex-wrap:wrap;gap:0.5rem;">
+                <div style="display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;">
+                  <span style="font-weight:700;font-size:0.88rem;color:#6ee7b7;" id="inlineLogTitle-${t.task_id}">Task Execution Logs</span>
+                  <span style="background:rgba(255,255,255,0.12);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:0.75rem;color:#94a3b8;">#${t.task_id}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                  <span style="font-size:0.78rem;color:#94a3b8;font-family:monospace;" id="inlineLogMeta-${t.task_id}"></span>
+                  <button type="button" class="btn-outline" style="padding:0.2rem 0.55rem;font-size:0.72rem;color:#ffffff;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25);cursor:pointer;" onclick="closeInlineTaskLogs()">✕ Close</button>
+                </div>
+              </div>
+              <pre class="console" id="inlineLogConsole-${t.task_id}" style="min-height:160px;max-height:380px;overflow-y:auto;background:#06090e;color:#4ade80;padding:0.85rem 1rem;border-radius:8px;font-family:monospace;font-size:0.78rem;line-height:1.55;white-space:pre-wrap;word-break:break-all;margin:0;border:1px solid rgba(255,255,255,0.12);"></pre>
+            </div>
+          </td>
+        `;
+        tbody.append(logRow);
+        openInlineTaskLogs(t.task_id, true);
       }
     }
   } catch (e) {
-    console.error('Error viewing task logs:', e);
+    console.error('Error loading task history:', e);
   }
 }
 
