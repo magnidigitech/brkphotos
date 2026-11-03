@@ -190,6 +190,9 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
         task_id = f"idx_{secrets.token_hex(4)}"
         create_task_record(task_id, "face_index", display_title, "All Albums", "Local Storage")
 
+    # CRITICAL: Always reset task_cancel_event so new tasks run cleanly without prior cancel flags
+    task_cancel_event.clear()
+
     with task_lock:
         current_task["task_id"] = task_id
         current_task["status"] = "running"
@@ -249,6 +252,15 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
                 current_task["status"] = "cancelled"
                 current_task["message"] = "Task stopped by admin."
             update_task_progress(task_id, status="cancelled", current_step="Task stopped by admin.", log_line="Indexing cancelled by administrator.")
+            return
+
+        if proc.returncode != 0:
+            err_msg = f"Indexing process terminated with exit code {proc.returncode}."
+            append_log(err_msg)
+            with task_lock:
+                current_task["status"] = "error"
+                current_task["message"] = err_msg
+            update_task_progress(task_id, status="failed", current_step=err_msg, log_line=err_msg)
             return
 
         get_event_index(event_slug)
@@ -1985,8 +1997,11 @@ def admin_stop_task(token: str = Depends(get_auth_token)):
 
 @app.post("/api/admin/events/{slug}/index")
 def admin_event_index(slug: str, token: str = Depends(get_auth_token)):
-    if current_task["status"] == "running":
-        raise HTTPException(409, "A task is already running.")
+    with task_lock:
+        if current_task.get("status") == "running":
+            raise HTTPException(409, "A task is already running.")
+        current_task["status"] = "running"
+    task_cancel_event.clear()
     threading.Thread(target=run_indexing_task, args=(slug,), daemon=True).start()
     return {"status": "started"}
 

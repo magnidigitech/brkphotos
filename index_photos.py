@@ -34,7 +34,7 @@ STORAGE = Path(os.environ.get("STORAGE_DIR", BASE / "storage"))
 PHOTOS = STORAGE / "photos"
 DATA = STORAGE / "data"
 MODELS = STORAGE / "models"
-DET_SIZE = int(os.environ.get("DET_SIZE", "960"))
+DET_SIZE = int(os.environ.get("DET_SIZE", "640"))
 EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
 def index_event(event_slug="brk-sir"):
@@ -124,7 +124,7 @@ def index_event(event_slug="brk-sir"):
                 thumb.save(DATA / "thumbs" / thumb_name, quality=80)
 
             # Detect faces
-            img.thumbnail((2000, 2000))
+            img.thumbnail((1600, 1600))
             bgr = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
             detected_faces = face_app.get(bgr)
             detected_here = len(detected_faces)
