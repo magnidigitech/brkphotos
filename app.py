@@ -299,13 +299,15 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
                                      total_files=done_cnt, current_step=msg, log_line=txt)
                 continue
 
-            # Parse live progress e.g. "Progress: 25/100 (25%)"
+            # Parse live progress e.g. "Progress: 8649/13557 (64%) [Batch: 1/4909]"
             m_prog = re.search(r"Progress:\s*(\d+)/(\d+)", txt)
             if m_prog:
                 cur_p = int(m_prog.group(1))
                 tot_p = int(m_prog.group(2))
-                calc_pct = int(80 + (cur_p / max(tot_p, 1)) * 16) if not owns_task else int(5 + (cur_p / max(tot_p, 1)) * 75)
-                step_msg = f"Indexed {cur_p}/{tot_p} photos ({int((cur_p / max(tot_p, 1)) * 100)}%)..."
+                m_batch = re.search(r"\[Batch:\s*(\d+)/(\d+)\]", txt)
+                batch_str = f" [New: {m_batch.group(1)}/{m_batch.group(2)}]" if m_batch else ""
+                calc_pct = int((cur_p / max(tot_p, 1)) * 100) if owns_task else int(80 + (cur_p / max(tot_p, 1)) * 19)
+                step_msg = f"Indexed {cur_p}/{tot_p} photos ({int((cur_p / max(tot_p, 1)) * 100)}%){batch_str}..."
                 with task_lock:
                     current_task["processed_files"] = cur_p
                     current_task["total_files"] = tot_p

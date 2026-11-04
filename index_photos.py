@@ -109,15 +109,13 @@ def index_event(event_slug="brk-sir", run_clustering=False):
     face_app.prepare(ctx_id=-1, det_size=(DET_SIZE, DET_SIZE))
     print(f"[{ist_ts()}] InsightFace model initialized successfully. Processing {len(pending_files)} photos...", flush=True)
 
+    total_pending = len(pending_files)
     processed_new = 0
     last_log_time = time.time()
     last_save_time = time.time()
 
-    for i, path in enumerate(files, 1):
+    for idx, path in enumerate(pending_files, 1):
         rel = str(path.relative_to(event_photos_dir))
-        if rel in done:
-            continue
-        
         detected_here = 0
         try:
             img = ImageOps.exif_transpose(Image.open(path)).convert("RGB")
@@ -140,7 +138,7 @@ def index_event(event_slug="brk-sir", run_clustering=False):
                 embs.append(face.normed_embedding)
                 names.append(rel)
         except Exception as e:
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Skipped {rel}: {e}", flush=True)
+            print(f"[{ist_ts()}] Skipped {rel}: {e}", flush=True)
             
         done.add(rel)
         processed_new += 1
@@ -148,15 +146,16 @@ def index_event(event_slug="brk-sir", run_clustering=False):
         # Yield CPU briefly so server remains completely responsive
         time.sleep(0.04)
         
-        # Live progress log every 5 photos, or if faces detected, or at least every 4 seconds
+        # Live progress log every 5 photos, or if faces detected, or at least every 4 seconds, or on last photo
         curr_time = time.time()
-        if (processed_new % 5 == 0) or (detected_here > 0) or (curr_time - last_log_time >= 4):
-            pct = int((i / max(total_files, 1)) * 100)
-            print(f"[{ist_ts()}] Progress: {i}/{total_files} ({pct}%) | Photo: {path.name} | Detected: {detected_here} face(s) | Total library faces: {len(embs)}", flush=True)
+        if (processed_new % 5 == 0) or (detected_here > 0) or (curr_time - last_log_time >= 4) or (idx == total_pending):
+            total_done_now = len(done)
+            pct = int((total_done_now / max(total_files, 1)) * 100)
+            print(f"[{ist_ts()}] Progress: {total_done_now}/{total_files} ({pct}%) [Batch: {idx}/{total_pending}] | Photo: {path.name} | Detected: {detected_here} face(s) | Total library faces: {len(embs)}", flush=True)
             last_log_time = curr_time
 
         # Save to disk every 20 photos or every 30 seconds
-        if (processed_new % 20 == 0) or (curr_time - last_save_time >= 30):
+        if (processed_new % 20 == 0) or (curr_time - last_save_time >= 30) or (idx == total_pending):
             save()
             last_save_time = curr_time
 
