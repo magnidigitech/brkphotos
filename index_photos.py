@@ -68,7 +68,21 @@ def index_event(event_slug="brk-sir", run_clustering=False):
 
     embs = list(np.load(emb_file)) if emb_file.exists() else []
     names = json.loads(names_file.read_text()) if names_file.exists() else []
-    done = set(json.loads(done_file.read_text())) if done_file.exists() else set()
+    
+    # Load and normalize done paths (handle both forward and backward slashes)
+    done = set()
+    if done_file.exists():
+        try:
+            raw_done = json.loads(done_file.read_text())
+            for item in raw_done:
+                if isinstance(item, str):
+                    s = item.replace("\\", "/").strip().lstrip("/")
+                    done.add(s)
+        except Exception as e:
+            print(f"[{ist_ts()}] Warning loading done.json: {e}", flush=True)
+
+    def norm_rel(p: Path) -> str:
+        return str(p.relative_to(event_photos_dir)).replace("\\", "/").strip().lstrip("/")
 
     def save():
         if embs:
@@ -87,7 +101,7 @@ def index_event(event_slug="brk-sir", run_clustering=False):
 
     files = sorted(p for p in event_photos_dir.rglob("*") if p.suffix.lower() in EXTS and not p.name.startswith("."))
     total_files = len(files)
-    pending_files = [p for p in files if str(p.relative_to(event_photos_dir)) not in done]
+    pending_files = [p for p in files if norm_rel(p) not in done]
     
     print(f"[{ist_ts()}] Scan complete: {total_files} total photos found in library.", flush=True)
     print(f"[{ist_ts()}] {len(done)} already indexed. {len(pending_files)} pending AI face analysis.", flush=True)
@@ -115,7 +129,7 @@ def index_event(event_slug="brk-sir", run_clustering=False):
     last_save_time = time.time()
 
     for idx, path in enumerate(pending_files, 1):
-        rel = str(path.relative_to(event_photos_dir))
+        rel = norm_rel(path)
         detected_here = 0
         try:
             img = ImageOps.exif_transpose(Image.open(path)).convert("RGB")
