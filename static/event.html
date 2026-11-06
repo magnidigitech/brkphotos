@@ -1627,7 +1627,7 @@
       align-items: center;
       justify-content: space-between;
       z-index: 2000;
-      padding: max(0.5rem, env(safe-area-inset-top)) max(0.6rem, env(safe-area-inset-right)) max(0.6rem, env(safe-area-inset-bottom)) max(0.6rem, env(safe-area-inset-left));
+      padding: max(0.4rem, env(safe-area-inset-top)) 0 0 0;
       box-sizing: border-box;
       user-select: none;
       -webkit-user-select: none;
@@ -1829,18 +1829,21 @@
 
     /* Card Stack Stage for Natural Card Stack Physics */
     .lightbox-img-wrap {
-      flex: 1;
+      flex: 1 1 0%;
       display: flex;
       align-items: center;
       justify-content: center;
       max-width: 100%;
       width: 100%;
+      height: 100%;
       overflow: hidden;
       position: relative;
       touch-action: none;
       perspective: 1200px;
       min-height: 0;
       z-index: 1000;
+      box-sizing: border-box;
+      padding: 0.25rem 0.5rem;
     }
 
     .card-stage {
@@ -1868,6 +1871,8 @@
       pointer-events: none;
       overflow: hidden; /* Restricts zoomed image strictly inside image card */
       opacity: 1 !important;
+      padding: 2px;
+      box-sizing: border-box;
     }
 
     .card-behind {
@@ -1892,25 +1897,113 @@
     }
 
     .lightbox-img {
-      max-width: min(92vw, 1200px);
-      max-height: calc(100dvh - 110px);
+      max-width: 100%;
+      max-height: 100%;
       width: auto;
       height: auto;
       object-fit: contain;
-      border-radius: clamp(14px, 2.5vw, 20px);
-      box-shadow: 0 24px 60px -8px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      border-radius: clamp(10px, 2vw, 16px);
+      box-shadow: 0 20px 50px -6px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
       transform-origin: center center;
       will-change: transform;
-      background: #0d1412;
+      background: transparent;
       transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
       pointer-events: auto;
     }
 
     @media (max-width: 640px) {
       .lightbox-img {
-        max-width: 92vw;
-        max-height: calc(100dvh - 100px);
-        border-radius: 16px;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 12px;
+      }
+    }
+
+    /* Persistent Bottom Thumbnail Filmstrip */
+    .lightbox-filmstrip-bar {
+      position: relative;
+      z-index: 2200;
+      width: 100%;
+      height: clamp(60px, 9.5vh, 76px);
+      background: rgba(8, 14, 12, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .lightbox-filmstrip-track {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 100%;
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 6px 12px;
+      box-sizing: border-box;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+
+    .lightbox-filmstrip-track::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filmstrip-thumb {
+      height: 100%;
+      aspect-ratio: 3 / 4;
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+      cursor: pointer;
+      position: relative;
+      background: #182220;
+      border: 2px solid transparent;
+      transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease, opacity 0.18s ease;
+      opacity: 0.55;
+      box-sizing: border-box;
+    }
+
+    .filmstrip-thumb:hover {
+      opacity: 0.9;
+      transform: scale(1.05);
+    }
+
+    .filmstrip-thumb.active {
+      opacity: 1;
+      border-color: #ffffff;
+      box-shadow: 0 0 14px rgba(255, 255, 255, 0.5);
+      transform: scale(1.08);
+      z-index: 2;
+    }
+
+    .filmstrip-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+      background: #1e293b;
+    }
+
+    @media (max-width: 480px) {
+      .lightbox-filmstrip-bar {
+        height: 58px;
+      }
+      .lightbox-filmstrip-track {
+        gap: 5px;
+        padding: 4px 8px;
+      }
+      .filmstrip-thumb {
+        border-radius: 5px;
       }
     }
 
@@ -2529,6 +2622,11 @@
         <button id="closeZoomBarBtn" class="zoom-bar-btn" title="Close Zoom Controls" aria-label="Close Zoom Controls" style="font-size:1.1rem;line-height:1;">&times;</button>
       </div>
     </div>
+
+    <!-- Persistent Bottom Thumbnail Filmstrip -->
+    <div class="lightbox-filmstrip-bar" id="lightboxFilmstripBar">
+      <div class="lightbox-filmstrip-track" id="lightboxFilmstripTrack"></div>
+    </div>
   </div>
 
   <!-- Floating Action Button to Overview -->
@@ -3057,6 +3155,9 @@
 
       renderNextGridBatch();
       updateFilterChips();
+      if (!$('photoLightboxModal').hidden) {
+        buildFilmstrip();
+      }
     }
 
     function renderNextGridBatch() {
@@ -3409,7 +3510,106 @@
       btn4k.setAttribute('download', filename);
     }
 
-    // Studio-Quality Lightbox Viewer with Natural Card Stack Physics
+    // Studio-Quality Lightbox Viewer with Natural Card Stack Physics & Bottom Filmstrip
+    let filmstripBuiltForCount = 0;
+
+    function buildFilmstrip() {
+      const track = $('lightboxFilmstripTrack');
+      if (!track) return;
+
+      const total = currentPhotosList.length;
+      if (filmstripBuiltForCount === total && track.children.length === total) {
+        return;
+      }
+
+      const existingCount = track.children.length;
+      if (existingCount > 0 && existingCount < total && filmstripBuiltForCount === existingCount) {
+        const fragment = document.createDocumentFragment();
+        for (let i = existingCount; i < total; i++) {
+          fragment.appendChild(createFilmstripThumbElement(i));
+        }
+        track.appendChild(fragment);
+        filmstripBuiltForCount = total;
+        return;
+      }
+
+      track.replaceChildren();
+      const fragment = document.createDocumentFragment();
+      for (let i = 0; i < total; i++) {
+        fragment.appendChild(createFilmstripThumbElement(i));
+      }
+      track.appendChild(fragment);
+      filmstripBuiltForCount = total;
+    }
+
+    function createFilmstripThumbElement(i) {
+      const item = currentPhotosList[i];
+      const p = typeof item === 'string' ? item : item.rel_path;
+      const enc = p.split('/').map(encodeURIComponent).join('/');
+
+      const thumb = document.createElement('div');
+      thumb.className = 'filmstrip-thumb' + (i === currentPhotoIndex ? ' active' : '');
+      thumb.dataset.index = i;
+
+      const img = document.createElement('img');
+      img.alt = `Photo ${i + 1}`;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.src = `/thumb/${enc}`;
+
+      thumb.appendChild(img);
+
+      thumb.addEventListener('click', (e) => {
+        e.stopPropagation();
+        jumpToPhoto(i);
+      });
+
+      return thumb;
+    }
+
+    function jumpToPhoto(targetIdx) {
+      if (targetIdx < 0 || targetIdx >= currentPhotosList.length || targetIdx === currentPhotoIndex) return;
+      currentPhotoIndex = targetIdx;
+      resetZoom();
+      updateLightboxHeader(targetIdx);
+
+      const enc = getPhotoEnc(currentPhotosList[targetIdx]);
+      const nextIdx = (targetIdx + 1) % currentPhotosList.length;
+      const nextEnc = getPhotoEnc(currentPhotosList[nextIdx]);
+
+      activeCard.style.transition = 'opacity 0.15s ease';
+      activeCard.style.opacity = '0.35';
+      activeImg.src = `/preview/${enc}`;
+      behindImg.src = `/preview/${nextEnc}`;
+
+      setTimeout(() => {
+        activeCard.style.opacity = '1';
+      }, 100);
+
+      updateFilmstripActive(targetIdx);
+
+      try {
+        history.replaceState({ brkLightboxOpen: true, photoIndex: targetIdx }, '');
+      } catch (e) {}
+
+      const prevIdx = (targetIdx - 1 + currentPhotosList.length) % currentPhotosList.length;
+      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
+    }
+
+    function updateFilmstripActive(index) {
+      const track = $('lightboxFilmstripTrack');
+      if (!track || track.children.length === 0) return;
+
+      const prevActive = track.querySelector('.filmstrip-thumb.active');
+      if (prevActive) prevActive.classList.remove('active');
+
+      const currentThumb = track.children[index];
+      if (currentThumb) {
+        currentThumb.classList.add('active');
+        currentThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+
     function openPhotoLightbox(index) {
       if (currentPhotosList.length === 0) return;
       if (index < 0) index = currentPhotosList.length - 1;
@@ -3419,6 +3619,9 @@
 
       initCardDeck();
       updateLightboxHeader(index);
+
+      buildFilmstrip();
+      updateFilmstripActive(index);
 
       const enc = getPhotoEnc(currentPhotosList[index]);
       const nextIdx = (index + 1) % currentPhotosList.length;
@@ -3472,6 +3675,7 @@
     function finishTransition(targetIdx, direction) {
       currentPhotoIndex = targetIdx;
       updateLightboxHeader(targetIdx);
+      updateFilmstripActive(targetIdx);
       resetZoom();
 
       // Incoming card is now centered and becomes activeCard at z-index 2
@@ -3641,6 +3845,12 @@
 
     // Lightbox Swipe & Dedicated Image Zoom Controller
     const lightboxWrap = $('lightboxImgWrap');
+    const filmstripBar = $('lightboxFilmstripBar');
+    if (filmstripBar) {
+      filmstripBar.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+      filmstripBar.addEventListener('touchmove', e => e.stopPropagation(), { passive: true });
+      filmstripBar.addEventListener('touchend', e => e.stopPropagation(), { passive: true });
+    }
     let lastLightboxTap = 0;
     let isPinching = false;
     let initialPinchDist = 0;
