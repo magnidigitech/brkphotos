@@ -888,38 +888,60 @@
       color: #111827;
     }
 
-    /* Photos Section (High Contrast Light Glass Design) */
-    .photos-section {
-      max-width: 1040px;
-      width: 100%;
-      margin: 2.5rem auto 4rem;
-      scroll-margin-top: 2rem;
-      background: rgba(255, 255, 255, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.98);
-      border-radius: 28px;
-      padding: clamp(1.2rem, 3vw, 2.2rem);
-      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.14);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    /* Full-Screen Photo Results Gallery Overlay */
+    .photos-gallery-overlay {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background: #f8fafc;
+      z-index: 1500;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
       box-sizing: border-box;
       color: #0f172a !important;
       color-scheme: light;
+      margin: 0;
+      padding: 0;
+      max-width: none;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+    }
+
+    .gallery-sticky-header {
+      position: relative;
+      z-index: 20;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+      padding: max(0.75rem, env(safe-area-inset-top)) clamp(0.75rem, 3vw, 1.75rem) 0.65rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    }
+
+    .gallery-title-wrap {
+      flex: 1 1 auto;
+      min-width: 0;
     }
 
     .section-title,
     #photosSectionTitle {
-      font-size: clamp(1.35rem, 2.8vw, 1.85rem);
+      font-size: clamp(1.2rem, 2.5vw, 1.65rem);
       font-weight: 800;
       color: #0f172a !important;
       letter-spacing: -0.02em;
-      margin: 0 0 0.35rem;
-      line-height: 1.25;
+      margin: 0 0 0.25rem;
+      line-height: 1.2;
     }
 
     #photosSectionSubtitle {
-      font-size: clamp(0.85rem, 1.8vw, 0.94rem) !important;
+      font-size: clamp(0.82rem, 1.6vw, 0.92rem) !important;
       font-weight: 600 !important;
-      color: #334155 !important;
+      color: #475569 !important;
       margin: 0;
     }
 
@@ -927,44 +949,94 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.25rem;
+      margin-bottom: 0.75rem;
       flex-wrap: wrap;
-      gap: 0.8rem;
+      gap: 0.75rem;
     }
 
-    /* Modern Responsive Masonry Gallery Grid */
+    .gallery-actions-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-gallery-head {
+      padding: 0.38rem 0.85rem;
+      font-size: 0.82rem;
+      border-radius: 999px;
+    }
+
+    .gallery-close-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      font-size: 1.4rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      flex-shrink: 0;
+    }
+
+    .gallery-close-btn:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+      transform: scale(1.05);
+    }
+
+    .gallery-scroll-body {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding: 1.25rem clamp(0.6rem, 2.5vw, 1.75rem) max(3rem, env(safe-area-inset-bottom));
+      box-sizing: border-box;
+    }
+
+    /* Modern Responsive Grid: 4-6 columns on desktop, 2 columns on mobile */
     .photos-grid {
-      column-count: 4;
-      column-gap: 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 1rem;
       width: 100%;
     }
 
-    @media (max-width: 1200px) {
+    @media (min-width: 1400px) {
       .photos-grid {
-        column-count: 3;
+        grid-template-columns: repeat(6, 1fr);
       }
     }
 
-    @media (max-width: 768px) {
+    @media (min-width: 1100px) and (max-width: 1399px) {
       .photos-grid {
-        column-count: 2;
-        column-gap: 0.75rem;
+        grid-template-columns: repeat(5, 1fr);
       }
     }
 
-    @media (max-width: 480px) {
+    @media (min-width: 768px) and (max-width: 1099px) {
       .photos-grid {
-        column-count: 1;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.85rem;
       }
     }
 
-    @supports (grid-template-rows: masonry) {
+    @media (max-width: 767px) {
       .photos-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        grid-template-rows: masonry;
-        gap: 1.25rem;
-        columns: unset;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.55rem;
+      }
+      .photo-card {
+        margin-bottom: 0 !important;
+        border-radius: 10px;
+      }
+      .photo-img-wrap {
+        min-height: 120px !important;
       }
     }
 
@@ -1827,7 +1899,7 @@
       }
     }
 
-    /* Single Photograph Full-Screen View */
+    /* 3-Panel Sliding Track for Glitch-Free Native Swipe Transition */
     .lightbox-img-wrap {
       flex: 1 1 0%;
       display: flex;
@@ -1845,21 +1917,32 @@
       padding: 0;
     }
 
-    .single-image-stage {
-      position: relative;
+    .lightbox-slider-track {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: row;
+      will-change: transform;
+      transform: translate3d(-100%, 0, 0); /* slideCurr is visible in viewport */
+    }
+
+    .lightbox-slide {
+      flex: 0 0 100%;
       width: 100%;
       height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
+      position: relative;
       box-sizing: border-box;
+      padding: 4px;
     }
 
-    .lightbox-main-img {
+    .lightbox-slide-img {
       max-width: 100%;
       max-height: 100%;
       width: auto;
@@ -1874,17 +1957,41 @@
       user-select: none;
       -webkit-user-select: none;
       cursor: grab;
-      transition: opacity 0.15s ease;
     }
 
-    .lightbox-main-img:active {
+    .lightbox-slide-img:active {
       cursor: grabbing;
     }
 
     @media (max-width: 640px) {
-      .lightbox-main-img {
+      .lightbox-slide-img {
         border-radius: 0;
       }
+    }
+
+    .slide-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.15);
+      border-top-color: #10b981;
+      animation: slideSpin 0.7s linear infinite;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 1;
+    }
+
+    .slide-spinner.visible {
+      opacity: 1;
+    }
+
+    @keyframes slideSpin {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
     /* Persistent Bottom Thumbnail Filmstrip */
@@ -2292,6 +2399,12 @@
 
       <!-- Search progress / scanning status -->
       <div id="searchStatus" class="search-status-text"></div>
+      <div id="searchViewPhotosAction" style="margin-top:0.85rem;display:flex;justify-content:center;" hidden>
+        <button type="button" class="btn-find-photos" id="searchViewPhotosBtn" style="padding:0.6rem 1.6rem;font-size:0.95rem;font-weight:700;display:inline-flex;align-items:center;gap:0.5rem;box-shadow:0 8px 24px rgba(5,150,105,0.28);">
+          <span>View Photos</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
 
       <!-- Divider line above Social Section -->
       <div class="card-divider"></div>
@@ -2349,66 +2462,73 @@
       </div>
     </section>
 
-    <!-- Dynamic Matched Photos Viewer Section (Shows ONLY matching photos) -->
-    <section class="photos-section" id="photosSection" hidden>
-      <!-- New Photos Alert Banner for Returning Visitors -->
-      <div id="newPhotosAlertBanner" class="new-photos-banner" hidden>
-        <div class="new-photos-content">
-          <span class="new-photos-pill">NEW</span>
-          <span id="newPhotosAlertText" class="new-photos-text">New photos found featuring your face!</span>
+    <!-- Full-Screen Photo Results Gallery Overlay -->
+    <section class="photos-gallery-overlay" id="photosSection" hidden>
+      <!-- Sticky Gallery Header Bar -->
+      <div class="gallery-sticky-header">
+        <!-- New Photos Alert Banner for Returning Visitors -->
+        <div id="newPhotosAlertBanner" class="new-photos-banner" hidden>
+          <div class="new-photos-content">
+            <span class="new-photos-pill">NEW</span>
+            <span id="newPhotosAlertText" class="new-photos-text">New photos found featuring your face!</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <button id="viewNewPhotosBannerBtn" class="btn-banner-action">View Photos</button>
+            <button id="closeNewPhotosBannerBtn" class="btn-banner-close" aria-label="Dismiss">&times;</button>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <button id="viewNewPhotosBannerBtn" class="btn-banner-action">View Photos</button>
-          <button id="closeNewPhotosBannerBtn" class="btn-banner-close" aria-label="Dismiss">&times;</button>
+
+        <div class="photos-head">
+          <div class="gallery-title-wrap">
+            <h2 class="section-title" id="photosSectionTitle">Photos with Bhashyam Ramakrishna Sir</h2>
+            <p id="photosSectionSubtitle"></p>
+          </div>
+          <div class="gallery-actions-wrap">
+            <button class="btn-find-photos btn-outline btn-gallery-head" id="toggleSelectBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 11 12 14 22 4"></polyline></svg>
+              <span id="toggleSelectText">Select Photos</span>
+            </button>
+            <button class="btn-find-photos btn-outline btn-gallery-head" id="closePhotosBtn">New Search ↑</button>
+            <button class="gallery-close-btn" id="galleryDismissBtn" title="Close Gallery" aria-label="Close Gallery">&times;</button>
+          </div>
+        </div>
+
+        <!-- Discovery & Filter Toolbar -->
+        <div id="discoveryToolbar" class="discovery-toolbar" hidden>
+          <div id="albumChipsContainer" class="album-chips-container"></div>
+          <div class="discovery-meta-controls">
+            <button id="sortOrderBtn" class="btn-sort-toggle" title="Toggle Sort Order">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span id="sortOrderText">Newest First</span>
+            </button>
+            <span id="photosProgressText" class="photos-progress-badge"></span>
+          </div>
         </div>
       </div>
 
-      <div class="photos-head">
-        <div>
-          <h2 class="section-title" id="photosSectionTitle">Photos with BRK Sir</h2>
-          <p id="photosSectionSubtitle"></p>
+      <!-- Scrollable Gallery Content Body -->
+      <div class="gallery-scroll-body" id="galleryScrollBody">
+        <!-- Helpful Empty State Card (Appears if 0 matches found) -->
+        <div id="emptyResultsCard" class="empty-state-card" hidden>
+          <div class="empty-state-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="15" x2="16" y2="15"></line><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+          </div>
+          <h3 class="empty-state-title">No Matching Photos Found Yet</h3>
+          <p class="empty-state-desc">We couldn't detect a clear match with BRK Sir in the currently indexed albums.</p>
+          <div class="empty-state-tips">
+            <div>💡 <strong>Lighting:</strong> Ensure your face is evenly lit without harsh shadows or backlighting.</div>
+            <div>📸 <strong>Angle:</strong> Look straight at the camera; avoid dark sunglasses or face coverings.</div>
+            <div>⏳ <strong>Recent Photos:</strong> If taken recently, additional folders may still be processing.</div>
+          </div>
+          <div class="empty-state-actions">
+            <button class="btn-find-photos" id="emptyRetryBtn" style="padding:0.45rem 1rem;font-size:0.85rem;">Take Another Selfie</button>
+            <button class="btn-find-photos btn-outline" id="emptyUploadBtn" style="padding:0.45rem 1rem;font-size:0.85rem;">Upload Photo</button>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-          <button class="btn-find-photos btn-outline" style="padding:0.4rem 0.85rem;font-size:0.85rem;display:inline-flex;align-items:center;gap:0.35rem;" id="toggleSelectBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 11 12 14 22 4"></polyline></svg>
-            <span id="toggleSelectText">Select Photos</span>
-          </button>
-          <button class="btn-find-photos btn-outline" style="padding:0.4rem 1rem;font-size:0.85rem;"
-            id="closePhotosBtn">New Search ↑</button>
-        </div>
-      </div>
 
-      <!-- Discovery & Filter Toolbar -->
-      <div id="discoveryToolbar" class="discovery-toolbar" hidden>
-        <div id="albumChipsContainer" class="album-chips-container"></div>
-        <div class="discovery-meta-controls">
-          <button id="sortOrderBtn" class="btn-sort-toggle" title="Toggle Sort Order">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            <span id="sortOrderText">Newest First</span>
-          </button>
-          <span id="photosProgressText" class="photos-progress-badge"></span>
-        </div>
+        <div class="photos-grid" id="photosGrid"></div>
+        <div id="gridScrollSentinel" style="height:20px;width:100%;"></div>
       </div>
-
-      <!-- Helpful Empty State Card (Appears if 0 matches found) -->
-      <div id="emptyResultsCard" class="empty-state-card" hidden>
-        <div class="empty-state-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="15" x2="16" y2="15"></line><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
-        </div>
-        <h3 class="empty-state-title">No Matching Photos Found Yet</h3>
-        <p class="empty-state-desc">We couldn't detect a clear match with BRK Sir in the currently indexed albums.</p>
-        <div class="empty-state-tips">
-          <div>💡 <strong>Lighting:</strong> Ensure your face is evenly lit without harsh shadows or backlighting.</div>
-          <div>📸 <strong>Angle:</strong> Look straight at the camera; avoid dark sunglasses or face coverings.</div>
-          <div>⏳ <strong>Recent Photos:</strong> If taken recently, additional folders may still be processing.</div>
-        </div>
-        <div class="empty-state-actions">
-          <button class="btn-find-photos" id="emptyRetryBtn" style="padding:0.45rem 1rem;font-size:0.85rem;">Take Another Selfie</button>
-          <button class="btn-find-photos btn-outline" id="emptyUploadBtn" style="padding:0.45rem 1rem;font-size:0.85rem;">Upload Photo</button>
-        </div>
-      </div>
-
-      <div class="photos-grid" id="photosGrid"></div>
     </section>
 
     <!-- Floating Bulk Selection Bar -->
@@ -2496,9 +2616,20 @@
     </div>
 
     <div class="lightbox-img-wrap" id="lightboxImgWrap">
-      <!-- Single Centered Photograph View (No Card Stack, Full Viewport Fit) -->
-      <div class="single-image-stage" id="singleImageStage">
-        <img id="lightboxMainImg" class="lightbox-main-img" alt="Photo Full View" fetchpriority="high">
+      <!-- 3-Panel Sliding Track for Glitch-Free Native Swipe Transition -->
+      <div class="lightbox-slider-track" id="lightboxSliderTrack">
+        <div class="lightbox-slide" id="slidePrev">
+          <div class="slide-spinner" id="spinnerPrev"></div>
+          <img id="imgPrev" class="lightbox-slide-img" alt="Previous Photo" draggable="false">
+        </div>
+        <div class="lightbox-slide" id="slideCurr">
+          <div class="slide-spinner" id="spinnerCurr"></div>
+          <img id="imgCurr" class="lightbox-slide-img" alt="Current Photo" draggable="false" fetchpriority="high">
+        </div>
+        <div class="lightbox-slide" id="slideNext">
+          <div class="slide-spinner" id="spinnerNext"></div>
+          <img id="imgNext" class="lightbox-slide-img" alt="Next Photo" draggable="false">
+        </div>
       </div>
 
       <!-- Floating Zoom Controls (appears when image view is clicked or zoom button is tapped) -->
@@ -3111,17 +3242,20 @@
       }
     }
 
-    // Scroll listener fallback for high-speed scrolling
-    window.addEventListener('scroll', () => {
-      const scrollBottom = window.innerHeight + window.scrollY;
-      if (scrollBottom >= document.documentElement.scrollHeight - 1400) {
-        if (gridQueueCursor < gridRenderQueue.length) {
-          renderNextGridBatch();
-        } else if (currentSearchHasMore && !isLoadingNextPage) {
-          fetchNextSearchPage();
+    // Scroll listener on full-screen gallery container
+    const galleryScroll = $('galleryScrollBody');
+    if (galleryScroll) {
+      galleryScroll.addEventListener('scroll', () => {
+        const scrollBottom = galleryScroll.clientHeight + galleryScroll.scrollTop;
+        if (scrollBottom >= galleryScroll.scrollHeight - 1200) {
+          if (gridQueueCursor < gridRenderQueue.length) {
+            renderNextGridBatch();
+          } else if (currentSearchHasMore && !isLoadingNextPage) {
+            fetchNextSearchPage();
+          }
         }
-      }
-    }, { passive: true });
+      }, { passive: true });
+    }
 
     function renderPhotos(photosList) {
       const seenFnames = new Set();
@@ -3209,8 +3343,7 @@
           sentinel.id = 'gridScrollSentinel';
           sentinel.style.height = '40px';
           sentinel.style.width = '100%';
-          sentinel.style.columnSpan = 'all';
-          sentinel.style.webkitColumnSpan = 'all';
+          sentinel.style.gridColumn = '1 / -1';
           sentinel.style.display = 'block';
         }
         grid.appendChild(sentinel);
@@ -3224,8 +3357,8 @@
             }
           }
         }, {
-          root: null,
-          rootMargin: '1200px 0px',
+          root: $('galleryScrollBody') || null,
+          rootMargin: '1000px 0px',
           threshold: 0
         });
         gridScrollObserver.observe(sentinel);
@@ -3235,13 +3368,66 @@
       updateProgressText();
     }
 
-    // Lightbox State & Zoom Variables
-    let mainLightboxImg = null;
+    // --- Full-Screen Gallery Overlay Management ---
+    function openGalleryOverlay() {
+      const overlay = $('photosSection');
+      if (!overlay) return;
+      overlay.hidden = false;
+      document.body.style.overflow = 'hidden';
+
+      const viewAction = $('searchViewPhotosAction');
+      if (viewAction) viewAction.hidden = false;
+
+      try {
+        history.pushState({ brkGalleryOpen: true }, '');
+      } catch (e) {}
+    }
+
+    function closeGalleryOverlay(isFromPopState = false) {
+      const overlay = $('photosSection');
+      if (!overlay || overlay.hidden) return;
+
+      overlay.hidden = true;
+      document.body.style.overflow = '';
+
+      if (!isFromPopState && window.history.state && window.history.state.brkGalleryOpen) {
+        try {
+          window.history.back();
+        } catch (e) {}
+      }
+    }
+
+    $('galleryDismissBtn')?.addEventListener('click', () => closeGalleryOverlay(false));
+    $('searchViewPhotosBtn')?.addEventListener('click', () => openGalleryOverlay());
+    $('closePhotosBtn')?.addEventListener('click', () => {
+      closeGalleryOverlay(false);
+      clearSelection();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // --- 3-Panel Sliding Lightbox (Native Smooth Carousel) ---
+    let sliderTrack = null;
+    let imgPrev = null;
+    let imgCurr = null;
+    let imgNext = null;
+    let spinnerPrev = null;
+    let spinnerCurr = null;
+    let spinnerNext = null;
     let isTransitioning = false;
     let zoomScale = 1;
     let panX = 0;
     let panY = 0;
     let isPanning = false;
+
+    function initLightboxSlider() {
+      sliderTrack = $('lightboxSliderTrack');
+      imgPrev = $('imgPrev');
+      imgCurr = $('imgCurr');
+      imgNext = $('imgNext');
+      spinnerPrev = $('spinnerPrev');
+      spinnerCurr = $('spinnerCurr');
+      spinnerNext = $('spinnerNext');
+    }
 
     // Web Audio API Swipe Sound & Mute Preference
     let audioCtx = null;
@@ -3317,8 +3503,8 @@
     }
 
     function updateImgTransform() {
-      if (!mainLightboxImg) mainLightboxImg = $('lightboxMainImg');
-      if (!mainLightboxImg) return;
+      initLightboxSlider();
+      if (!imgCurr) return;
       const zoomText = $('zoomLevelText');
       if (zoomText) zoomText.textContent = `${Math.round(zoomScale * 100)}%`;
 
@@ -3327,16 +3513,16 @@
         panX = 0;
         panY = 0;
         isPanning = false;
-        mainLightboxImg.style.transform = 'none';
-        mainLightboxImg.style.cursor = 'grab';
+        imgCurr.style.transform = 'none';
+        imgCurr.style.cursor = 'grab';
       } else {
         const maxPanX = (window.innerWidth * (zoomScale - 1)) / 1.8;
         const maxPanY = (window.innerHeight * (zoomScale - 1)) / 1.8;
         panX = Math.max(Math.min(panX, maxPanX), -maxPanX);
         panY = Math.max(Math.min(panY, maxPanY), -maxPanY);
 
-        mainLightboxImg.style.transform = `scale(${zoomScale}) translate3d(${panX / zoomScale}px, ${panY / zoomScale}px, 0)`;
-        mainLightboxImg.style.cursor = isPanning ? 'grabbing' : 'grab';
+        imgCurr.style.transform = `scale(${zoomScale}) translate3d(${panX / zoomScale}px, ${panY / zoomScale}px, 0)`;
+        imgCurr.style.cursor = isPanning ? 'grabbing' : 'grab';
       }
     }
 
@@ -3345,10 +3531,10 @@
       panX = 0;
       panY = 0;
       isPanning = false;
-      if (!mainLightboxImg) mainLightboxImg = $('lightboxMainImg');
-      if (mainLightboxImg) {
-        mainLightboxImg.style.transform = 'none';
-        mainLightboxImg.style.cursor = 'grab';
+      initLightboxSlider();
+      if (imgCurr) {
+        imgCurr.style.transform = 'none';
+        imgCurr.style.cursor = 'grab';
       }
       const zoomText = $('zoomLevelText');
       if (zoomText) zoomText.textContent = '100%';
@@ -3440,7 +3626,7 @@
       thumb.addEventListener('click', (e) => {
         e.stopPropagation();
         if (i !== currentPhotoIndex) {
-          showPhotoAtIndex(i, { autoCenterFilmstrip: true, direction: 0 });
+          jumpToPhoto(i);
         }
       });
 
@@ -3473,78 +3659,146 @@
       }
     }
 
-    function showPhotoAtIndex(targetIdx, { autoCenterFilmstrip = true, direction = 0 } = {}) {
-      if (targetIdx < 0 || targetIdx >= currentPhotosList.length) return;
-      if (!mainLightboxImg) mainLightboxImg = $('lightboxMainImg');
-      if (!mainLightboxImg) return;
+    function setSlideImage(imgEl, spinnerEl, src) {
+      if (!imgEl) return;
+      if (!src) {
+        imgEl.src = '';
+        if (spinnerEl) spinnerEl.classList.remove('visible');
+        return;
+      }
+      if (imgEl.src && imgEl.src.endsWith(src)) {
+        if (spinnerEl) spinnerEl.classList.remove('visible');
+        return;
+      }
+      if (spinnerEl) spinnerEl.classList.add('visible');
+      imgEl.onload = () => {
+        if (spinnerEl) spinnerEl.classList.remove('visible');
+      };
+      imgEl.onerror = () => {
+        if (spinnerEl) spinnerEl.classList.remove('visible');
+      };
+      imgEl.src = src;
+    }
 
+    function updateSlideSlots(targetIdx) {
+      initLightboxSlider();
+      const total = currentPhotosList.length;
+      if (total === 0) return;
+
+      const currEnc = getPhotoEnc(currentPhotosList[targetIdx]);
+      setSlideImage(imgCurr, spinnerCurr, `/preview/${currEnc}`);
+
+      if (total > 1) {
+        const prevIdx = (targetIdx - 1 + total) % total;
+        const nextIdx = (targetIdx + 1) % total;
+        const prevEnc = getPhotoEnc(currentPhotosList[prevIdx]);
+        const nextEnc = getPhotoEnc(currentPhotosList[nextIdx]);
+
+        setSlideImage(imgPrev, spinnerPrev, `/preview/${prevEnc}`);
+        setSlideImage(imgNext, spinnerNext, `/preview/${nextEnc}`);
+
+        // Preload adjacent ±2 photos in background
+        const prev2Idx = (targetIdx - 2 + total) % total;
+        const next2Idx = (targetIdx + 2) % total;
+        new Image().src = `/preview/${getPhotoEnc(currentPhotosList[prev2Idx])}`;
+        new Image().src = `/preview/${getPhotoEnc(currentPhotosList[next2Idx])}`;
+      } else {
+        setSlideImage(imgPrev, spinnerPrev, '');
+        setSlideImage(imgNext, spinnerNext, '');
+      }
+    }
+
+    function jumpToPhoto(targetIdx) {
+      if (targetIdx < 0 || targetIdx >= currentPhotosList.length) return;
+      initLightboxSlider();
       currentPhotoIndex = targetIdx;
       resetZoom();
+
+      if (sliderTrack) {
+        sliderTrack.style.transition = 'none';
+        sliderTrack.style.transform = 'translate3d(-100%, 0, 0)';
+      }
+
       updateLightboxHeader(targetIdx);
-      updateFilmstripActive(targetIdx, autoCenterFilmstrip);
+      updateFilmstripActive(targetIdx, true);
       checkAndFetchMorePhotos(targetIdx);
 
-      const enc = getPhotoEnc(currentPhotosList[targetIdx]);
-      const nextSrc = `/preview/${enc}`;
-
-      if (direction !== 0) {
-        // Natural single image gallery slide
-        isTransitioning = true;
-        const outX = direction > 0 ? -window.innerWidth * 0.7 : window.innerWidth * 0.7;
-        const inX = direction > 0 ? window.innerWidth * 0.7 : -window.innerWidth * 0.7;
-
-        mainLightboxImg.style.transition = 'transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.18s ease';
-        mainLightboxImg.style.transform = `translate3d(${outX}px, 0, 0)`;
-        mainLightboxImg.style.opacity = '0.35';
-
-        setTimeout(() => {
-          if (!mainLightboxImg) return;
-          mainLightboxImg.src = nextSrc;
-          mainLightboxImg.style.transition = 'none';
-          mainLightboxImg.style.transform = `translate3d(${inX}px, 0, 0)`;
-
-          requestAnimationFrame(() => {
-            if (!mainLightboxImg) return;
-            mainLightboxImg.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease';
-            mainLightboxImg.style.transform = 'translate3d(0, 0, 0)';
-            mainLightboxImg.style.opacity = '1';
-            setTimeout(() => {
-              isTransitioning = false;
-            }, 220);
-          });
-        }, 180);
-      } else {
-        mainLightboxImg.style.transition = 'opacity 0.15s ease';
-        mainLightboxImg.style.opacity = '0.35';
-        mainLightboxImg.src = nextSrc;
-        setTimeout(() => {
-          if (mainLightboxImg) mainLightboxImg.style.opacity = '1';
-        }, 60);
+      if (imgCurr) {
+        imgCurr.style.transition = 'opacity 0.15s ease';
+        imgCurr.style.opacity = '0.4';
       }
+      updateSlideSlots(targetIdx);
+      setTimeout(() => {
+        if (imgCurr) imgCurr.style.opacity = '1';
+      }, 60);
 
       try {
         history.replaceState({ brkLightboxOpen: true, photoIndex: targetIdx }, '');
       } catch (e) {}
-
-      // Preload adjacent images
-      const prevIdx = (targetIdx - 1 + currentPhotosList.length) % currentPhotosList.length;
-      const nextIdx = (targetIdx + 1) % currentPhotosList.length;
-      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
-      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
     }
 
     function goToNextPhoto() {
       if (isTransitioning || currentPhotosList.length <= 1) return;
-      const nextIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
+      initLightboxSlider();
+      isTransitioning = true;
+      resetZoom();
+
+      if (sliderTrack) {
+        sliderTrack.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+        sliderTrack.style.transform = 'translate3d(-200%, 0, 0)';
+      }
       playSwipeSound();
-      showPhotoAtIndex(nextIdx, { autoCenterFilmstrip: true, direction: 1 });
+
+      setTimeout(() => {
+        finishSlideTransition(1);
+      }, 250);
     }
 
     function goToPrevPhoto() {
       if (isTransitioning || currentPhotosList.length <= 1) return;
-      const prevIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
+      initLightboxSlider();
+      isTransitioning = true;
+      resetZoom();
+
+      if (sliderTrack) {
+        sliderTrack.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+        sliderTrack.style.transform = 'translate3d(0%, 0, 0)';
+      }
       playSwipeSound();
-      showPhotoAtIndex(prevIdx, { autoCenterFilmstrip: true, direction: -1 });
+
+      setTimeout(() => {
+        finishSlideTransition(-1);
+      }, 250);
+    }
+
+    function finishSlideTransition(direction) {
+      initLightboxSlider();
+      const total = currentPhotosList.length;
+      if (direction === 1) {
+        currentPhotoIndex = (currentPhotoIndex + 1) % total;
+      } else if (direction === -1) {
+        currentPhotoIndex = (currentPhotoIndex - 1 + total) % total;
+      }
+
+      updateLightboxHeader(currentPhotoIndex);
+      updateFilmstripActive(currentPhotoIndex, true);
+      checkAndFetchMorePhotos(currentPhotoIndex);
+
+      updateSlideSlots(currentPhotoIndex);
+
+      // Instantly snap track back to center without transition
+      if (sliderTrack) {
+        sliderTrack.style.transition = 'none';
+        sliderTrack.style.transform = 'translate3d(-100%, 0, 0)';
+      }
+
+      try {
+        history.replaceState({ brkLightboxOpen: true, photoIndex: currentPhotoIndex }, '');
+      } catch (e) {}
+
+      isTransitioning = false;
+      currentDragX = 0;
+      currentDragY = 0;
     }
 
     function openPhotoLightbox(index) {
@@ -3554,19 +3808,18 @@
       currentPhotoIndex = index;
       resetZoom();
 
-      if (!mainLightboxImg) mainLightboxImg = $('lightboxMainImg');
+      initLightboxSlider();
+      if (sliderTrack) {
+        sliderTrack.style.transition = 'none';
+        sliderTrack.style.transform = 'translate3d(-100%, 0, 0)';
+      }
+
       updateLightboxHeader(index);
       buildFilmstrip();
       updateFilmstripActive(index, true);
       checkAndFetchMorePhotos(index);
 
-      const enc = getPhotoEnc(currentPhotosList[index]);
-      if (mainLightboxImg) {
-        mainLightboxImg.style.transition = 'none';
-        mainLightboxImg.style.transform = 'translate3d(0, 0, 0)';
-        mainLightboxImg.style.opacity = '1';
-        mainLightboxImg.src = `/preview/${enc}`;
-      }
+      updateSlideSlots(index);
 
       const modal = $('photoLightboxModal');
       if (modal.hidden) {
@@ -3583,11 +3836,6 @@
           history.replaceState({ brkLightboxOpen: true, photoIndex: index }, '');
         } catch (e) {}
       }
-
-      const prevIdx = (index - 1 + currentPhotosList.length) % currentPhotosList.length;
-      const nextIdx = (index + 1) % currentPhotosList.length;
-      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
-      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
     }
 
     function closeLightbox(isFromPopState = false) {
@@ -3597,7 +3845,10 @@
       modal.classList.remove('active');
       setTimeout(() => {
         modal.hidden = true;
-        if (mainLightboxImg) mainLightboxImg.src = '';
+        initLightboxSlider();
+        if (imgCurr) imgCurr.src = '';
+        if (imgPrev) imgPrev.src = '';
+        if (imgNext) imgNext.src = '';
         resetZoom();
         toggleZoomBar(false);
       }, 260);
@@ -3619,9 +3870,15 @@
     }
 
     window.addEventListener('popstate', () => {
-      const modal = $('photoLightboxModal');
-      if (modal && !modal.hidden && modal.classList.contains('active')) {
+      const lightbox = $('photoLightboxModal');
+      if (lightbox && !lightbox.hidden && lightbox.classList.contains('active')) {
         closeLightbox(true);
+        return;
+      }
+      const gallery = $('photosSection');
+      if (gallery && !gallery.hidden) {
+        closeGalleryOverlay(true);
+        return;
       }
     });
 
@@ -3676,14 +3933,14 @@
           if (closestThumb) {
             const newIdx = parseInt(closestThumb.dataset.index, 10);
             if (!isNaN(newIdx) && newIdx !== currentPhotoIndex && newIdx >= 0 && newIdx < currentPhotosList.length) {
-              showPhotoAtIndex(newIdx, { autoCenterFilmstrip: false, direction: 0 });
+              jumpToPhoto(newIdx);
             }
           }
         }, 75);
       }, { passive: true });
     }
 
-    // Touch & Swipe Controller on Lightbox Wrap
+    // Touch & Swipe Controller on Lightbox Wrap (Native 3-Panel Physics)
     const lightboxWrap = $('lightboxImgWrap');
     let touchStartX = 0;
     let touchStartY = 0;
@@ -3701,6 +3958,7 @@
     lightboxWrap.addEventListener('touchstart', e => {
       if (isTransitioning) return;
       if (e.target.closest('button, a, .lightbox-zoom-bar')) return;
+      initLightboxSlider();
 
       if (e.touches.length === 2) {
         isPinching = true;
@@ -3729,8 +3987,8 @@
         } else {
           isPanning = false;
           isTouchSwiping = true;
-          if (mainLightboxImg) {
-            mainLightboxImg.style.transition = 'none';
+          if (sliderTrack) {
+            sliderTrack.style.transition = 'none';
           }
         }
       }
@@ -3765,9 +4023,9 @@
         } else if (isTouchSwiping && zoomScale <= 1.05) {
           if (Math.abs(diffX) > Math.abs(diffY)) {
             e.preventDefault();
-            if (mainLightboxImg) {
+            if (sliderTrack) {
               const resistance = (currentPhotosList.length <= 1) ? 0.25 : 1;
-              mainLightboxImg.style.transform = `translate3d(${diffX * resistance}px, 0, 0)`;
+              sliderTrack.style.transform = `translate3d(calc(-100% + ${diffX * resistance}px), 0, 0)`;
             }
           }
         }
@@ -3811,19 +4069,19 @@
         if (isTouchSwiping && zoomScale <= 1.05) {
           isTouchSwiping = false;
           const diffX = currentDragX;
-          const isQuickSwipe = elapsed < 280 && Math.abs(diffX) > 35;
+          const isQuickSwipe = elapsed < 260 && Math.abs(diffX) > 35;
           const isThresholdPassed = Math.abs(diffX) > 60;
 
-          if ((isThresholdPassed || isQuickSwipe) && !isTransitioning) {
+          if ((isThresholdPassed || isQuickSwipe) && currentPhotosList.length > 1 && !isTransitioning) {
             if (diffX < 0) {
               goToNextPhoto();
             } else {
               goToPrevPhoto();
             }
           } else {
-            if (mainLightboxImg) {
-              mainLightboxImg.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
-              mainLightboxImg.style.transform = 'translate3d(0, 0, 0)';
+            if (sliderTrack) {
+              sliderTrack.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
+              sliderTrack.style.transform = 'translate3d(-100%, 0, 0)';
             }
           }
         }
@@ -3841,6 +4099,7 @@
     lightboxWrap.addEventListener('mousedown', e => {
       if (isTransitioning) return;
       if (e.target.closest('button, a, .lightbox-zoom-bar')) return;
+      initLightboxSlider();
 
       mouseIsDown = true;
       mouseStartTime = Date.now();
@@ -3856,7 +4115,7 @@
         startPanY = e.clientY - panY;
       } else {
         isPanning = false;
-        if (mainLightboxImg) mainLightboxImg.style.transition = 'none';
+        if (sliderTrack) sliderTrack.style.transition = 'none';
       }
     });
 
@@ -3872,8 +4131,9 @@
         panY = e.clientY - startPanY;
         updateImgTransform();
       } else if (zoomScale <= 1.05) {
-        if (mainLightboxImg) {
-          mainLightboxImg.style.transform = `translate3d(${diffX}px, 0, 0)`;
+        if (sliderTrack) {
+          const resistance = (currentPhotosList.length <= 1) ? 0.25 : 1;
+          sliderTrack.style.transform = `translate3d(calc(-100% + ${diffX * resistance}px), 0, 0)`;
         }
       }
     });
@@ -3886,7 +4146,7 @@
       const dist = Math.hypot(mouseDragX, mouseDragY);
 
       if (dist < 8 && elapsed < 350) {
-        if (e.target.closest('#singleImageStage, .lightbox-main-img')) {
+        if (e.target.closest('.lightbox-slide, .lightbox-slide-img')) {
           toggleZoomBar();
         }
         isPanning = false;
@@ -3901,19 +4161,19 @@
 
       if (zoomScale <= 1.05 && !isTransitioning) {
         const diffX = mouseDragX;
-        const isQuickSwipe = elapsed < 280 && Math.abs(diffX) > 35;
+        const isQuickSwipe = elapsed < 260 && Math.abs(diffX) > 35;
         const isThresholdPassed = Math.abs(diffX) > 60;
 
-        if (isThresholdPassed || isQuickSwipe) {
+        if ((isThresholdPassed || isQuickSwipe) && currentPhotosList.length > 1) {
           if (diffX < 0) {
             goToNextPhoto();
           } else {
             goToPrevPhoto();
           }
         } else {
-          if (mainLightboxImg) {
-            mainLightboxImg.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
-            mainLightboxImg.style.transform = 'translate3d(0, 0, 0)';
+          if (sliderTrack) {
+            sliderTrack.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
+            sliderTrack.style.transform = 'translate3d(-100%, 0, 0)';
           }
         }
       }
@@ -3956,10 +4216,6 @@
       });
     }
 
-    $('closePhotosBtn').addEventListener('click', () => {
-      $('photosSection').hidden = true;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
 
     // In-Browser Selfie Camera Controller (Mobile & Desktop)
     let mediaStream = null;
@@ -4305,8 +4561,7 @@
           $('photosSectionTitle').textContent = 'Photos with Bhashyam Ramakrishna Sir';
           $('photosSectionSubtitle').textContent = actualCount === 1 ? '1 photograph found featuring your face' : `${actualCount} unique photographs found featuring your face`;
           renderPhotos(photos);
-          $('photosSection').hidden = false;
-          $('photosSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          openGalleryOverlay();
         }
       } catch (err) {
         console.error('Error rendering saved photos from storage:', err);
@@ -4443,8 +4698,7 @@
           $('photosSectionTitle').textContent = 'Photos with Bhashyam Ramakrishna Sir';
           $('photosSectionSubtitle').textContent = totalMatches === 1 ? '1 photograph found featuring your face' : `${totalMatches} unique photographs found featuring your face`;
           renderPhotos(j.photos);
-          $('photosSection').hidden = false;
-          $('photosSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          openGalleryOverlay();
         } else {
           if (statusEl) {
             statusEl.innerHTML = `<span style="color:#d97706;font-weight:600;">No matching photos found with your face. See tips below:</span>`;
@@ -4454,8 +4708,7 @@
           $('photosGrid').replaceChildren();
           if ($('discoveryToolbar')) $('discoveryToolbar').hidden = true;
           if ($('emptyResultsCard')) $('emptyResultsCard').hidden = false;
-          $('photosSection').hidden = false;
-          $('emptyResultsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          openGalleryOverlay();
         }
       } catch (err) {
         if (statusEl) {
