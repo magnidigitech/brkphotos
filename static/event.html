@@ -1254,6 +1254,13 @@
       flex-shrink: 0;
     }
 
+    .lightbox-meta-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+
     .lightbox-badge {
       background: rgba(255, 255, 255, 0.2);
       padding: clamp(0.25rem, 0.8vh, 0.35rem) clamp(0.45rem, 1.5vw, 0.75rem);
@@ -1277,6 +1284,32 @@
     }
 
     @media (max-width: 640px) {
+      .lightbox-topbar {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.5rem 0.15rem;
+      }
+      .lightbox-actions-group {
+        order: 1;
+        width: 100%;
+        justify-content: center;
+        gap: clamp(4px, 1.5vw, 8px);
+      }
+      .lightbox-meta-group {
+        order: 2;
+        width: 100%;
+        justify-content: center;
+      }
+      .lightbox-badge {
+        font-size: 0.8rem;
+        padding: 0.22rem 0.75rem;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
       .lightbox-title {
         display: none;
       }
@@ -1357,10 +1390,35 @@
       transform: scale(1.06);
     }
 
-    @media (max-width: 400px) {
+    @media (max-width: 480px) {
       .btn-lightbox-action {
-        padding: 0.34rem 0.42rem;
-        font-size: 0.7rem;
+        padding: 0.32rem 0.44rem;
+        font-size: 0.72rem;
+        gap: 4px;
+      }
+      .btn-lightbox-action svg {
+        width: 12px;
+        height: 12px;
+      }
+      .lightbox-icon-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 1.15rem;
+      }
+      .lightbox-actions-group {
+        gap: 4px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .btn-lightbox-action {
+        padding: 0.28rem 0.36rem;
+        font-size: 0.68rem;
+        gap: 3px;
+      }
+      .lightbox-icon-btn {
+        width: 30px;
+        height: 30px;
       }
       .lightbox-actions-group {
         gap: 3px;
@@ -1892,7 +1950,7 @@
   <!-- High-Resolution Lightbox Modal with Tinder-Style Card Stack, Audio & Smooth Apple Physics -->
   <div id="photoLightboxModal" class="lightbox-backdrop" hidden>
     <div class="lightbox-topbar">
-      <div style="display:flex;align-items:center;gap:0.75rem;min-width:0;">
+      <div class="lightbox-meta-group">
         <span id="lightboxCounter" class="lightbox-badge">1 / 1</span>
         <span id="lightboxFilename" class="lightbox-title">Photo</span>
       </div>
@@ -1991,10 +2049,6 @@
         <button id="zoomResetBtn" class="zoom-bar-btn zoom-bar-reset" title="Fit to Screen" aria-label="Fit to Screen">Fit</button>
         <button id="closeZoomBarBtn" class="zoom-bar-btn" title="Close Zoom Controls" aria-label="Close Zoom Controls" style="font-size:1.1rem;line-height:1;">&times;</button>
       </div>
-          stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-      </button>
     </div>
   </div>
 
