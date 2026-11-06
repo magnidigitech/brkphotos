@@ -1413,27 +1413,34 @@
       opacity: 1;
     }
 
-    /* Filter & Sort Section (Clean Light Neutral Design) */
+    /* Filter & Calendar Section (Clean Light Neutral Design) */
     .discovery-toolbar,
     .gallery-filter-panel {
       display: flex;
       flex-direction: column;
       gap: 0.65rem;
-      margin-top: 0.8rem;
-      padding-top: 0.8rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
       border-top: 1px solid #f1f5f9;
       background: transparent;
       width: 100%;
       box-sizing: border-box;
     }
 
-    .album-chips-container,
-    .gallery-chips-wrap {
+    .calendar-controls-bar {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.45rem;
       align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
       width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .calendar-main-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
     }
 
     .filter-chip {
@@ -1478,18 +1485,283 @@
       font-weight: 600 !important;
     }
 
-    .discovery-meta-controls,
+    .calendar-toggle-btn,
+    .other-albums-toggle-btn {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 9999px;
+      padding: 0.35rem 0.82rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      user-select: none;
+      -webkit-user-select: none;
+      white-space: nowrap;
+    }
+
+    .calendar-toggle-btn:hover,
+    .other-albums-toggle-btn:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+
+    .calendar-toggle-btn.has-filter {
+      background: #ecfdf5;
+      border-color: #059669;
+      color: #065f46;
+    }
+
+    .calendar-selected-pill {
+      font-size: 0.72rem;
+      background: #059669;
+      color: #ffffff;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+
+    .other-albums-count {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* Monthly Calendar Card */
+    .monthly-calendar-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 0.75rem 0.85rem;
+      width: 100%;
+      max-width: 320px;
+      margin: 0.35rem auto 0;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    }
+
+    .monthly-calendar-card.collapsed {
+      display: none;
+    }
+
+    .calendar-header-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.65rem;
+    }
+
+    .calendar-nav-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .calendar-nav-btn:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #0f172a;
+      transform: scale(1.05);
+    }
+
+    .calendar-month-year-title {
+      font-size: 0.94rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.01em;
+    }
+
+    .calendar-weekdays-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 0.35rem;
+    }
+
+    .calendar-days-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+
+    .calendar-day-cell {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #1e293b;
+      position: relative;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      background: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      padding: 0;
+    }
+
+    .calendar-day-cell.empty {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .calendar-day-cell.muted {
+      color: #cbd5e1;
+      pointer-events: none;
+      opacity: 0.45;
+    }
+
+    .calendar-day-cell.has-photos {
+      cursor: pointer;
+      font-weight: 700;
+      color: #0f172a;
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+
+    .calendar-day-cell.has-photos:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      transform: scale(1.06);
+    }
+
+    .calendar-day-cell.selected {
+      background: #ecfdf5 !important;
+      border-color: #059669 !important;
+      color: #065f46 !important;
+      font-weight: 800 !important;
+      box-shadow: 0 1px 4px rgba(5, 150, 105, 0.2);
+    }
+
+    .calendar-day-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #059669;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .calendar-day-cell.selected .calendar-day-dot {
+      background: #047857;
+    }
+
+    .calendar-footer-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 0.55rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed #f1f5f9;
+    }
+
+    .calendar-legend-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #059669;
+      display: inline-block;
+    }
+
+    /* Other Albums Drawer */
+    .other-albums-drawer {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 0.65rem 0.85rem;
+      width: 100%;
+      box-sizing: border-box;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+      margin-top: 0.35rem;
+    }
+
+    .other-albums-header {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 0.45rem;
+    }
+
+    .other-albums-chips-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    /* Active Filter Banner above Gallery Grid */
+    .active-date-filter-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      background: #ecfdf5;
+      border: 1px solid rgba(5, 150, 105, 0.3);
+      border-radius: 10px;
+      padding: 0.55rem 0.9rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.84rem;
+      color: #065f46;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .active-filter-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-clear-date-filter {
+      background: #ffffff;
+      border: 1px solid #059669;
+      color: #065f46;
+      border-radius: 9999px;
+      padding: 0.28rem 0.75rem;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-clear-date-filter:hover {
+      background: #059669;
+      color: #ffffff;
+    }
+
     .gallery-sort-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 0.75rem;
-      width: 100%;
-      margin: 0;
-      padding: 0;
+      margin-left: auto;
     }
 
-    .btn-sort-toggle,
     .gallery-sort-btn {
       background: #ffffff;
       border: 1px solid #e2e8f0;
@@ -1506,14 +1778,12 @@
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
     }
 
-    .btn-sort-toggle:hover,
     .gallery-sort-btn:hover {
       background: #f8fafc;
       border-color: #cbd5e1;
       color: #0f172a;
     }
 
-    .photos-progress-badge,
     .gallery-progress-text {
       font-size: 0.78rem;
       font-weight: 500;
@@ -2547,21 +2817,97 @@
           </div>
         </div>
 
-        <!-- Filter & Sort Panel (Clean Light Neutral Design) -->
+        <!-- Filter & Calendar Panel (Compact Monthly Calendar Interface) -->
         <div id="discoveryToolbar" class="gallery-filter-panel" hidden>
-          <div id="albumChipsContainer" class="gallery-chips-wrap"></div>
-          <div class="gallery-sort-row">
-            <button id="sortOrderBtn" class="gallery-sort-btn" title="Toggle Sort Order">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              <span id="sortOrderText">Newest First</span>
-            </button>
-            <span id="photosProgressText" class="gallery-progress-text"></span>
+          <!-- Compact Controls Bar: All Photos, Calendar Toggle, Other Albums, Sort -->
+          <div class="calendar-controls-bar">
+            <div class="calendar-main-actions">
+              <button type="button" class="filter-chip active" id="allPhotosChip">
+                <span>All Photos</span> <span id="allPhotosChipCount">(0)</span>
+              </button>
+              <button type="button" class="calendar-toggle-btn" id="calendarToggleBtn" title="Filter by Calendar Date">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span id="calendarToggleText">Calendar</span>
+                <span id="calendarSelectedIndicator" class="calendar-selected-pill" hidden></span>
+              </button>
+              <button type="button" class="other-albums-toggle-btn" id="otherAlbumsToggleBtn" title="View Non-Date Albums" hidden>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Other Albums</span>
+                <span id="otherAlbumsCountBadge" class="other-albums-count">(0)</span>
+              </button>
+            </div>
+
+            <div class="gallery-sort-row">
+              <button id="sortOrderBtn" class="gallery-sort-btn" title="Toggle Sort Order">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span id="sortOrderText">Newest First</span>
+              </button>
+              <span id="photosProgressText" class="gallery-progress-text"></span>
+            </div>
+          </div>
+
+          <!-- Compact Interactive Monthly Calendar Card -->
+          <div id="monthlyCalendarCard" class="monthly-calendar-card">
+            <div class="calendar-header-nav">
+              <button type="button" class="calendar-nav-btn" id="calPrevMonthBtn" title="Previous Month" aria-label="Previous Month">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
+              <div class="calendar-month-year-title" id="calMonthYearTitle">November 2026</div>
+              <button type="button" class="calendar-nav-btn" id="calNextMonthBtn" title="Next Month" aria-label="Next Month">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Weekdays Row (Sun - Sat) -->
+            <div class="calendar-weekdays-row">
+              <span>Sun</span>
+              <span>Mon</span>
+              <span>Tue</span>
+              <span>Wed</span>
+              <span>Thu</span>
+              <span>Fri</span>
+              <span>Sat</span>
+            </div>
+
+            <!-- Days Grid (aligned correctly for active month) -->
+            <div class="calendar-days-grid" id="calendarDaysGrid"></div>
+
+            <!-- Calendar Footer Hint -->
+            <div class="calendar-footer-hint">
+              <span class="calendar-legend-dot"></span>
+              <span>Dates with matching photos</span>
+            </div>
+          </div>
+
+          <!-- Other Albums Collapsible Section -->
+          <div id="otherAlbumsSection" class="other-albums-drawer" hidden>
+            <div class="other-albums-header">Other Albums & Events</div>
+            <div id="otherAlbumsChipsContainer" class="other-albums-chips-wrap"></div>
           </div>
         </div>
       </div>
 
       <!-- Scrollable Gallery Content Body -->
       <div class="gallery-scroll-body" id="galleryScrollBody">
+        <!-- Active Filter Indicator Banner (shows selected date & photo count + Clear option) -->
+        <div id="activeDateFilterBanner" class="active-date-filter-banner" hidden>
+          <div class="active-filter-info">
+            <span class="active-filter-icon">📅</span>
+            <span id="activeFilterLabel">Filtered: <strong>01 Nov 2026</strong> (1 photo)</span>
+          </div>
+          <button type="button" id="clearDateFilterBtn" class="btn-clear-date-filter">Show All Photos &times;</button>
+        </div>
         <!-- Helpful Empty State Card (Appears if 0 matches found) -->
         <div id="emptyResultsCard" class="empty-state-card" hidden>
           <div class="empty-state-icon">
@@ -2816,8 +3162,17 @@
     // Gallery Discovery, Album Filters & Sorting State
     let rawPhotosList = [];
     let totalMatchingPhotosCount = 0;
-    let activeAlbumFilter = 'all';
     let sortOrder = 'newest'; // 'newest' | 'oldest'
+
+    // Compact Monthly Calendar & Filter State
+    let calendarViewYear = 2026;
+    let calendarViewMonth = 10; // 0-indexed (10 = November)
+    let selectedCalendarDate = null; // 'YYYY-MM-DD'
+    let selectedOtherAlbum = null; // rawAlbum string e.g. 'PART 01'
+    const datePhotoCounts = new Map(); // 'YYYY-MM-DD' -> count
+    const otherAlbumCounts = new Map(); // rawAlbum -> count
+    let newestCalendarDate = null; // 'YYYY-MM-DD'
+    let hasUserNavigatedMonth = false;
 
     // Selection Mode State
     let isSelectionMode = false;
@@ -2965,6 +3320,10 @@
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
+    const FULL_MONTH_NAMES = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
 
     function parsePhotoDate(item) {
       let album = '';
@@ -2985,23 +3344,58 @@
         }
       }
 
-      // 1. Try parsing DD-MM-YY or DD-MM-YYYY from album name (e.g. "01-11-26" or "21-10-2026")
+      // 1. Strict parsing of DD-MM-YY or DD-MM-YYYY from album name (e.g. "01-11-26" or "21-10-2026")
       const dmy = album.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
       if (dmy) {
         const d = parseInt(dmy[1], 10);
         const m = parseInt(dmy[2], 10);
         let y = parseInt(dmy[3], 10);
         if (y < 100) y += 2000;
-        const dateObj = new Date(y, m - 1, d);
-        if (!isNaN(dateObj.getTime())) {
-          const dayPad = String(d).padStart(2, '0');
-          const monthPad = String(m).padStart(2, '0');
-          return {
-            key: `${y}-${monthPad}-${dayPad}`,
-            sortTime: dateObj.getTime(),
-            title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
-            rawAlbum: album
-          };
+        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+          const dateObj = new Date(y, m - 1, d);
+          if (!isNaN(dateObj.getTime()) && dateObj.getDate() === d) {
+            const dayPad = String(d).padStart(2, '0');
+            const monthPad = String(m).padStart(2, '0');
+            const dateKey = `${y}-${monthPad}-${dayPad}`;
+            return {
+              isDate: true,
+              key: dateKey,
+              dateKey,
+              year: y,
+              month: m - 1,
+              day: d,
+              sortTime: dateObj.getTime(),
+              title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
+              rawAlbum: album
+            };
+          }
+        }
+      }
+
+      // Strict parsing of YYYY-MM-DD from album name
+      const ymdAlb = album.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+      if (ymdAlb) {
+        const y = parseInt(ymdAlb[1], 10);
+        const m = parseInt(ymdAlb[2], 10);
+        const d = parseInt(ymdAlb[3], 10);
+        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+          const dateObj = new Date(y, m - 1, d);
+          if (!isNaN(dateObj.getTime()) && dateObj.getDate() === d) {
+            const dayPad = String(d).padStart(2, '0');
+            const monthPad = String(m).padStart(2, '0');
+            const dateKey = `${y}-${monthPad}-${dayPad}`;
+            return {
+              isDate: true,
+              key: dateKey,
+              dateKey,
+              year: y,
+              month: m - 1,
+              day: d,
+              sortTime: dateObj.getTime(),
+              title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
+              rawAlbum: album
+            };
+          }
         }
       }
 
@@ -3012,103 +3406,245 @@
           const y = parseInt(ymd[1], 10);
           const m = parseInt(ymd[2], 10);
           const d = parseInt(ymd[3], 10);
-          const dateObj = new Date(y, m - 1, d);
-          if (!isNaN(dateObj.getTime())) {
-            const dayPad = String(d).padStart(2, '0');
-            const monthPad = String(m).padStart(2, '0');
-            return {
-              key: `${y}-${monthPad}-${dayPad}`,
-              sortTime: dateObj.getTime(),
-              title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
-              rawAlbum: album || `${y}-${monthPad}-${dayPad}`
-            };
+          if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+            const dateObj = new Date(y, m - 1, d);
+            if (!isNaN(dateObj.getTime()) && dateObj.getDate() === d) {
+              const dayPad = String(d).padStart(2, '0');
+              const monthPad = String(m).padStart(2, '0');
+              const dateKey = `${y}-${monthPad}-${dayPad}`;
+              return {
+                isDate: true,
+                key: dateKey,
+                dateKey,
+                year: y,
+                month: m - 1,
+                day: d,
+                sortTime: dateObj.getTime(),
+                title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
+                rawAlbum: album || dateKey
+              };
+            }
           }
         }
       }
 
-      // 3. Fallback to album name or event name
+      // 3. Fallback to Other Albums & Events (non-date album titles like "PART 01", "18-10-2026 ceremony")
       const fallback = album || event || 'Celebration Photos';
       return {
+        isDate: false,
         key: fallback,
+        dateKey: null,
+        year: null,
+        month: null,
+        day: null,
         sortTime: 0,
         title: fallback,
         rawAlbum: fallback
       };
     }
 
-    function updateFilterChips() {
-      const container = $('albumChipsContainer');
+    function updateCalendarAndFilters() {
       const toolbar = $('discoveryToolbar');
-      if (!container || !toolbar) return;
+      if (!toolbar) return;
 
       if (!rawPhotosList || rawPhotosList.length === 0) {
         toolbar.hidden = true;
         return;
       }
-
       toolbar.hidden = false;
-      container.replaceChildren();
 
-      const albumMap = new Map();
+      datePhotoCounts.clear();
+      otherAlbumCounts.clear();
+
+      let latestDateKey = null;
+      let latestSortTime = -1;
+
       for (const item of rawPhotosList) {
         const parsed = parsePhotoDate(item);
-        const filterKey = parsed.rawAlbum;
-        if (!albumMap.has(filterKey)) {
-          albumMap.set(filterKey, {
-            filterKey,
-            displayTitle: parsed.title,
-            sortTime: parsed.sortTime,
-            count: 0
-          });
+        if (parsed.isDate && parsed.dateKey) {
+          const count = (datePhotoCounts.get(parsed.dateKey) || 0) + 1;
+          datePhotoCounts.set(parsed.dateKey, count);
+          if (parsed.sortTime > latestSortTime) {
+            latestSortTime = parsed.sortTime;
+            latestDateKey = parsed.dateKey;
+          }
+        } else {
+          const count = (otherAlbumCounts.get(parsed.rawAlbum) || 0) + 1;
+          otherAlbumCounts.set(parsed.rawAlbum, count);
         }
-        albumMap.get(filterKey).count++;
       }
 
-      const albums = Array.from(albumMap.values());
-      // Sort albums chronologically (newest date first)
-      albums.sort((a, b) => {
-        if (a.sortTime && b.sortTime) return b.sortTime - a.sortTime;
-        if (a.sortTime) return -1;
-        if (b.sortTime) return 1;
-        return a.filterKey.localeCompare(b.filterKey);
-      });
+      newestCalendarDate = latestDateKey;
 
-      // All Photos Chip
-      const allChip = document.createElement('button');
-      allChip.type = 'button';
-      allChip.className = 'filter-chip' + (activeAlbumFilter === 'all' ? ' active' : '');
+      // Automatically set viewing month to newest photograph's month unless user has manually navigated months
+      if (!hasUserNavigatedMonth && newestCalendarDate) {
+        const parts = newestCalendarDate.split('-');
+        calendarViewYear = parseInt(parts[0], 10);
+        calendarViewMonth = parseInt(parts[1], 10) - 1;
+      }
+
+      // Update "All Photos" Chip
       const allCount = (totalMatchingPhotosCount > 0) ? totalMatchingPhotosCount : rawPhotosList.length;
-      allChip.innerHTML = `<span>All Photos</span> <span>(${allCount})</span>`;
-      allChip.addEventListener('click', () => {
-        if (activeAlbumFilter === 'all') return;
-        activeAlbumFilter = 'all';
-        applyPhotoFiltersAndSort();
-      });
-      container.appendChild(allChip);
+      const allChip = $('allPhotosChip');
+      const allChipCount = $('allPhotosChipCount');
+      if (allChipCount) allChipCount.textContent = `(${allCount})`;
+      if (allChip) allChip.classList.toggle('active', !selectedCalendarDate && !selectedOtherAlbum);
 
-      // Date / Album Filter Chips
-      albums.forEach(alb => {
+      // Update Other Albums Button Visibility & Count
+      const otherBtn = $('otherAlbumsToggleBtn');
+      const otherBadge = $('otherAlbumsCountBadge');
+      const otherSection = $('otherAlbumsSection');
+      if (otherBtn && otherBadge) {
+        if (otherAlbumCounts.size > 0) {
+          otherBtn.hidden = false;
+          otherBadge.textContent = `(${otherAlbumCounts.size})`;
+        } else {
+          otherBtn.hidden = true;
+          if (otherSection) otherSection.hidden = true;
+        }
+      }
+
+      renderCalendarGrid();
+      renderOtherAlbums();
+      updateActiveFilterBanner();
+      updateProgressText();
+    }
+
+    function renderCalendarGrid() {
+      const titleEl = $('calMonthYearTitle');
+      const gridEl = $('calendarDaysGrid');
+      if (!titleEl || !gridEl) return;
+
+      titleEl.textContent = `${FULL_MONTH_NAMES[calendarViewMonth]} ${calendarViewYear}`;
+      gridEl.replaceChildren();
+
+      // Weekday offset for 1st day of month: 0 = Sun, 1 = Mon, ..., 6 = Sat
+      const firstDayOfWeek = new Date(calendarViewYear, calendarViewMonth, 1).getDay();
+      const daysInMonth = new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate();
+
+      // Leading empty placeholders
+      for (let i = 0; i < firstDayOfWeek; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'calendar-day-cell empty';
+        gridEl.appendChild(emptyCell);
+      }
+
+      const monthPad = String(calendarViewMonth + 1).padStart(2, '0');
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayPad = String(day).padStart(2, '0');
+        const dateKey = `${calendarViewYear}-${monthPad}-${dayPad}`;
+        const count = datePhotoCounts.get(dateKey) || 0;
+        const hasPhotos = count > 0;
+        const isSelected = selectedCalendarDate === dateKey;
+
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'calendar-day-cell' + (hasPhotos ? ' has-photos' : ' muted') + (isSelected ? ' selected' : '');
+        cell.innerHTML = `<span>${day}</span>${hasPhotos ? '<span class="calendar-day-dot"></span>' : ''}`;
+
+        if (hasPhotos) {
+          cell.title = `${dayPad} ${MONTH_NAMES[calendarViewMonth]} ${calendarViewYear} (${count} ${count === 1 ? 'photo' : 'photos'})`;
+          cell.addEventListener('click', () => {
+            selectCalendarDate(dateKey);
+          });
+        }
+
+        gridEl.appendChild(cell);
+      }
+    }
+
+    function selectCalendarDate(dateKey) {
+      if (selectedCalendarDate === dateKey) {
+        selectedCalendarDate = null;
+      } else {
+        selectedCalendarDate = dateKey;
+        selectedOtherAlbum = null;
+      }
+      applyPhotoFiltersAndSort();
+      updateCalendarAndFilters();
+    }
+
+    function selectOtherAlbum(albumName) {
+      if (selectedOtherAlbum === albumName) {
+        selectedOtherAlbum = null;
+      } else {
+        selectedOtherAlbum = albumName;
+        selectedCalendarDate = null;
+      }
+      applyPhotoFiltersAndSort();
+      updateCalendarAndFilters();
+    }
+
+    function renderOtherAlbums() {
+      const container = $('otherAlbumsChipsContainer');
+      if (!container) return;
+      container.replaceChildren();
+
+      const sortedAlbums = Array.from(otherAlbumCounts.entries()).sort((a, b) => {
+        return b[1] - a[1] || a[0].localeCompare(b[0]);
+      });
+
+      for (const [alb, count] of sortedAlbums) {
         const chip = document.createElement('button');
         chip.type = 'button';
-        chip.className = 'filter-chip' + (activeAlbumFilter === alb.filterKey ? ' active' : '');
-        chip.innerHTML = `<span>${alb.filterKey}</span> <span>(${alb.count})</span>`;
+        chip.className = 'filter-chip' + (selectedOtherAlbum === alb ? ' active' : '');
+        chip.innerHTML = `<span>${alb}</span> <span>(${count})</span>`;
         chip.addEventListener('click', () => {
-          if (activeAlbumFilter === alb.filterKey) return;
-          activeAlbumFilter = alb.filterKey;
-          applyPhotoFiltersAndSort();
+          selectOtherAlbum(alb);
         });
         container.appendChild(chip);
-      });
+      }
+    }
 
-      updateProgressText();
+    function updateActiveFilterBanner() {
+      const banner = $('activeDateFilterBanner');
+      const label = $('activeFilterLabel');
+      const calIndicator = $('calendarSelectedIndicator');
+      const calToggleBtn = $('calendarToggleBtn');
+      if (!banner || !label) return;
+
+      if (selectedCalendarDate) {
+        banner.hidden = false;
+        const parts = selectedCalendarDate.split('-');
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        const count = datePhotoCounts.get(selectedCalendarDate) || 0;
+        const formatted = `${String(d).padStart(2, '0')} ${MONTH_NAMES[m]} ${y}`;
+        label.innerHTML = `Filtered: <strong>${formatted}</strong> (${count} ${count === 1 ? 'photo' : 'photos'})`;
+
+        if (calIndicator) {
+          calIndicator.textContent = `${d} ${MONTH_NAMES[m]}`;
+          calIndicator.hidden = false;
+        }
+        if (calToggleBtn) calToggleBtn.classList.add('has-filter');
+      } else if (selectedOtherAlbum) {
+        banner.hidden = false;
+        const count = otherAlbumCounts.get(selectedOtherAlbum) || 0;
+        label.innerHTML = `Filtered: <strong>${selectedOtherAlbum}</strong> (${count} ${count === 1 ? 'photo' : 'photos'})`;
+
+        if (calIndicator) calIndicator.hidden = true;
+        if (calToggleBtn) calToggleBtn.classList.remove('has-filter');
+      } else {
+        banner.hidden = true;
+        if (calIndicator) calIndicator.hidden = true;
+        if (calToggleBtn) calToggleBtn.classList.remove('has-filter');
+      }
     }
 
     function applyPhotoFiltersAndSort() {
       let filtered = [...rawPhotosList];
-      if (activeAlbumFilter !== 'all') {
+
+      if (selectedCalendarDate) {
         filtered = filtered.filter(item => {
           const parsed = parsePhotoDate(item);
-          return parsed.rawAlbum === activeAlbumFilter;
+          return parsed.isDate && parsed.dateKey === selectedCalendarDate;
+        });
+      } else if (selectedOtherAlbum) {
+        filtered = filtered.filter(item => {
+          const parsed = parsePhotoDate(item);
+          return !parsed.isDate && parsed.rawAlbum === selectedOtherAlbum;
         });
       }
 
@@ -3131,7 +3667,6 @@
       });
 
       renderPhotosGridData(filtered);
-      updateFilterChips();
     }
 
     function toggleSortOrder() {
@@ -3318,7 +3853,7 @@
 
       totalMatchingPhotosCount = Math.max(totalMatchingPhotosCount, rawPhotosList.length);
       renderNextGridBatch();
-      updateFilterChips();
+      updateCalendarAndFilters();
       if (!$('photoLightboxModal').hidden) {
         buildFilmstrip();
         updateLightboxHeader(currentPhotoIndex);
@@ -3433,7 +3968,9 @@
       }
 
       rawPhotosList = uniquePhotos;
-      activeAlbumFilter = 'all';
+      selectedCalendarDate = null;
+      selectedOtherAlbum = null;
+      hasUserNavigatedMonth = false;
       selectedPhotos.clear();
       updateBulkBar();
 
@@ -3442,6 +3979,7 @@
       }
 
       applyPhotoFiltersAndSort();
+      updateCalendarAndFilters();
     }
 
     function renderPhotosGridData(list) {
@@ -4926,8 +5464,46 @@
     $('bulkDownloadZipBtn')?.addEventListener('click', downloadSelectedZip);
     $('bulkCancelBtn')?.addEventListener('click', clearSelection);
 
-    // Discovery & Sort Listeners
+    // Discovery, Calendar & Date Filter Listeners
     $('sortOrderBtn')?.addEventListener('click', toggleSortOrder);
+    $('allPhotosChip')?.addEventListener('click', () => {
+      selectedCalendarDate = null;
+      selectedOtherAlbum = null;
+      applyPhotoFiltersAndSort();
+      updateCalendarAndFilters();
+    });
+    $('calendarToggleBtn')?.addEventListener('click', () => {
+      const cal = $('monthlyCalendarCard');
+      if (cal) cal.classList.toggle('collapsed');
+    });
+    $('otherAlbumsToggleBtn')?.addEventListener('click', () => {
+      const drawer = $('otherAlbumsSection');
+      if (drawer) drawer.hidden = !drawer.hidden;
+    });
+    $('calPrevMonthBtn')?.addEventListener('click', () => {
+      hasUserNavigatedMonth = true;
+      calendarViewMonth--;
+      if (calendarViewMonth < 0) {
+        calendarViewMonth = 11;
+        calendarViewYear--;
+      }
+      renderCalendarGrid();
+    });
+    $('calNextMonthBtn')?.addEventListener('click', () => {
+      hasUserNavigatedMonth = true;
+      calendarViewMonth++;
+      if (calendarViewMonth > 11) {
+        calendarViewMonth = 0;
+        calendarViewYear++;
+      }
+      renderCalendarGrid();
+    });
+    $('clearDateFilterBtn')?.addEventListener('click', () => {
+      selectedCalendarDate = null;
+      selectedOtherAlbum = null;
+      applyPhotoFiltersAndSort();
+      updateCalendarAndFilters();
+    });
 
     // Lightbox Desktop Double-Click Zoom & Native Share
     lightboxWrap?.addEventListener('dblclick', e => {
