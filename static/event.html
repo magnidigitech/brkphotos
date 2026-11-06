@@ -1031,21 +1031,42 @@
       width: 100%;
       min-height: 220px;
       aspect-ratio: 4 / 3;
-      background: linear-gradient(90deg, #edf2ef 0%, #f7faf8 50%, #edf2ef 100%);
-      background-size: 200% 100%;
-      animation: photoShimmer 1.5s infinite ease-in-out;
+      background: #fef08a;
       overflow: hidden;
       display: block;
     }
 
+    .photo-img-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(
+        90deg,
+        rgba(254, 240, 138, 0) 0%,
+        rgba(255, 255, 255, 0.82) 50%,
+        rgba(254, 240, 138, 0) 100%
+      );
+      animation: photoShimmer 2.2s infinite ease-in-out;
+      pointer-events: none;
+    }
+
     @keyframes photoShimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
     }
 
     @media (prefers-color-scheme: dark) {
       .photo-img-wrap {
-        background: linear-gradient(90deg, #182821 0%, #22372d 50%, #182821 100%);
+        background: #453713;
+      }
+      .photo-img-wrap::after {
+        background: linear-gradient(
+          90deg,
+          rgba(69, 55, 19, 0) 0%,
+          rgba(254, 240, 138, 0.35) 50%,
+          rgba(69, 55, 19, 0) 100%
+        );
       }
     }
 
@@ -1071,6 +1092,11 @@
       background: transparent;
       min-height: unset;
       aspect-ratio: unset;
+    }
+
+    .photo-img-wrap.loaded::after {
+      display: none;
+      animation: none;
     }
 
     .photo-img:hover {
@@ -1382,7 +1408,7 @@
 
     .card-behind {
       z-index: 1;
-      transform: scale(0.92) translate3d(0, 16px, 0);
+      transform: scale(0.92);
       filter: brightness(0.85);
       pointer-events: none;
       opacity: 1 !important;
@@ -2450,7 +2476,7 @@
       behindCard.className = 'stack-card card-behind';
       behindCard.style.zIndex = '1';
       behindCard.style.transition = 'none';
-      behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+      behindCard.style.transform = 'scale(0.92)';
       behindCard.style.opacity = '1';
       behindCard.style.filter = 'brightness(0.85)';
 
@@ -2496,7 +2522,7 @@
       activeCard.className = 'stack-card card-behind';
       activeCard.style.zIndex = '1';
       activeCard.style.transition = 'none';
-      activeCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+      activeCard.style.transform = 'scale(0.92)';
       activeCard.style.filter = 'brightness(0.85)';
       activeCard.style.opacity = '1';
 
@@ -2529,35 +2555,35 @@
       isTransitioning = true;
 
       if (direction > 0) {
-        // NEXT (Swipe Left): Active card slides left, reveal next from bottom of stack
+        // NEXT (Swipe Left): Incoming photo appears from ABOVE existing card, stacking over current card from right
         const targetIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
         behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[targetIdx])}`;
 
-        behindCard.className = 'stack-card card-behind';
-        behindCard.style.zIndex = '1';
+        behindCard.className = 'stack-card';
+        behindCard.style.zIndex = '3'; // Layer incoming card ABOVE current card
         behindCard.style.transition = 'none';
-        behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
-        behindCard.style.filter = 'brightness(0.85)';
+        behindCard.style.transform = 'translate3d(110vw, 0, 0) scale(1) rotate(6deg)';
+        behindCard.style.filter = 'brightness(1)';
         behindCard.style.opacity = '1';
 
-        activeCard.className = 'stack-card card-current';
+        activeCard.className = 'stack-card';
         activeCard.style.zIndex = '2';
         activeCard.style.opacity = '1';
 
         requestAnimationFrame(() => {
-          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
-          activeCard.style.transform = 'translate3d(-120vw, 0, 0) rotate(-10deg)';
+          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+          behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
 
-          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-          behindCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
-          behindCard.style.filter = 'brightness(1)';
+          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
+          activeCard.style.transform = 'scale(0.92)';
+          activeCard.style.filter = 'brightness(0.85)';
         });
 
         playSwipeSound();
         setTimeout(() => { finishTransition(targetIdx, 1); }, 280);
 
       } else {
-        // PREVIOUS (Swipe Right): Incoming photo appears from ABOVE existing card, stacking over current card
+        // PREVIOUS (Swipe Right): Incoming photo appears from ABOVE existing card, stacking over current card from left
         const targetIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
         behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[targetIdx])}`;
 
@@ -2577,7 +2603,7 @@
           behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
 
           activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-          activeCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+          activeCard.style.transform = 'scale(0.92)';
           activeCard.style.filter = 'brightness(0.85)';
         });
 
@@ -2719,23 +2745,26 @@
           currentDragY = diffY;
 
           if (diffX < -5) {
-            // Dragging Left: reveal next photo from bottom of card stack
+            // Dragging Left: incoming next photo appears from ABOVE existing card, stacking over current card from right
             if (dragDirection !== -1) {
               dragDirection = -1;
               const nextIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
               behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
-              behindCard.className = 'stack-card card-behind';
-              behindCard.style.zIndex = '1';
+              behindCard.className = 'stack-card';
+              behindCard.style.zIndex = '3'; // Layer incoming card ABOVE current card
               behindCard.style.opacity = '1';
-              activeCard.className = 'stack-card card-current';
+              behindCard.style.filter = 'brightness(1)';
+              activeCard.className = 'stack-card';
               activeCard.style.zIndex = '2';
               activeCard.style.opacity = '1';
             }
-            const rot = Math.max(Math.min(diffX * 0.04, 12), -12);
-            activeCard.style.transform = `translate3d(${diffX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg)`;
-            const progress = Math.min(Math.abs(diffX) / 180, 1);
-            behindCard.style.transform = `scale(${0.92 + 0.08 * progress}) translate3d(0, ${16 * (1 - progress)}px, 0)`;
-            behindCard.style.filter = `brightness(${0.85 + 0.15 * progress})`;
+            const incomingX = window.innerWidth + diffX;
+            const rot = Math.max(Math.min((diffX + 100) * 0.02, 6), -6);
+            behindCard.style.transform = `translate3d(${incomingX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg) scale(1)`;
+
+            const progress = Math.min(Math.abs(diffX) / 200, 1);
+            activeCard.style.transform = `scale(${1 - 0.08 * progress})`;
+            activeCard.style.filter = `brightness(${1 - 0.15 * progress})`;
 
           } else if (diffX > 5) {
             // Dragging Right: incoming photo appears from ABOVE existing card, stacking over current card
@@ -2756,7 +2785,7 @@
             behindCard.style.transform = `translate3d(${incomingX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg) scale(1)`;
 
             const progress = Math.min(diffX / 200, 1);
-            activeCard.style.transform = `scale(${1 - 0.08 * progress}) translate3d(0, ${16 * progress}px, 0)`;
+            activeCard.style.transform = `scale(${1 - 0.08 * progress})`;
             activeCard.style.filter = `brightness(${1 - 0.15 * progress})`;
           }
         }
@@ -2774,16 +2803,16 @@
           const diffX = currentDragX;
 
           if (diffX < -60 && !isTransitioning) {
-            // Swipe Left Confirmed: Throw active card out left, reveal next photo from bottom
+            // Swipe Left Confirmed: Slide incoming next photo in from ABOVE over current card
             isTransitioning = true;
             const targetIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
 
-            activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
-            activeCard.style.transform = `translate3d(-120vw, ${currentDragY * 0.3}px, 0) rotate(-12deg)`;
+            behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+            behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
 
-            behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-            behindCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
-            behindCard.style.filter = 'brightness(1)';
+            activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
+            activeCard.style.transform = 'scale(0.92)';
+            activeCard.style.filter = 'brightness(0.85)';
 
             playSwipeSound();
             setTimeout(() => { finishTransition(targetIdx, 1); }, 280);
@@ -2797,7 +2826,7 @@
             behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
 
             activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-            activeCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+            activeCard.style.transform = 'scale(0.92)';
             activeCard.style.filter = 'brightness(0.85)';
 
             playSwipeSound();
@@ -2813,14 +2842,25 @@
               activeCard.style.filter = 'brightness(1)';
               setTimeout(() => {
                 behindCard.style.zIndex = '1';
-                behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+                behindCard.style.transform = 'scale(0.92)';
+                behindCard.style.filter = 'brightness(0.85)';
+              }, 250);
+            } else if (dragDirection === -1) {
+              behindCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
+              behindCard.style.transform = 'translate3d(110vw, 0, 0) scale(1)';
+              activeCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease';
+              activeCard.style.transform = 'scale(1) translate3d(0, 0, 0)';
+              activeCard.style.filter = 'brightness(1)';
+              setTimeout(() => {
+                behindCard.style.zIndex = '1';
+                behindCard.style.transform = 'scale(0.92)';
                 behindCard.style.filter = 'brightness(0.85)';
               }, 250);
             } else {
               activeCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
               activeCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
               behindCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.26s ease';
-              behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+              behindCard.style.transform = 'scale(0.92)';
               behindCard.style.filter = 'brightness(0.85)';
             }
             dragDirection = 0;
@@ -2886,18 +2926,21 @@
             dragDirection = -1;
             const nextIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
             behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
-            behindCard.className = 'stack-card card-behind';
-            behindCard.style.zIndex = '1';
+            behindCard.className = 'stack-card';
+            behindCard.style.zIndex = '3';
             behindCard.style.opacity = '1';
-            activeCard.className = 'stack-card card-current';
+            behindCard.style.filter = 'brightness(1)';
+            activeCard.className = 'stack-card';
             activeCard.style.zIndex = '2';
             activeCard.style.opacity = '1';
           }
-          const rot = Math.max(Math.min(diffX * 0.04, 12), -12);
-          activeCard.style.transform = `translate3d(${diffX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg)`;
-          const progress = Math.min(Math.abs(diffX) / 180, 1);
-          behindCard.style.transform = `scale(${0.92 + 0.08 * progress}) translate3d(0, ${16 * (1 - progress)}px, 0)`;
-          behindCard.style.filter = `brightness(${0.85 + 0.15 * progress})`;
+          const incomingX = window.innerWidth + diffX;
+          const rot = Math.max(Math.min((diffX + 100) * 0.02, 6), -6);
+          behindCard.style.transform = `translate3d(${incomingX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg) scale(1)`;
+
+          const progress = Math.min(Math.abs(diffX) / 200, 1);
+          activeCard.style.transform = `scale(${1 - 0.08 * progress})`;
+          activeCard.style.filter = `brightness(${1 - 0.15 * progress})`;
 
         } else if (diffX > 5) {
           if (dragDirection !== 1) {
@@ -2917,7 +2960,7 @@
           behindCard.style.transform = `translate3d(${incomingX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg) scale(1)`;
 
           const progress = Math.min(diffX / 200, 1);
-          activeCard.style.transform = `scale(${1 - 0.08 * progress}) translate3d(0, ${16 * progress}px, 0)`;
+          activeCard.style.transform = `scale(${1 - 0.08 * progress})`;
           activeCard.style.filter = `brightness(${1 - 0.15 * progress})`;
         }
       }
@@ -2932,11 +2975,11 @@
           // Swipe Left Confirmed
           isTransitioning = true;
           const targetIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
-          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
-          activeCard.style.transform = `translate3d(-120vw, ${mouseDragY * 0.3}px, 0) rotate(-12deg)`;
-          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-          behindCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
-          behindCard.style.filter = 'brightness(1)';
+          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
+          behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
+          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
+          activeCard.style.transform = 'scale(0.92)';
+          activeCard.style.filter = 'brightness(0.85)';
           playSwipeSound();
           setTimeout(() => { finishTransition(targetIdx, 1); }, 280);
 
@@ -2947,7 +2990,7 @@
           behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
           behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
           activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-          activeCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+          activeCard.style.transform = 'scale(0.92)';
           activeCard.style.filter = 'brightness(0.85)';
           playSwipeSound();
           setTimeout(() => { finishTransition(targetIdx, -1); }, 280);
@@ -2961,7 +3004,18 @@
             activeCard.style.filter = 'brightness(1)';
             setTimeout(() => {
               behindCard.style.zIndex = '1';
-              behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+              behindCard.style.transform = 'scale(0.92)';
+              behindCard.style.filter = 'brightness(0.85)';
+            }, 250);
+          } else if (dragDirection === -1) {
+            behindCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
+            behindCard.style.transform = 'translate3d(110vw, 0, 0) scale(1)';
+            activeCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease';
+            activeCard.style.transform = 'scale(1) translate3d(0, 0, 0)';
+            activeCard.style.filter = 'brightness(1)';
+            setTimeout(() => {
+              behindCard.style.zIndex = '1';
+              behindCard.style.transform = 'scale(0.92)';
               behindCard.style.filter = 'brightness(0.85)';
             }, 250);
           } else {
@@ -2971,7 +3025,7 @@
             }
             if (behindCard) {
               behindCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.26s ease';
-              behindCard.style.transform = 'scale(0.92) translate3d(0, 16px, 0)';
+              behindCard.style.transform = 'scale(0.92)';
               behindCard.style.filter = 'brightness(0.85)';
             }
           }
