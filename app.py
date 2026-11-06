@@ -1,4 +1,4 @@
-import os, sys, threading, subprocess, secrets, shutil, zipfile, io, re, time, base64
+import os, sys, threading, subprocess, secrets, shutil, zipfile, io, re, time, base64, tempfile
 from typing import Optional
 
 # Limit CPU threads to prevent memory and CPU spikes on VPS
@@ -14,7 +14,7 @@ from PIL import Image, ImageOps
 import cv2
 import numpy as np
 import requests
-from fastapi import FastAPI, File, HTTPException, UploadFile, Request, Depends, Form
+from fastapi import FastAPI, File, HTTPException, UploadFile, Request, Depends, Form, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from insightface.app import FaceAnalysis
@@ -1602,6 +1602,101 @@ def download_4k(name: str):
         return RedirectResponse(gdrive_url, status_code=302)
 
     raise HTTPException(404, "Original 4K photo not found")
+
+@app.post("/api/download/bulk-zip")
+@app.post("/api/{slug}/download/bulk-zip")
+async def download_bulk_zip(request: Request, background_tasks: BackgroundTasks, slug: str = "brk-sir"):
+    """
+    Creates and streams a downloadable ZIP file containing the selected photos.
+    Supports HD (1080p optimized) or Original full-resolution files.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    photo_items = body.get("photos", [])
+    if not photo_items or not isinstance(photo_items, list):
+        raise HTTPException(400, "No photos provided for ZIP download.")
+
+    quality = (body.get("quality") or "hd").lower()
+    # Cap to 500 photos per zip archive
+    selected = photo_items[:500]
+
+    tmp_fd, tmp_zip_path = tempfile.mkstemp(suffix=".zip", prefix="brk_bulk_")
+    os.close(tmp_fd)
+
+    def cleanup_file(path: str):
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception:
+            pass
+
+    background_tasks.add_task(cleanup_file, tmp_zip_path)
+
+    added_names = set()
+    reload_drive_map()
+
+    with zipfile.ZipFile(tmp_zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as zf:
+        for item in selected:
+            if isinstance(item, dict):
+                p_path = item.get("rel_path") or item.get("filename") or ""
+            else:
+                p_path = str(item)
+
+            if not p_path:
+                continue
+
+            fname = Path(p_path).name
+            clean_name = fname
+            count = 1
+            while clean_name.lower() in added_names:
+                stem = Path(fname).stem
+                ext = Path(fname).suffix or ".jpg"
+                clean_name = f"{stem}_{count}{ext}"
+                count += 1
+            added_names.add(clean_name.lower())
+
+            file_to_add = None
+            if quality == "hd":
+                cache_thumb = DATA / "thumbs" / (p_path.replace("/", "__") + ".jpg")
+                if cache_thumb.exists():
+                    file_to_add = cache_thumb
+                elif p_path.startswith("events/"):
+                    parts = p_path.split("/", 2)
+                    if len(parts) >= 3:
+                        ev_thumb = DATA / "events" / parts[1] / "thumbs" / (parts[2].replace("/", "__") + ".jpg")
+                        if ev_thumb.exists():
+                            file_to_add = ev_thumb
+
+            if not file_to_add or not file_to_add.exists():
+                target = PHOTOS / p_path
+                if not target.exists():
+                    matches = list(PHOTOS.glob(f"**/{fname}"))
+                    if matches:
+                        target = matches[0]
+                if target.exists():
+                    file_to_add = target
+
+            if file_to_add and file_to_add.exists():
+                try:
+                    zf.write(file_to_add, arcname=clean_name)
+                except Exception as e:
+                    print(f"Error adding {file_to_add} to zip: {e}")
+
+    zip_size = os.path.getsize(tmp_zip_path) if os.path.exists(tmp_zip_path) else 0
+    if zip_size <= 22 or len(added_names) == 0:
+        cleanup_file(tmp_zip_path)
+        raise HTTPException(404, "None of the selected photos could be found on the server.")
+
+    zip_filename = f"BRK_Photos_{len(added_names)}_Photos.zip"
+    return FileResponse(
+        tmp_zip_path,
+        media_type="application/zip",
+        filename=zip_filename,
+        headers={"Content-Disposition": f'attachment; filename="{zip_filename}"'}
+    )
 
 # --- Public Gallery Metadata APIs ---
 

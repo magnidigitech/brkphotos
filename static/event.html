@@ -1163,6 +1163,408 @@
       background: #fef3c7;
     }
 
+    /* Photo Card Selection Mode */
+    .photo-card.selection-active {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .photo-select-checkbox {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(15, 23, 42, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 8;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      pointer-events: none;
+    }
+
+    .photo-select-checkbox svg {
+      opacity: 0;
+      transform: scale(0.6);
+      transition: all 0.18s ease;
+      stroke: #ffffff;
+    }
+
+    .photo-card.selected {
+      outline: 3px solid #059669;
+      outline-offset: -1px;
+      transform: scale(0.98);
+      box-shadow: 0 8px 24px rgba(5, 150, 105, 0.25);
+    }
+
+    .photo-card.selected .photo-select-checkbox {
+      background: #059669;
+      border-color: #059669;
+      transform: scale(1.08);
+    }
+
+    .photo-card.selected .photo-select-checkbox svg {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Floating Bulk Selection Bar */
+    .bulk-selection-bar {
+      position: fixed;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(140%);
+      width: min(94vw, 560px);
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: #ffffff;
+      padding: 0.6rem 0.85rem;
+      border-radius: 99px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.15);
+      z-index: 1800;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
+    .bulk-selection-bar.active {
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+
+    .bulk-info-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    .bulk-badge {
+      background: #059669;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.78rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+
+    .bulk-actions-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-shrink: 0;
+    }
+
+    .btn-bulk {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      border-radius: 99px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-bulk:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-bulk.btn-bulk-download {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-color: #10b981;
+      font-weight: 700;
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+    }
+
+    .btn-bulk.btn-bulk-download:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .btn-bulk.btn-bulk-close {
+      background: transparent;
+      border: 0;
+      font-size: 1.15rem;
+      padding: 0.2rem 0.45rem;
+      opacity: 0.8;
+    }
+
+    .btn-bulk.btn-bulk-close:hover {
+      opacity: 1;
+    }
+
+    /* Discovery & Filter Toolbar */
+    .discovery-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      margin-bottom: 1.25rem;
+      padding: 0.65rem 0.85rem;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      flex-wrap: wrap;
+    }
+
+    .album-chips-container {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      overflow-x: auto;
+      max-width: 100%;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      padding: 2px 0;
+    }
+
+    .album-chips-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-chip {
+      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      padding: 0.32rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--ink);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .filter-chip:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .filter-chip.active {
+      background: var(--accent, #0f5c4d);
+      color: #ffffff;
+      border-color: var(--accent, #0f5c4d);
+      box-shadow: 0 2px 8px rgba(15, 92, 77, 0.25);
+    }
+
+    .discovery-meta-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .btn-sort-toggle {
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.32rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--ink);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.15s ease;
+    }
+
+    .btn-sort-toggle:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    .photos-progress-badge {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* New Photos Notification Banner for Returning Users */
+    .new-photos-banner {
+      background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%);
+      border: 1px solid #fde68a;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.08);
+      animation: bannerSlideDown 0.3s ease;
+    }
+
+    @keyframes bannerSlideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .new-photos-content {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      min-width: 0;
+    }
+
+    .new-photos-pill {
+      background: #d97706;
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      flex-shrink: 0;
+    }
+
+    .new-photos-text {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #92400e;
+    }
+
+    .btn-banner-action {
+      background: #d97706;
+      color: #ffffff;
+      border: 0;
+      border-radius: 8px;
+      padding: 0.36rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-banner-action:hover {
+      background: #b45309;
+    }
+
+    .btn-banner-close {
+      background: transparent;
+      border: 0;
+      color: #92400e;
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 0 0.25rem;
+      line-height: 1;
+      opacity: 0.7;
+    }
+
+    .btn-banner-close:hover {
+      opacity: 1;
+    }
+
+    /* Helpful Empty State Card */
+    .empty-state-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      max-width: 520px;
+      margin: 1.5rem auto;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+    }
+
+    .empty-state-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #fef3c7;
+      color: #d97706;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+    }
+
+    .empty-state-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 0 0 0.4rem;
+    }
+
+    .empty-state-desc {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin: 0 0 1.25rem;
+    }
+
+    .empty-state-tips {
+      background: rgba(0, 0, 0, 0.02);
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      text-align: left;
+      font-size: 0.82rem;
+      color: var(--ink);
+      margin-bottom: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .empty-state-actions {
+      display: flex;
+      justify-content: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    /* Toast Notification */
+    .gallery-toast {
+      position: fixed;
+      bottom: max(24px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(30px);
+      opacity: 0;
+      background: rgba(15, 23, 42, 0.95);
+      color: #ffffff;
+      padding: 0.55rem 1.1rem;
+      border-radius: 99px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      z-index: 2500;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+    }
+
+    .gallery-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
     /* Modals */
     .modal-backdrop {
       position: fixed;
@@ -1934,16 +2336,83 @@
 
     <!-- Dynamic Matched Photos Viewer Section (Shows ONLY matching photos) -->
     <section class="photos-section" id="photosSection" hidden>
+      <!-- New Photos Alert Banner for Returning Visitors -->
+      <div id="newPhotosAlertBanner" class="new-photos-banner" hidden>
+        <div class="new-photos-content">
+          <span class="new-photos-pill">NEW</span>
+          <span id="newPhotosAlertText" class="new-photos-text">New photos found featuring your face!</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <button id="viewNewPhotosBannerBtn" class="btn-banner-action">View Photos</button>
+          <button id="closeNewPhotosBannerBtn" class="btn-banner-close" aria-label="Dismiss">&times;</button>
+        </div>
+      </div>
+
       <div class="photos-head">
         <div>
           <h2 class="section-title" id="photosSectionTitle">Photos with BRK Sir</h2>
           <p id="photosSectionSubtitle"></p>
         </div>
-        <button class="btn-find-photos btn-outline" style="padding:0.4rem 1rem;font-size:0.85rem;"
-          id="closePhotosBtn">New Search ↑</button>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn-find-photos btn-outline" style="padding:0.4rem 0.85rem;font-size:0.85rem;display:inline-flex;align-items:center;gap:0.35rem;" id="toggleSelectBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 11 12 14 22 4"></polyline></svg>
+            <span id="toggleSelectText">Select Photos</span>
+          </button>
+          <button class="btn-find-photos btn-outline" style="padding:0.4rem 1rem;font-size:0.85rem;"
+            id="closePhotosBtn">New Search ↑</button>
+        </div>
       </div>
+
+      <!-- Discovery & Filter Toolbar -->
+      <div id="discoveryToolbar" class="discovery-toolbar" hidden>
+        <div id="albumChipsContainer" class="album-chips-container"></div>
+        <div class="discovery-meta-controls">
+          <button id="sortOrderBtn" class="btn-sort-toggle" title="Toggle Sort Order">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span id="sortOrderText">Newest First</span>
+          </button>
+          <span id="photosProgressText" class="photos-progress-badge"></span>
+        </div>
+      </div>
+
+      <!-- Helpful Empty State Card (Appears if 0 matches found) -->
+      <div id="emptyResultsCard" class="empty-state-card" hidden>
+        <div class="empty-state-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="15" x2="16" y2="15"></line><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+        </div>
+        <h3 class="empty-state-title">No Matching Photos Found Yet</h3>
+        <p class="empty-state-desc">We couldn't detect a clear match with BRK Sir in the currently indexed albums.</p>
+        <div class="empty-state-tips">
+          <div>💡 <strong>Lighting:</strong> Ensure your face is evenly lit without harsh shadows or backlighting.</div>
+          <div>📸 <strong>Angle:</strong> Look straight at the camera; avoid dark sunglasses or face coverings.</div>
+          <div>⏳ <strong>Recent Photos:</strong> If taken recently, additional folders may still be processing.</div>
+        </div>
+        <div class="empty-state-actions">
+          <button class="btn-find-photos" id="emptyRetryBtn" style="padding:0.45rem 1rem;font-size:0.85rem;">Take Another Selfie</button>
+          <button class="btn-find-photos btn-outline" id="emptyUploadBtn" style="padding:0.45rem 1rem;font-size:0.85rem;">Upload Photo</button>
+        </div>
+      </div>
+
       <div class="photos-grid" id="photosGrid"></div>
     </section>
+
+    <!-- Floating Bulk Selection Bar -->
+    <div id="bulkSelectionBar" class="bulk-selection-bar">
+      <div class="bulk-info-wrap">
+        <span id="bulkSelectedCount" class="bulk-badge">0 selected</span>
+        <button id="bulkSelectAllBtn" class="btn-bulk" title="Select All Photos">Select All</button>
+      </div>
+      <div class="bulk-actions-wrap">
+        <button id="bulkDownloadZipBtn" class="btn-bulk btn-bulk-download">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span id="bulkDownloadZipText">Download ZIP</span>
+        </button>
+        <button id="bulkCancelBtn" class="btn-bulk btn-bulk-close" title="Exit Selection">&times;</button>
+      </div>
+    </div>
+
+    <!-- Toast Notification Element -->
+    <div id="galleryToast" class="gallery-toast"></div>
 
   </main>
 
@@ -1994,6 +2463,16 @@
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
             <line x1="23" y1="9" x2="17" y2="15" />
             <line x1="17" y1="9" x2="23" y2="15" />
+          </svg>
+        </button>
+        <button id="lightboxShareBtn" class="lightbox-icon-btn" title="Share Photo" aria-label="Share Photo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
           </svg>
         </button>
         <button id="closeLightboxBtn" class="lightbox-icon-btn" title="Close Lightbox (Esc)"
@@ -2152,6 +2631,272 @@
     let isRenderingBatch = false;
     const GRID_BATCH_SIZE = 40;
 
+    // Gallery Discovery, Album Filters & Sorting State
+    let rawPhotosList = [];
+    let activeAlbumFilter = 'all';
+    let sortOrder = 'newest'; // 'newest' | 'oldest'
+
+    // Selection Mode State
+    let isSelectionMode = false;
+    const selectedPhotos = new Set();
+    let toastTimeout = null;
+
+    function showToast(msg) {
+      const toast = $('galleryToast');
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.classList.add('show');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3200);
+    }
+
+    function toggleSelectionMode(force) {
+      isSelectionMode = typeof force === 'boolean' ? force : !isSelectionMode;
+      const toggleBtn = $('toggleSelectBtn');
+      const toggleText = $('toggleSelectText');
+      const bar = $('bulkSelectionBar');
+
+      if (toggleText) {
+        toggleText.textContent = isSelectionMode ? 'Done' : 'Select Photos';
+      }
+      if (toggleBtn) {
+        if (isSelectionMode) {
+          toggleBtn.classList.remove('btn-outline');
+          toggleBtn.style.background = 'var(--accent, #0f5c4d)';
+          toggleBtn.style.color = '#ffffff';
+        } else {
+          toggleBtn.classList.add('btn-outline');
+          toggleBtn.style.background = '';
+          toggleBtn.style.color = '';
+        }
+      }
+
+      document.querySelectorAll('.photo-card').forEach(c => {
+        c.classList.toggle('selection-active', isSelectionMode);
+        const chk = c.querySelector('.photo-select-checkbox');
+        if (chk) chk.style.display = isSelectionMode ? 'flex' : 'none';
+      });
+
+      if (bar) {
+        bar.classList.toggle('active', isSelectionMode);
+      }
+      updateBulkBar();
+    }
+
+    function togglePhotoSelect(path, cardEl) {
+      if (selectedPhotos.has(path)) {
+        selectedPhotos.delete(path);
+        if (cardEl) cardEl.classList.remove('selected');
+      } else {
+        selectedPhotos.add(path);
+        if (cardEl) cardEl.classList.add('selected');
+      }
+      updateBulkBar();
+    }
+
+    function updateBulkBar() {
+      const countEl = $('bulkSelectedCount');
+      const zipBtn = $('bulkDownloadZipBtn');
+      const selectAllBtn = $('bulkSelectAllBtn');
+      const count = selectedPhotos.size;
+
+      if (countEl) {
+        countEl.textContent = `${count} selected`;
+      }
+      if (zipBtn) {
+        zipBtn.disabled = count === 0;
+        zipBtn.style.opacity = count === 0 ? '0.5' : '1';
+        zipBtn.style.pointerEvents = count === 0 ? 'none' : 'auto';
+      }
+      if (selectAllBtn) {
+        const allPaths = currentPhotosList.map(item => typeof item === 'string' ? item : item.rel_path);
+        const isAllSelected = allPaths.length > 0 && allPaths.every(p => selectedPhotos.has(p));
+        selectAllBtn.textContent = isAllSelected ? 'Deselect All' : 'Select All';
+      }
+    }
+
+    function selectAllPhotos() {
+      const allPaths = currentPhotosList.map(item => typeof item === 'string' ? item : item.rel_path);
+      const isAllSelected = allPaths.length > 0 && allPaths.every(p => selectedPhotos.has(p));
+
+      if (isAllSelected) {
+        allPaths.forEach(p => selectedPhotos.delete(p));
+        document.querySelectorAll('.photo-card').forEach(c => c.classList.remove('selected'));
+      } else {
+        allPaths.forEach(p => selectedPhotos.add(p));
+        document.querySelectorAll('.photo-card').forEach(c => c.classList.add('selected'));
+      }
+      updateBulkBar();
+    }
+
+    function clearSelection() {
+      selectedPhotos.clear();
+      document.querySelectorAll('.photo-card').forEach(c => c.classList.remove('selected'));
+      toggleSelectionMode(false);
+    }
+
+    async function downloadSelectedZip() {
+      if (selectedPhotos.size === 0) {
+        showToast('Please select at least 1 photo.');
+        return;
+      }
+
+      const zipText = $('bulkDownloadZipText');
+      const originalText = zipText ? zipText.textContent : 'Download ZIP';
+      if (zipText) zipText.textContent = 'Preparing ZIP...';
+
+      try {
+        const payload = {
+          photos: Array.from(selectedPhotos),
+          quality: 'hd'
+        };
+        const res = await fetch('/api/download/bulk-zip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || 'Could not create ZIP archive.');
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `BRK_Photos_${selectedPhotos.size}_Photos.zip`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          a.remove();
+        }, 1500);
+
+        showToast(`Downloaded ${selectedPhotos.size} photos as ZIP!`);
+      } catch (err) {
+        showToast(err.message || 'Error downloading ZIP archive.');
+      } finally {
+        if (zipText) zipText.textContent = originalText;
+      }
+    }
+
+    function updateFilterChips() {
+      const container = $('albumChipsContainer');
+      const toolbar = $('discoveryToolbar');
+      if (!container || !toolbar) return;
+
+      if (!rawPhotosList || rawPhotosList.length === 0) {
+        toolbar.hidden = true;
+        return;
+      }
+
+      toolbar.hidden = false;
+      container.replaceChildren();
+
+      const albumCounts = {};
+      for (const item of rawPhotosList) {
+        let alb = '';
+        if (typeof item === 'object') {
+          alb = item.album_name || item.event_name || '';
+        }
+        if (!alb && typeof item === 'string') {
+          const parts = item.split('/');
+          if (parts.length > 1) alb = parts[parts.length - 2];
+        }
+        if (!alb) alb = 'Celebration Photos';
+        albumCounts[alb] = (albumCounts[alb] || 0) + 1;
+      }
+
+      const albumNames = Object.keys(albumCounts);
+
+      // All Photos Chip
+      const allChip = document.createElement('button');
+      allChip.type = 'button';
+      allChip.className = 'filter-chip' + (activeAlbumFilter === 'all' ? ' active' : '');
+      allChip.innerHTML = `<span>All Photos</span> <span style="opacity:0.75;font-size:0.75rem;">(${rawPhotosList.length})</span>`;
+      allChip.addEventListener('click', () => {
+        if (activeAlbumFilter === 'all') return;
+        activeAlbumFilter = 'all';
+        applyPhotoFiltersAndSort();
+      });
+      container.appendChild(allChip);
+
+      if (albumNames.length > 1) {
+        albumNames.forEach(albName => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'filter-chip' + (activeAlbumFilter === albName ? ' active' : '');
+          chip.innerHTML = `<span>${albName}</span> <span style="opacity:0.75;font-size:0.75rem;">(${albumCounts[albName]})</span>`;
+          chip.addEventListener('click', () => {
+            if (activeAlbumFilter === albName) return;
+            activeAlbumFilter = albName;
+            applyPhotoFiltersAndSort();
+          });
+          container.appendChild(chip);
+        });
+      }
+
+      updateProgressText();
+    }
+
+    function applyPhotoFiltersAndSort() {
+      let filtered = [...rawPhotosList];
+      if (activeAlbumFilter !== 'all') {
+        filtered = filtered.filter(item => {
+          let alb = '';
+          if (typeof item === 'object') alb = item.album_name || item.event_name || '';
+          if (!alb && typeof item === 'string') {
+            const parts = item.split('/');
+            if (parts.length > 1) alb = parts[parts.length - 2];
+          }
+          if (!alb) alb = 'Celebration Photos';
+          return alb === activeAlbumFilter;
+        });
+      }
+
+      filtered.sort((a, b) => {
+        const featA = (typeof a === 'object' && a.is_featured) ? 1 : 0;
+        const featB = (typeof b === 'object' && b.is_featured) ? 1 : 0;
+        if (featA !== featB) return featB - featA;
+
+        const dateA = (typeof a === 'object' && (a.captured_at || a.created_at)) ? (a.captured_at || a.created_at) : '';
+        const dateB = (typeof b === 'object' && (b.captured_at || b.created_at)) ? (b.captured_at || b.created_at) : '';
+
+        if (dateA && dateB && dateA !== dateB) {
+          return sortOrder === 'newest' ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
+        }
+        if (dateB && !dateA) return sortOrder === 'newest' ? 1 : -1;
+        if (dateA && !dateB) return sortOrder === 'newest' ? -1 : 1;
+
+        const nameA = (typeof a === 'string' ? a.split('/').pop() : (a.filename || a.rel_path.split('/').pop())).toLowerCase();
+        const nameB = (typeof b === 'string' ? b.split('/').pop() : (b.filename || b.rel_path.split('/').pop())).toLowerCase();
+        const comp = nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+        return sortOrder === 'newest' ? comp : -comp;
+      });
+
+      renderPhotosGridData(filtered);
+      updateFilterChips();
+    }
+
+    function toggleSortOrder() {
+      sortOrder = sortOrder === 'newest' ? 'oldest' : 'newest';
+      const text = $('sortOrderText');
+      if (text) text.textContent = sortOrder === 'newest' ? 'Newest First' : 'Oldest First';
+      applyPhotoFiltersAndSort();
+    }
+
+    function updateProgressText() {
+      const el = $('photosProgressText');
+      if (!el) return;
+      const total = rawPhotosList.length;
+      const loaded = Math.min(gridQueueCursor, currentPhotosList.length);
+      el.textContent = `Showing ${loaded} of ${total} photos`;
+    }
+
     function createPhotoCard(item, idx) {
       const p = typeof item === 'string' ? item : item.rel_path;
       const enc = p.split('/').map(encodeURIComponent).join('/');
@@ -2159,7 +2904,15 @@
       const isFeat = typeof item === 'object' && item.is_featured;
 
       const card = document.createElement('div');
-      card.className = 'photo-card';
+      card.className = 'photo-card' + (isSelectionMode ? ' selection-active' : '') + (selectedPhotos.has(p) ? ' selected' : '');
+      card.dataset.photoPath = p;
+
+      // Checkbox indicator for selection mode
+      const chk = document.createElement('div');
+      chk.className = 'photo-select-checkbox';
+      chk.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      chk.style.display = isSelectionMode ? 'flex' : 'none';
+      card.appendChild(chk);
 
       if (isFeat) {
         const badge = document.createElement('span');
@@ -2206,7 +2959,28 @@
 
       wrap.appendChild(img);
       card.appendChild(wrap);
-      card.addEventListener('click', () => openPhotoLightbox(idx));
+
+      // Long press detection on mobile to trigger selection mode:
+      let pressTimer = null;
+      card.addEventListener('touchstart', (e) => {
+        pressTimer = setTimeout(() => {
+          if (!isSelectionMode) {
+            toggleSelectionMode(true);
+          }
+          togglePhotoSelect(p, card);
+        }, 550);
+      }, { passive: true });
+      card.addEventListener('touchend', () => { if (pressTimer) clearTimeout(pressTimer); });
+      card.addEventListener('touchmove', () => { if (pressTimer) clearTimeout(pressTimer); });
+
+      card.addEventListener('click', (e) => {
+        if (isSelectionMode) {
+          e.preventDefault();
+          togglePhotoSelect(p, card);
+        } else {
+          openPhotoLightbox(idx);
+        }
+      });
       return card;
     }
 
@@ -2258,7 +3032,7 @@
 
     function appendPhotosToGrid(newPhotos) {
       if (!newPhotos || newPhotos.length === 0) return;
-      const seenFnames = new Set(currentPhotosList.map(item => {
+      const seenFnames = new Set(rawPhotosList.map(item => {
         return (typeof item === 'string' ? item.split('/').pop() : (item.filename || item.rel_path.split('/').pop())).toLowerCase();
       }));
 
@@ -2268,6 +3042,7 @@
         if (!seenFnames.has(fn)) {
           seenFnames.add(fn);
           added.push(item);
+          rawPhotosList.push(item);
         }
       }
       if (added.length === 0) return;
@@ -2281,6 +3056,7 @@
       }
 
       renderNextGridBatch();
+      updateFilterChips();
     }
 
     function renderNextGridBatch() {
@@ -2313,6 +3089,7 @@
       }
 
       isRenderingBatch = false;
+      updateProgressText();
 
       // Check if we are approaching the end of current render queue and more pages exist on server
       if (gridQueueCursor >= gridRenderQueue.length - 16 && currentSearchHasMore && !isLoadingNextPage) {
@@ -2340,7 +3117,6 @@
     }, { passive: true });
 
     function renderPhotos(photosList) {
-      // 1. Deduplicate by unique filename so same photo in multiple folders is only shown once
       const seenFnames = new Set();
       const uniquePhotos = [];
       for (const item of (photosList || [])) {
@@ -2351,27 +3127,20 @@
         }
       }
 
-      // 2. Sort: Featured photos placed in the beginning, followed by remaining images in descending date order (newest first)
-      uniquePhotos.sort((a, b) => {
-        const featA = (typeof a === 'object' && a.is_featured) ? 1 : 0;
-        const featB = (typeof b === 'object' && b.is_featured) ? 1 : 0;
-        if (featA !== featB) return featB - featA; // Featured photos first
-        
-        // Descending date order (newest to oldest)
-        const dateA = (typeof a === 'object' && (a.captured_at || a.created_at)) ? (a.captured_at || a.created_at) : '';
-        const dateB = (typeof b === 'object' && (b.captured_at || b.created_at)) ? (b.captured_at || b.created_at) : '';
-        if (dateA && dateB && dateA !== dateB) {
-          return dateB.localeCompare(dateA); // Newer date first
-        }
-        if (dateB && !dateA) return 1;
-        if (dateA && !dateB) return -1;
+      rawPhotosList = uniquePhotos;
+      activeAlbumFilter = 'all';
+      selectedPhotos.clear();
+      updateBulkBar();
 
-        const nameA = (typeof a === 'string' ? a.split('/').pop() : (a.filename || a.rel_path.split('/').pop())).toLowerCase();
-        const nameB = (typeof b === 'string' ? b.split('/').pop() : (b.filename || b.rel_path.split('/').pop())).toLowerCase();
-        return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
-      });
+      if ($('emptyResultsCard')) {
+        $('emptyResultsCard').hidden = rawPhotosList.length > 0;
+      }
 
-      currentPhotosList = uniquePhotos;
+      applyPhotoFiltersAndSort();
+    }
+
+    function renderPhotosGridData(list) {
+      currentPhotosList = list;
       const grid = $('photosGrid');
       grid.replaceChildren();
 
@@ -2380,11 +3149,11 @@
       }
 
       if (currentPhotosList.length === 0) {
-        grid.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;">No photos found in this view.</div>';
+        grid.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;text-align:center;padding:2.5rem 1rem;">No photos match the selected filter.</div>';
+        updateProgressText();
         return;
       }
 
-      // Group photos by Event / Album if available
       const groups = {};
       for (let idx = 0; idx < currentPhotosList.length; idx++) {
         const item = currentPhotosList[idx];
@@ -2406,7 +3175,6 @@
       const groupKeys = Object.keys(groups);
       const showGroupHeaders = groupKeys.length > 1;
 
-      // Build flattened render queue
       gridRenderQueue = [];
       gridQueueCursor = 0;
 
@@ -2427,7 +3195,6 @@
         }
       }
 
-      // Append sentinel if queue has more than initial batch or server has more pages
       if (gridRenderQueue.length > GRID_BATCH_SIZE || currentSearchHasMore) {
         let sentinel = $('gridScrollSentinel');
         if (!sentinel) {
@@ -2457,8 +3224,8 @@
         gridScrollObserver.observe(sentinel);
       }
 
-      // Render initial batch immediately
       renderNextGridBatch();
+      updateProgressText();
     }
 
     // Zoom & Pan State for Lightbox (Only active photo image section zooms)
@@ -2874,10 +3641,27 @@
 
     // Lightbox Swipe & Dedicated Image Zoom Controller
     const lightboxWrap = $('lightboxImgWrap');
+    let lastLightboxTap = 0;
+    let isPinching = false;
+    let initialPinchDist = 0;
+    let initialPinchScale = 1;
 
     lightboxWrap.addEventListener('touchstart', e => {
       if (isTransitioning) return;
       if (e.target.closest('button, a, .lightbox-zoom-bar')) return;
+
+      if (e.touches.length === 2) {
+        // Pinch-to-zoom gesture
+        isPinching = true;
+        isCardDragging = false;
+        isPanning = false;
+        initialPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        initialPinchScale = zoomScale;
+        return;
+      }
 
       if (e.touches.length === 1) {
         touchStartTime = Date.now();
@@ -2903,6 +3687,19 @@
 
     lightboxWrap.addEventListener('touchmove', e => {
       if (isTransitioning) return;
+
+      if (isPinching && e.touches.length === 2) {
+        e.preventDefault();
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        if (initialPinchDist > 10) {
+          setZoom(initialPinchScale * (dist / initialPinchDist));
+        }
+        return;
+      }
+
       if (e.touches.length === 1) {
         const diffX = e.touches[0].clientX - touchStartX;
         const diffY = e.touches[0].clientY - touchStartY;
@@ -2966,15 +3763,31 @@
     }, { passive: false });
 
     lightboxWrap.addEventListener('touchend', e => {
+      if (isPinching && e.touches.length < 2) {
+        isPinching = false;
+      }
+
       if (e.touches.length === 0) {
         const elapsed = Date.now() - touchStartTime;
         const dist = Math.hypot(currentDragX, currentDragY);
 
-        // Tap on image view toggles Zoom Controls Option
+        // Tap on image view: check for double tap to zoom, or single tap to toggle zoom toolbar
         if (dist < 10 && elapsed < 350) {
           isPanning = false;
           isCardDragging = false;
-          toggleZoomBar();
+          const now = Date.now();
+          if (now - lastLightboxTap < 320) {
+            // Double tap zoom toggle
+            if (zoomScale > 1.2) {
+              resetZoom();
+            } else {
+              setZoom(2.2);
+            }
+            lastLightboxTap = 0;
+          } else {
+            lastLightboxTap = now;
+            toggleZoomBar();
+          }
           return;
         }
 
@@ -3568,6 +4381,16 @@
             if (newBadge) {
               newBadge.hidden = !(newCount > acknowledgedCount);
             }
+
+            if (newCount > acknowledgedCount) {
+              const diff = newCount - acknowledgedCount;
+              const banner = $('newPhotosAlertBanner');
+              const alertText = $('newPhotosAlertText');
+              if (banner && alertText) {
+                alertText.textContent = `🎉 ${diff} new photo${diff === 1 ? '' : 's'} found with BRK Sir since your last visit!`;
+                banner.hidden = false;
+              }
+            }
           }
         }
       } catch (err) {
@@ -3587,6 +4410,8 @@
       localStorage.setItem('brk_acknowledged_count', savedCount);
       const newBadge = $('newBadgeIndicator');
       if (newBadge) newBadge.hidden = true;
+      const banner = $('newPhotosAlertBanner');
+      if (banner) banner.hidden = true;
 
       try {
         const photos = JSON.parse(savedPhotosJson);
@@ -3735,6 +4560,7 @@
           if (statusEl) {
             statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ Found ${totalMatches} photo${totalMatches === 1 ? '' : 's'} with BRK Sir!</span>`;
           }
+          if ($('emptyResultsCard')) $('emptyResultsCard').hidden = true;
           $('photosSectionTitle').textContent = 'Photos with Bhashyam Ramakrishna Sir';
           $('photosSectionSubtitle').textContent = totalMatches === 1 ? '1 photograph found featuring your face' : `${totalMatches} unique photographs found featuring your face`;
           renderPhotos(j.photos);
@@ -3742,9 +4568,15 @@
           $('photosSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
           if (statusEl) {
-            statusEl.innerHTML = `<span style="color:#d97706;font-weight:600;">No matching photos found with your face. Please try another clear photo with good lighting.</span>`;
+            statusEl.innerHTML = `<span style="color:#d97706;font-weight:600;">No matching photos found with your face. See tips below:</span>`;
           }
-          $('photosSection').hidden = true;
+          $('photosSectionTitle').textContent = 'Search Results';
+          $('photosSectionSubtitle').textContent = '0 matching photographs found';
+          $('photosGrid').replaceChildren();
+          if ($('discoveryToolbar')) $('discoveryToolbar').hidden = true;
+          if ($('emptyResultsCard')) $('emptyResultsCard').hidden = false;
+          $('photosSection').hidden = false;
+          $('emptyResultsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       } catch (err) {
         if (statusEl) {
@@ -3775,6 +4607,58 @@
     $('savedAvatarClickWrap')?.addEventListener('click', viewSavedPhotos);
     $('savedInfoClickWrap')?.addEventListener('click', viewSavedPhotos);
     $('clearSavedBtn')?.addEventListener('click', clearSavedProfile);
+
+    // New Photos Alert Banner Listeners
+    $('viewNewPhotosBannerBtn')?.addEventListener('click', viewSavedPhotos);
+    $('closeNewPhotosBannerBtn')?.addEventListener('click', () => {
+      const banner = $('newPhotosAlertBanner');
+      if (banner) banner.hidden = true;
+    });
+
+    // Empty Results State Action Listeners
+    $('emptyRetryBtn')?.addEventListener('click', triggerCamera);
+    $('emptyUploadBtn')?.addEventListener('click', () => $('selfieFileInput').click());
+
+    // Selection & Bulk Download Listeners
+    $('toggleSelectBtn')?.addEventListener('click', () => toggleSelectionMode());
+    $('bulkSelectAllBtn')?.addEventListener('click', selectAllPhotos);
+    $('bulkDownloadZipBtn')?.addEventListener('click', downloadSelectedZip);
+    $('bulkCancelBtn')?.addEventListener('click', clearSelection);
+
+    // Discovery & Sort Listeners
+    $('sortOrderBtn')?.addEventListener('click', toggleSortOrder);
+
+    // Lightbox Desktop Double-Click Zoom & Native Share
+    lightboxWrap?.addEventListener('dblclick', e => {
+      if (e.target.closest('button, a, .lightbox-zoom-bar')) return;
+      if (zoomScale > 1.2) {
+        resetZoom();
+      } else {
+        setZoom(2.2);
+      }
+    });
+
+    $('lightboxShareBtn')?.addEventListener('click', () => {
+      const curItem = currentPhotosList[currentPhotoIndex];
+      if (!curItem) return;
+      const p = typeof curItem === 'string' ? curItem : curItem.rel_path;
+      const downloadUrl = `${window.location.origin}/download/hd/${p}`;
+      if (navigator.share) {
+        navigator.share({
+          title: 'Photo with BRK Sir',
+          text: 'Check out my photograph with Bhashyam Ramakrishna Sir!',
+          url: downloadUrl
+        }).catch(() => {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(downloadUrl).then(() => {
+          showToast('Photo download link copied to clipboard!');
+        }).catch(() => {
+          showToast('Photo link: ' + downloadUrl);
+        });
+      } else {
+        showToast('Photo link: ' + downloadUrl);
+      }
+    });
 
     // Multi-Face Cancel / Reset
     $('cancelMultiFaceBtn')?.addEventListener('click', () => {
