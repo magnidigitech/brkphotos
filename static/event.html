@@ -926,38 +926,45 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 0.35rem;
-      flex-wrap: wrap;
-      gap: 0.4rem;
+      flex-wrap: nowrap !important;
+      gap: 0.5rem;
+      width: 100%;
     }
 
     .gallery-title-wrap {
-      flex: 1 1 200px;
+      flex: 1 1 auto;
       min-width: 0;
+      overflow: hidden;
     }
 
     .section-title,
     #photosSectionTitle {
-      font-size: clamp(1rem, 2vw, 1.35rem);
+      font-size: clamp(0.95rem, 1.8vw, 1.25rem);
       font-weight: 800;
       color: #0f172a !important;
       letter-spacing: -0.02em;
       margin: 0;
       line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     #photosSectionSubtitle {
-      font-size: clamp(0.74rem, 1.3vw, 0.82rem) !important;
+      font-size: clamp(0.72rem, 1.3vw, 0.8rem) !important;
       font-weight: 500 !important;
       color: #64748b !important;
       margin: 0.1rem 0 0;
-      line-height: 1.25;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .gallery-actions-wrap {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      flex-wrap: wrap;
+      gap: 0.35rem;
       flex-shrink: 0;
     }
 
@@ -1418,9 +1425,9 @@
     .gallery-filter-panel {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
-      margin-top: 0.4rem;
-      padding-top: 0.4rem;
+      gap: 0.3rem;
+      margin-top: 0.35rem;
+      padding-top: 0.35rem;
       border-top: 1px solid #f1f5f9;
       background: transparent;
       width: 100%;
@@ -1433,14 +1440,16 @@
       justify-content: space-between;
       gap: 0.45rem;
       width: 100%;
-      flex-wrap: wrap;
+      flex-wrap: nowrap !important;
+      min-width: 0;
     }
 
     .calendar-main-actions {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      flex-wrap: wrap;
+      gap: 0.35rem;
+      flex-shrink: 0;
+      min-width: 0;
     }
 
     .filter-chip {
@@ -1970,6 +1979,46 @@
       display: inline-block;
     }
 
+    /* Sheet Sort Order Segmented Control */
+    .sheet-sort-segmented {
+      display: flex;
+      gap: 0.5rem;
+      width: 100%;
+      margin-top: 0.35rem;
+    }
+
+    .sheet-sort-btn {
+      flex: 1 1 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      padding: 0.58rem 0.85rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .sheet-sort-btn:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+
+    .sheet-sort-btn.active {
+      background: #ecfdf5 !important;
+      border: 1.5px solid #059669 !important;
+      color: #065f46 !important;
+      box-shadow: 0 1px 3px rgba(5, 150, 105, 0.12);
+    }
+
     /* Other Albums Accordion & Drawer */
     .sheet-accordion-btn {
       background: #f8fafc;
@@ -2362,19 +2411,20 @@
         padding: max(0.35rem, env(safe-area-inset-top)) 0.65rem 0.35rem !important;
       }
       .photos-head {
-        margin-bottom: 0.25rem !important;
+        margin-bottom: 0.2rem !important;
         gap: 0.3rem !important;
+        flex-wrap: nowrap !important;
       }
       .section-title,
       #photosSectionTitle {
-        font-size: 0.95rem !important;
+        font-size: 0.92rem !important;
         line-height: 1.15 !important;
       }
       #photosSectionSubtitle {
-        font-size: 0.72rem !important;
+        font-size: 0.7rem !important;
       }
       .gallery-action-btn {
-        padding: 0.22rem 0.55rem !important;
+        padding: 0.22rem 0.5rem !important;
         font-size: 0.72rem !important;
         gap: 0.25rem !important;
       }
@@ -2387,13 +2437,13 @@
       .gallery-filter-panel {
         margin-top: 0.25rem !important;
         padding-top: 0.25rem !important;
-        gap: 0.25rem !important;
       }
       .calendar-controls-bar {
         gap: 0.3rem !important;
+        flex-wrap: nowrap !important;
       }
       .filter-chip {
-        padding: 0.2rem 0.55rem !important;
+        padding: 0.2rem 0.5rem !important;
         font-size: 0.72rem !important;
       }
       .btn-filter-trigger {
@@ -2401,12 +2451,11 @@
         font-size: 0.72rem !important;
         gap: 0.25rem !important;
       }
-      .gallery-sort-btn {
-        padding: 0.2rem 0.5rem !important;
-        font-size: 0.72rem !important;
+      .gallery-sort-row .gallery-sort-btn {
+        display: none !important;
       }
       .gallery-progress-text {
-        font-size: 0.7rem !important;
+        font-size: 0.68rem !important;
       }
       .lightbox-topbar {
         flex-direction: column;
@@ -3130,13 +3179,13 @@
 
         <div class="photos-head">
           <div class="gallery-title-wrap">
-            <h2 class="section-title" id="photosSectionTitle">Photos with Bhashyam Ramakrishna Sir</h2>
+            <h2 class="section-title" id="photosSectionTitle">Photos with BRK Sir</h2>
             <p id="photosSectionSubtitle"></p>
           </div>
           <div class="gallery-actions-wrap">
             <button class="gallery-action-btn" id="toggleSelectBtn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 11 12 14 22 4"></polyline></svg>
-              <span id="toggleSelectText">Select Photos</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 11 12 14 22 4"></polyline></svg>
+              <span id="toggleSelectText">Select</span>
             </button>
             <button class="gallery-action-btn" id="closePhotosBtn">New Search ↑</button>
             <button class="gallery-close-btn" id="galleryDismissBtn" title="Close Gallery" aria-label="Close Gallery">&times;</button>
@@ -3150,8 +3199,8 @@
               <button type="button" class="filter-chip active" id="allPhotosChip">
                 <span>All Photos</span> <span id="allPhotosChipCount">(0)</span>
               </button>
-              <button type="button" class="btn-filter-trigger" id="openFilterSheetBtn" title="Filter by date or album">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <button type="button" class="btn-filter-trigger" id="openFilterSheetBtn" title="Filter & sort photos">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="4" y1="21" x2="4" y2="14"></line>
                   <line x1="4" y1="10" x2="4" y2="3"></line>
                   <line x1="12" y1="21" x2="12" y2="12"></line>
@@ -3162,7 +3211,7 @@
                   <line x1="9" y1="8" x2="15" y2="8"></line>
                   <line x1="17" y1="16" x2="23" y2="16"></line>
                 </svg>
-                <span>Filter</span>
+                <span>Filter & Sort</span>
                 <span id="filterActiveBadge" class="filter-active-dot" hidden></span>
               </button>
               <div id="activeFilterPill" class="active-filter-pill" hidden>
@@ -3173,7 +3222,7 @@
 
             <div class="gallery-sort-row">
               <button id="sortOrderBtn" class="gallery-sort-btn" title="Toggle Sort Order">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 <span id="sortOrderText">Newest First</span>
               </button>
               <span id="photosProgressText" class="gallery-progress-text"></span>
@@ -3236,8 +3285,8 @@
         <!-- Sheet Fixed Header -->
         <div class="filter-sheet-header">
           <div class="filter-sheet-title-wrap">
-            <h3 id="filterSheetTitle" class="filter-sheet-title">Filter Photos</h3>
-            <p class="filter-sheet-subtitle">Select a date or event album to refine your matches</p>
+            <h3 id="filterSheetTitle" class="filter-sheet-title">Filter & Sort Photos</h3>
+            <p class="filter-sheet-subtitle">Refine photos by sort order, date, or event album</p>
           </div>
           <button type="button" id="closeFilterSheetBtn" class="filter-sheet-close-btn" aria-label="Close Filter Sheet">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -3249,6 +3298,24 @@
 
         <!-- Sheet Scrollable Content -->
         <div class="filter-sheet-content" id="filterSheetContent">
+          <!-- Section 0: Sort Order -->
+          <div class="sheet-section" style="margin-bottom: 1.15rem;">
+            <div class="sheet-section-header">
+              <span class="sheet-section-title">Sort Order</span>
+              <span class="sheet-section-hint">Ordering of matched photos</span>
+            </div>
+            <div class="sheet-sort-segmented" id="sheetSortSegmented">
+              <button type="button" class="sheet-sort-btn active" id="sheetSortNewestBtn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Newest First</span>
+              </button>
+              <button type="button" class="sheet-sort-btn" id="sheetSortOldestBtn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 14 12 9 7 14"></polyline><line x1="12" y1="9" x2="12" y2="21"></line></svg>
+                <span>Oldest First</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Section C: Active Draft Selection (shown if draft selection exists) -->
           <div id="sheetActiveFilterBanner" class="sheet-active-banner" hidden>
             <div class="sheet-active-info">
@@ -3552,6 +3619,7 @@
     // Draft State for Filter Bottom Sheet (allows cancel / tap-away without altering active filters)
     let draftCalendarDate = null;
     let draftOtherAlbum = null;
+    let draftSortOrder = 'newest';
     let sheetViewYear = 2026;
     let sheetViewMonth = 10;
     let hasUserNavigatedSheetMonth = false;
@@ -3579,7 +3647,7 @@
       const bar = $('bulkSelectionBar');
 
       if (toggleText) {
-        toggleText.textContent = isSelectionMode ? 'Done' : 'Select Photos';
+        toggleText.textContent = isSelectionMode ? 'Done' : 'Select';
       }
       if (toggleBtn) {
         toggleBtn.classList.toggle('active-mode', isSelectionMode);
@@ -3929,6 +3997,7 @@
       // Sync draft state with currently applied state
       draftCalendarDate = selectedCalendarDate;
       draftOtherAlbum = selectedOtherAlbum;
+      draftSortOrder = sortOrder;
 
       if (selectedCalendarDate) {
         const parts = selectedCalendarDate.split('-');
@@ -4073,6 +4142,14 @@
         }
       }
 
+      // Update Sort Segmented Buttons in Sheet
+      const newestBtn = $('sheetSortNewestBtn');
+      const oldestBtn = $('sheetSortOldestBtn');
+      if (newestBtn && oldestBtn) {
+        newestBtn.classList.toggle('active', draftSortOrder === 'newest');
+        oldestBtn.classList.toggle('active', draftSortOrder === 'oldest');
+      }
+
       // Update "Show X Photos" Button
       const applyBtnText = $('sheetApplyBtnText');
       if (applyBtnText) {
@@ -4112,10 +4189,12 @@
     function clearSheetDraftFilters() {
       draftCalendarDate = null;
       draftOtherAlbum = null;
+      draftSortOrder = 'newest';
       renderSheetContent();
     }
 
     function applySheetFilters() {
+      sortOrder = draftSortOrder;
       selectedCalendarDate = draftCalendarDate;
       selectedOtherAlbum = draftOtherAlbum;
       closeFilterSheet();
@@ -5823,8 +5902,8 @@
           if (statusEl) {
             statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ Restored ${actualCount} saved photo${actualCount === 1 ? '' : 's'} with BRK Sir!</span>`;
           }
-          $('photosSectionTitle').textContent = 'Photos with Bhashyam Ramakrishna Sir';
-          $('photosSectionSubtitle').textContent = actualCount === 1 ? '1 photograph found featuring your face' : `${actualCount} unique photographs found featuring your face`;
+          $('photosSectionTitle').textContent = 'Photos with BRK Sir';
+          $('photosSectionSubtitle').textContent = actualCount === 1 ? '1 photograph found' : `${actualCount} photographs found`;
           renderPhotos(photos);
           openGalleryOverlay();
           if (currentSearchHasMore) {
@@ -5970,8 +6049,8 @@
             statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ Found ${totalMatches} photo${totalMatches === 1 ? '' : 's'} with BRK Sir!</span>`;
           }
           if ($('emptyResultsCard')) $('emptyResultsCard').hidden = true;
-          $('photosSectionTitle').textContent = 'Photos with Bhashyam Ramakrishna Sir';
-          $('photosSectionSubtitle').textContent = totalMatches === 1 ? '1 photograph found featuring your face' : `${totalMatches} unique photographs found featuring your face`;
+          $('photosSectionTitle').textContent = 'Photos with BRK Sir';
+          $('photosSectionSubtitle').textContent = totalMatches === 1 ? '1 photograph found' : `${totalMatches} photographs found`;
           renderPhotos(j.photos);
           openGalleryOverlay();
           if (j.has_more) {
@@ -6054,6 +6133,14 @@
     });
 
     // Filter Bottom Sheet Actions
+    $('sheetSortNewestBtn')?.addEventListener('click', () => {
+      draftSortOrder = 'newest';
+      renderSheetContent();
+    });
+    $('sheetSortOldestBtn')?.addEventListener('click', () => {
+      draftSortOrder = 'oldest';
+      renderSheetContent();
+    });
     $('closeFilterSheetBtn')?.addEventListener('click', closeFilterSheet);
     $('filterSheetBackdrop')?.addEventListener('click', (e) => {
       if (e.target === $('filterSheetBackdrop')) closeFilterSheet();
