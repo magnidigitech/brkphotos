@@ -917,46 +917,46 @@
       flex-shrink: 0;
       background: #ffffff;
       border-bottom: 1px solid #eef2f6;
-      padding: max(0.85rem, env(safe-area-inset-top)) clamp(0.85rem, 3.2vw, 2rem) 0.85rem;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+      padding: max(0.45rem, env(safe-area-inset-top)) clamp(0.75rem, 2.5vw, 1.5rem) 0.45rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     }
 
     .photos-head {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 0.85rem;
+      align-items: center;
+      margin-bottom: 0.35rem;
       flex-wrap: wrap;
-      gap: 0.85rem;
+      gap: 0.4rem;
     }
 
     .gallery-title-wrap {
-      flex: 1 1 280px;
+      flex: 1 1 200px;
       min-width: 0;
     }
 
     .section-title,
     #photosSectionTitle {
-      font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+      font-size: clamp(1rem, 2vw, 1.35rem);
       font-weight: 800;
       color: #0f172a !important;
       letter-spacing: -0.02em;
-      margin: 0 0 0.25rem;
-      line-height: 1.25;
+      margin: 0;
+      line-height: 1.2;
     }
 
     #photosSectionSubtitle {
-      font-size: clamp(0.82rem, 1.5vw, 0.92rem) !important;
+      font-size: clamp(0.74rem, 1.3vw, 0.82rem) !important;
       font-weight: 500 !important;
       color: #64748b !important;
-      margin: 0;
-      line-height: 1.4;
+      margin: 0.1rem 0 0;
+      line-height: 1.25;
     }
 
     .gallery-actions-wrap {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.4rem;
       flex-wrap: wrap;
       flex-shrink: 0;
     }
@@ -964,12 +964,12 @@
     .gallery-action-btn {
       display: inline-flex;
       align-items: center;
-      gap: 0.45rem;
-      padding: 0.42rem 0.95rem;
+      gap: 0.35rem;
+      padding: 0.32rem 0.72rem;
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 9999px;
-      font-size: 0.82rem;
+      font-size: 0.76rem;
       font-weight: 600;
       color: #334155;
       cursor: pointer;
@@ -993,13 +993,13 @@
     }
 
     .gallery-close-btn {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       background: #ffffff;
       border: 1px solid #e2e8f0;
       color: #64748b;
-      font-size: 1.35rem;
+      font-size: 1.25rem;
       line-height: 1;
       display: flex;
       align-items: center;
@@ -1418,9 +1418,9 @@
     .gallery-filter-panel {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-      margin-top: 0.65rem;
-      padding-top: 0.65rem;
+      gap: 0.35rem;
+      margin-top: 0.4rem;
+      padding-top: 0.4rem;
       border-top: 1px solid #f1f5f9;
       background: transparent;
       width: 100%;
@@ -1431,7 +1431,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.6rem;
+      gap: 0.45rem;
       width: 100%;
       flex-wrap: wrap;
     }
@@ -1439,7 +1439,7 @@
     .calendar-main-actions {
       display: flex;
       align-items: center;
-      gap: 0.45rem;
+      gap: 0.4rem;
       flex-wrap: wrap;
     }
 
@@ -1447,8 +1447,8 @@
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 9999px;
-      padding: 0.35rem 0.82rem;
-      font-size: 0.8rem;
+      padding: 0.28rem 0.72rem;
+      font-size: 0.78rem;
       font-weight: 500;
       color: #475569;
       cursor: pointer;
@@ -1878,11 +1878,15 @@
     .calendar-days-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(6, 1fr);
       gap: 3px;
+      min-height: 230px;
     }
 
     .calendar-day-cell {
       aspect-ratio: 1;
+      min-height: 34px;
+      max-height: 40px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -2354,6 +2358,56 @@
     }
 
     @media (max-width: 640px) {
+      .gallery-sticky-header {
+        padding: max(0.35rem, env(safe-area-inset-top)) 0.65rem 0.35rem !important;
+      }
+      .photos-head {
+        margin-bottom: 0.25rem !important;
+        gap: 0.3rem !important;
+      }
+      .section-title,
+      #photosSectionTitle {
+        font-size: 0.95rem !important;
+        line-height: 1.15 !important;
+      }
+      #photosSectionSubtitle {
+        font-size: 0.72rem !important;
+      }
+      .gallery-action-btn {
+        padding: 0.22rem 0.55rem !important;
+        font-size: 0.72rem !important;
+        gap: 0.25rem !important;
+      }
+      .gallery-close-btn {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 1.15rem !important;
+      }
+      .discovery-toolbar,
+      .gallery-filter-panel {
+        margin-top: 0.25rem !important;
+        padding-top: 0.25rem !important;
+        gap: 0.25rem !important;
+      }
+      .calendar-controls-bar {
+        gap: 0.3rem !important;
+      }
+      .filter-chip {
+        padding: 0.2rem 0.55rem !important;
+        font-size: 0.72rem !important;
+      }
+      .btn-filter-trigger {
+        padding: 0.2rem 0.55rem !important;
+        font-size: 0.72rem !important;
+        gap: 0.25rem !important;
+      }
+      .gallery-sort-btn {
+        padding: 0.2rem 0.5rem !important;
+        font-size: 0.72rem !important;
+      }
+      .gallery-progress-text {
+        font-size: 0.7rem !important;
+      }
       .lightbox-topbar {
         flex-direction: column;
         align-items: center;
@@ -3486,9 +3540,14 @@
     // Applied Filters State
     let selectedCalendarDate = null; // 'YYYY-MM-DD'
     let selectedOtherAlbum = null; // rawAlbum string e.g. 'PART 01'
+    let serverDateSummary = null; // Server aggregated date summary across all matches
     const datePhotoCounts = new Map(); // 'YYYY-MM-DD' -> count
     const otherAlbumCounts = new Map(); // rawAlbum -> count
     let newestCalendarDate = null; // 'YYYY-MM-DD'
+
+    // History and Scroll State
+    let isClosingLightboxViaCode = false;
+    let lastGalleryScrollTop = 0;
 
     // Draft State for Filter Bottom Sheet (allows cancel / tap-away without altering active filters)
     let draftCalendarDate = null;
@@ -3605,7 +3664,7 @@
       try {
         const payload = {
           photos: Array.from(selectedPhotos),
-          quality: 'hd'
+          quality: 'original'
         };
         const res = await fetch('/api/download/bulk-zip', {
           method: 'POST',
@@ -3623,7 +3682,7 @@
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = `BRK_Photos_${selectedPhotos.size}_Photos.zip`;
+        a.download = `BRK_Photos_${selectedPhotos.size}_Original_Photos.zip`;
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {
@@ -3779,25 +3838,38 @@
       datePhotoCounts.clear();
       otherAlbumCounts.clear();
 
-      let latestDateKey = null;
-      let latestSortTime = -1;
-
-      for (const item of rawPhotosList) {
-        const parsed = parsePhotoDate(item);
-        if (parsed.isDate && parsed.dateKey) {
-          const count = (datePhotoCounts.get(parsed.dateKey) || 0) + 1;
-          datePhotoCounts.set(parsed.dateKey, count);
-          if (parsed.sortTime > latestSortTime) {
-            latestSortTime = parsed.sortTime;
-            latestDateKey = parsed.dateKey;
-          }
-        } else {
-          const count = (otherAlbumCounts.get(parsed.rawAlbum) || 0) + 1;
-          otherAlbumCounts.set(parsed.rawAlbum, count);
+      if (serverDateSummary && serverDateSummary.date_counts) {
+        // Hydrate from complete server-side aggregation across all matches
+        for (const [dk, count] of Object.entries(serverDateSummary.date_counts)) {
+          datePhotoCounts.set(dk, Number(count) || 0);
         }
-      }
+        if (serverDateSummary.other_albums) {
+          for (const [alb, count] of Object.entries(serverDateSummary.other_albums)) {
+            otherAlbumCounts.set(alb, Number(count) || 0);
+          }
+        }
+        newestCalendarDate = serverDateSummary.newest_date || null;
+      } else {
+        // Fallback to client-side iteration over current loaded items
+        let latestDateKey = null;
+        let latestSortTime = -1;
 
-      newestCalendarDate = latestDateKey;
+        for (const item of rawPhotosList) {
+          const parsed = parsePhotoDate(item);
+          if (parsed.isDate && parsed.dateKey) {
+            const count = (datePhotoCounts.get(parsed.dateKey) || 0) + 1;
+            datePhotoCounts.set(parsed.dateKey, count);
+            if (parsed.sortTime > latestSortTime) {
+              latestSortTime = parsed.sortTime;
+              latestDateKey = parsed.dateKey;
+            }
+          } else {
+            const count = (otherAlbumCounts.get(parsed.rawAlbum) || 0) + 1;
+            otherAlbumCounts.set(parsed.rawAlbum, count);
+          }
+        }
+        newestCalendarDate = latestDateKey;
+      }
 
       if (!hasUserNavigatedSheetMonth && newestCalendarDate) {
         const parts = newestCalendarDate.split('-');
@@ -3938,6 +4010,15 @@
         }
 
         gridEl.appendChild(cell);
+      }
+
+      // Enforce strictly invariant 42 cells (6 rows x 7 cols) so switching months never jumps or shifts layout
+      const totalRendered = firstDayOfWeek + daysInMonth;
+      const trailingEmpty = Math.max(0, 42 - totalRendered);
+      for (let i = 0; i < trailingEmpty; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'calendar-day-cell empty';
+        gridEl.appendChild(emptyCell);
       }
 
       // Render Other Albums Section
@@ -4209,6 +4290,12 @@
         }
         if (res.ok) {
           const data = await res.json();
+          if (data.date_summary) {
+            serverDateSummary = data.date_summary;
+            try {
+              localStorage.setItem('brk_saved_date_summary', JSON.stringify(data.date_summary));
+            } catch (e) {}
+          }
           if (data.photos && data.photos.length > 0) {
             currentSearchPage = data.page || (currentSearchPage + 1);
             currentSearchHasMore = !!data.has_more;
@@ -4924,6 +5011,12 @@
       currentPhotoIndex = index;
       resetZoom();
 
+      // Remember scroll position in gallery so we return to the exact same spot
+      const galleryBody = $('galleryScrollBody');
+      if (galleryBody) {
+        lastGalleryScrollTop = galleryBody.scrollTop;
+      }
+
       initLightboxSlider();
       if (sliderTrack) {
         sliderTrack.style.transition = 'none';
@@ -4956,7 +5049,7 @@
 
     function closeLightbox(isFromPopState = false) {
       const modal = $('photoLightboxModal');
-      if (modal.hidden) return;
+      if (!modal || (modal.hidden && !modal.classList.contains('active'))) return;
 
       modal.classList.remove('active');
       setTimeout(() => {
@@ -4970,9 +5063,16 @@
       }, 260);
 
       if (!isFromPopState && window.history.state && window.history.state.brkLightboxOpen) {
+        isClosingLightboxViaCode = true;
         try {
           window.history.back();
         } catch (e) {}
+      }
+
+      // Restore scroll position in gallery
+      const galleryBody = $('galleryScrollBody');
+      if (galleryBody && lastGalleryScrollTop > 0) {
+        galleryBody.scrollTop = lastGalleryScrollTop;
       }
 
       const allCards = document.querySelectorAll('.photo-card');
@@ -4985,17 +5085,41 @@
       }
     }
 
-    window.addEventListener('popstate', () => {
+    window.addEventListener('popstate', (e) => {
+      // 1. If we triggered history.back() from closeLightbox(), ignore this popstate event
+      if (isClosingLightboxViaCode) {
+        isClosingLightboxViaCode = false;
+        const galleryBody = $('galleryScrollBody');
+        if (galleryBody && lastGalleryScrollTop > 0) {
+          galleryBody.scrollTop = lastGalleryScrollTop;
+        }
+        return;
+      }
+
+      // 2. Filter bottom sheet dismiss on back button
       const filterSheet = $('filterSheetBackdrop');
       if (filterSheet && !filterSheet.hidden && filterSheet.classList.contains('active')) {
         closeFilterSheet();
         return;
       }
+
+      // 3. Lightbox viewer dismiss on back button
       const lightbox = $('photoLightboxModal');
-      if (lightbox && !lightbox.hidden && lightbox.classList.contains('active')) {
+      if (lightbox && (!lightbox.hidden || lightbox.classList.contains('active'))) {
         closeLightbox(true);
+        const galleryBody = $('galleryScrollBody');
+        if (galleryBody && lastGalleryScrollTop > 0) {
+          galleryBody.scrollTop = lastGalleryScrollTop;
+        }
         return;
       }
+
+      // 4. Results gallery overlay: if history state indicates we are still in gallery, do NOT close
+      if (e.state && e.state.brkGalleryOpen) {
+        return;
+      }
+
+      // 5. Back from results gallery to search home
       const gallery = $('photosSection');
       if (gallery && !gallery.hidden) {
         closeGalleryOverlay(true);
@@ -5628,6 +5752,12 @@
           const newCount = (typeof data.total_count === 'number' && data.total_count > 0) ? data.total_count : data.count;
           if (typeof newCount === 'number' && newCount > 0) {
             localStorage.setItem('brk_saved_count', newCount);
+            if (data.date_summary) {
+              serverDateSummary = data.date_summary;
+              try {
+                localStorage.setItem('brk_saved_date_summary', JSON.stringify(data.date_summary));
+              } catch (e) {}
+            }
             if (data.photos && data.photos.length > 0) {
               localStorage.setItem('brk_saved_photos', JSON.stringify(data.photos));
             }
@@ -5682,6 +5812,13 @@
           currentSearchPage = 1;
           currentSearchHasMore = actualCount > photos.length;
 
+          const savedDateSummaryJson = localStorage.getItem('brk_saved_date_summary');
+          if (savedDateSummaryJson) {
+            try {
+              serverDateSummary = JSON.parse(savedDateSummaryJson);
+            } catch (e) {}
+          }
+
           const statusEl = $('searchStatus');
           if (statusEl) {
             statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ Restored ${actualCount} saved photo${actualCount === 1 ? '' : 's'} with BRK Sir!</span>`;
@@ -5690,6 +5827,9 @@
           $('photosSectionSubtitle').textContent = actualCount === 1 ? '1 photograph found featuring your face' : `${actualCount} unique photographs found featuring your face`;
           renderPhotos(photos);
           openGalleryOverlay();
+          if (currentSearchHasMore) {
+            fetchNextSearchPage();
+          }
         }
       } catch (err) {
         console.error('Error rendering saved photos from storage:', err);
@@ -5801,6 +5941,13 @@
             : (typeof j.count === 'number' && j.count > 0 ? j.count : j.photos.length);
           totalMatchingPhotosCount = totalMatches;
 
+          if (j.date_summary) {
+            serverDateSummary = j.date_summary;
+            try {
+              localStorage.setItem('brk_saved_date_summary', JSON.stringify(j.date_summary));
+            } catch (e) {}
+          }
+
           currentSearchFaceThumb = j.face_thumb || null;
           currentSearchPage = j.page || 1;
           currentSearchHasMore = !!j.has_more;
@@ -5827,6 +5974,9 @@
           $('photosSectionSubtitle').textContent = totalMatches === 1 ? '1 photograph found featuring your face' : `${totalMatches} unique photographs found featuring your face`;
           renderPhotos(j.photos);
           openGalleryOverlay();
+          if (j.has_more) {
+            fetchNextSearchPage();
+          }
         } else {
           if (statusEl) {
             statusEl.innerHTML = `<span style="color:#d97706;font-weight:600;">No matching photos found with your face. See tips below:</span>`;

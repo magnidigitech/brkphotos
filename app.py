@@ -1114,7 +1114,78 @@ def crop_face_thumb(img, bbox, target_size=(160, 160)):
     _, buf = cv2.imencode(".jpg", crop_resized, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
     return "data:image/jpeg;base64," + base64.b64encode(buf).decode("utf-8")
 
-def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_index: Optional[int] = None, page: int = 1, page_size: int = 50):
+MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+def parse_photo_date_info(item: dict) -> dict:
+    """Parses date or album name from a photo record matching frontend logic."""
+    album = (item.get("album_name") or "").strip()
+    cap_dt = (item.get("captured_at") or item.get("created_at") or "").strip()
+
+    # 1. Match DD-MM-YY or DD-MM-YYYY in album name (e.g. "01-11-26", "21-10-2026")
+    m_dmy = re.match(r"^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$", album)
+    if m_dmy:
+        d = int(m_dmy.group(1))
+        m = int(m_dmy.group(2))
+        y = int(m_dmy.group(3))
+        if y < 100:
+            y += 2000
+        try:
+            datetime(y, m, d)
+            return {"is_date": True, "date_key": f"{y:04d}-{m:02d}-{d:02d}", "raw_album": album}
+        except ValueError:
+            pass
+
+    # Match YYYY-MM-DD in album name
+    m_ymd_alb = re.match(r"^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$", album)
+    if m_ymd_alb:
+        y = int(m_ymd_alb.group(1))
+        m = int(m_ymd_alb.group(2))
+        d = int(m_ymd_alb.group(3))
+        try:
+            datetime(y, m, d)
+            return {"is_date": True, "date_key": f"{y:04d}-{m:02d}-{d:02d}", "raw_album": album}
+        except ValueError:
+            pass
+
+    # 2. Match YYYY-MM-DD in captured_at / created_at
+    if cap_dt:
+        m_ymd = re.match(r"^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})", cap_dt)
+        if m_ymd:
+            y = int(m_ymd.group(1))
+            m = int(m_ymd.group(2))
+            d = int(m_ymd.group(3))
+            try:
+                datetime(y, m, d)
+                return {"is_date": True, "date_key": f"{y:04d}-{m:02d}-{d:02d}", "raw_album": album or f"{y:04d}-{m:02d}-{d:02d}"}
+            except ValueError:
+                pass
+
+    fallback = album or item.get("event_name") or "Celebration Photos"
+    return {"is_date": False, "date_key": None, "raw_album": fallback}
+
+def aggregate_photo_dates(photos_list: list) -> dict:
+    """Aggregates date counts and album counts across the full dataset of matched photos."""
+    date_counts = {}
+    other_albums = {}
+    newest_date = None
+    for p in photos_list:
+        parsed = parse_photo_date_info(p)
+        if parsed["is_date"] and parsed["date_key"]:
+            dk = parsed["date_key"]
+            date_counts[dk] = date_counts.get(dk, 0) + 1
+            if newest_date is None or dk > newest_date:
+                newest_date = dk
+        else:
+            alb = parsed["raw_album"]
+            other_albums[alb] = other_albums.get(alb, 0) + 1
+    return {
+        "date_counts": date_counts,
+        "other_albums": other_albums,
+        "newest_date": newest_date,
+        "total_matched": len(photos_list)
+    }
+
+def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_index: Optional[int] = None, page: int = 1, page_size: int = 50, filter_date: Optional[str] = None, filter_album: Optional[str] = None):
     embs, names, known = get_event_index(event_slug)
     if len(names) == 0:
         raise HTTPException(503, "Photos are still being prepared for this event. Please check back soon.")
@@ -1210,6 +1281,18 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
             "event_name": info.get("event_name", ""),
             "event_slug": info.get("event_slug", event_slug)
         })
+    # Compute date summary across the complete set of matched photos BEFORE filtering
+    date_summary = aggregate_photo_dates(photos_data)
+    unfiltered_total_count = len(photos_data)
+
+    # Optional server-side date / album filtering
+    if filter_date:
+        photos_data = [p for p in photos_data if parse_photo_date_info(p).get("date_key") == filter_date]
+    if filter_album:
+        photos_data = [p for p in photos_data if parse_photo_date_info(p).get("raw_album") == filter_album]
+
+    total_count = len(photos_data)
+
     # Sort search results by latest date first (Newest to Oldest), featured photos first
     photos_data.sort(key=lambda p: p.get("captured_at") or p.get("created_at") or "", reverse=True)
     photos_data.sort(key=lambda p: 0 if p.get("is_featured") else 1)
@@ -1230,26 +1313,30 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
         "multiple_faces": False,
         "count": total_count,
         "total_count": total_count,
+        "unfiltered_total_count": unfiltered_total_count,
         "page": page,
         "page_size": page_size if page_size > 0 else total_count,
         "has_more": has_more,
         "next_page": next_page,
         "photos": paged_photos,
         "legacy_photos": [p["rel_path"] for p in paged_photos],
+        "date_summary": date_summary,
+        "filter_date": filter_date,
+        "filter_album": filter_album,
         "face_thumb": selected_face_thumb,
         "total_faces_in_query": len(faces),
         "selected_face_index": selected_idx
     }
 
 @app.post("/api/search")
-def default_search(selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50)):
-    """Search for matching photos using face recognition with server-side pagination."""
-    return perform_face_search(selfie, "brk-sir", face_index=face_index, page=page, page_size=page_size)
+def default_search(selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50), filter_date: Optional[str] = Form(None), filter_album: Optional[str] = Form(None)):
+    """Search for matching photos using face recognition with server-side pagination and date summary."""
+    return perform_face_search(selfie, "brk-sir", face_index=face_index, page=page, page_size=page_size, filter_date=filter_date, filter_album=filter_album)
 
 @app.post("/api/{slug}/search")
-def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50)):
-    """Search for matching photos using face recognition with server-side pagination."""
-    return perform_face_search(selfie, slug, face_index=face_index, page=page, page_size=page_size)
+def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50), filter_date: Optional[str] = Form(None), filter_album: Optional[str] = Form(None)):
+    """Search for matching photos using face recognition with server-side pagination and date summary."""
+    return perform_face_search(selfie, slug, face_index=face_index, page=page, page_size=page_size, filter_date=filter_date, filter_album=filter_album)
 
 @app.post("/api/events/{slug}/check-profile-matches")
 @app.post("/api/check-profile-matches")
@@ -1339,6 +1426,19 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
             "event_slug": info.get("event_slug", slug)
         })
 
+    filter_date = body.get("filter_date")
+    filter_album = body.get("filter_album")
+
+    # Calculate date summary across all matched photos before filtering
+    date_summary = aggregate_photo_dates(photos_data)
+    unfiltered_total_count = len(photos_data)
+
+    # Optional server-side filtering
+    if filter_date:
+        photos_data = [p for p in photos_data if parse_photo_date_info(p).get("date_key") == filter_date]
+    if filter_album:
+        photos_data = [p for p in photos_data if parse_photo_date_info(p).get("raw_album") == filter_album]
+
     # Sort descending by capture date, with featured photos at top
     photos_data.sort(key=lambda p: p.get("captured_at") or p.get("created_at") or "", reverse=True)
     photos_data.sort(key=lambda p: 0 if p.get("is_featured") else 1)
@@ -1361,11 +1461,15 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
         "status": "ok",
         "count": total_count,
         "total_count": total_count,
+        "unfiltered_total_count": unfiltered_total_count,
         "page": page,
         "page_size": page_size if page_size > 0 else total_count,
         "has_more": has_more,
         "next_page": next_page,
         "photos": paged_photos,
+        "date_summary": date_summary,
+        "filter_date": filter_date,
+        "filter_album": filter_album,
         "has_new": has_new,
         "new_count": new_count
     }
@@ -1607,8 +1711,8 @@ def download_4k(name: str):
 @app.post("/api/{slug}/download/bulk-zip")
 async def download_bulk_zip(request: Request, background_tasks: BackgroundTasks, slug: str = "brk-sir"):
     """
-    Creates and streams a downloadable ZIP file containing the selected photos.
-    Supports HD (1080p optimized) or Original full-resolution files.
+    Creates and streams a downloadable ZIP file containing the selected original full-resolution photos.
+    Uses ZIP_STORED (0% CPU recompression overhead, fast disk stream) and prevents directory traversal.
     """
     try:
         body = await request.json()
@@ -1619,7 +1723,6 @@ async def download_bulk_zip(request: Request, background_tasks: BackgroundTasks,
     if not photo_items or not isinstance(photo_items, list):
         raise HTTPException(400, "No photos provided for ZIP download.")
 
-    quality = (body.get("quality") or "hd").lower()
     # Cap to 500 photos per zip archive
     selected = photo_items[:500]
 
@@ -1636,14 +1739,16 @@ async def download_bulk_zip(request: Request, background_tasks: BackgroundTasks,
     background_tasks.add_task(cleanup_file, tmp_zip_path)
 
     added_names = set()
-    reload_drive_map()
+    missing_photos = []
+    photos_root = PHOTOS.resolve()
 
-    with zipfile.ZipFile(tmp_zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as zf:
+    # Use ZIP_STORED to eliminate heavy CPU re-compression overhead on JPEG photos
+    with zipfile.ZipFile(tmp_zip_path, "w", compression=zipfile.ZIP_STORED) as zf:
         for item in selected:
             if isinstance(item, dict):
                 p_path = item.get("rel_path") or item.get("filename") or ""
             else:
-                p_path = str(item)
+                p_path = str(item).strip()
 
             if not p_path:
                 continue
@@ -1656,46 +1761,54 @@ async def download_bulk_zip(request: Request, background_tasks: BackgroundTasks,
                 ext = Path(fname).suffix or ".jpg"
                 clean_name = f"{stem}_{count}{ext}"
                 count += 1
-            added_names.add(clean_name.lower())
 
-            file_to_add = None
-            if quality == "hd":
-                cache_thumb = DATA / "thumbs" / (p_path.replace("/", "__") + ".jpg")
-                if cache_thumb.exists():
-                    file_to_add = cache_thumb
-                elif p_path.startswith("events/"):
-                    parts = p_path.split("/", 2)
-                    if len(parts) >= 3:
-                        ev_thumb = DATA / "events" / parts[1] / "thumbs" / (parts[2].replace("/", "__") + ".jpg")
-                        if ev_thumb.exists():
-                            file_to_add = ev_thumb
+            # Prevent directory traversal attacks
+            candidate = None
+            try:
+                target = (PHOTOS / p_path).resolve()
+                if str(target).startswith(str(photos_root)) and target.is_file():
+                    candidate = target
+            except Exception:
+                candidate = None
 
-            if not file_to_add or not file_to_add.exists():
-                target = PHOTOS / p_path
-                if not target.exists():
-                    matches = list(PHOTOS.glob(f"**/{fname}"))
-                    if matches:
-                        target = matches[0]
-                if target.exists():
-                    file_to_add = target
+            # Fallback search within PHOTOS by filename
+            if candidate is None:
+                matches = list(PHOTOS.glob(f"**/{fname}"))
+                for m in matches:
+                    try:
+                        resolved_m = m.resolve()
+                        if str(resolved_m).startswith(str(photos_root)) and resolved_m.is_file():
+                            candidate = resolved_m
+                            break
+                    except Exception:
+                        pass
 
-            if file_to_add and file_to_add.exists():
+            if candidate and candidate.is_file():
                 try:
-                    zf.write(file_to_add, arcname=clean_name)
+                    zf.write(candidate, arcname=clean_name)
+                    added_names.add(clean_name.lower())
                 except Exception as e:
-                    print(f"Error adding {file_to_add} to zip: {e}")
+                    print(f"Error adding {candidate} to zip: {e}")
+                    missing_photos.append(p_path)
+            else:
+                missing_photos.append(p_path)
 
     zip_size = os.path.getsize(tmp_zip_path) if os.path.exists(tmp_zip_path) else 0
     if zip_size <= 22 or len(added_names) == 0:
         cleanup_file(tmp_zip_path)
-        raise HTTPException(404, "None of the selected photos could be found on the server.")
+        raise HTTPException(404, "None of the selected original photos could be found on the server.")
 
-    zip_filename = f"BRK_Photos_{len(added_names)}_Photos.zip"
+    zip_filename = f"BRK_Photos_{len(added_names)}_Original_Photos.zip"
+    resp_headers = {
+        "Content-Disposition": f'attachment; filename="{zip_filename}"',
+        "X-Total-Photos": str(len(added_names)),
+        "X-Missing-Photos-Count": str(len(missing_photos))
+    }
     return FileResponse(
         tmp_zip_path,
         media_type="application/zip",
         filename=zip_filename,
-        headers={"Content-Disposition": f'attachment; filename="{zip_filename}"'}
+        headers=resp_headers
     )
 
 # --- Public Gallery Metadata APIs ---
