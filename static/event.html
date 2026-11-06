@@ -915,43 +915,42 @@
       position: relative;
       z-index: 20;
       flex-shrink: 0;
-      background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(226, 232, 240, 0.9);
-      padding: max(0.75rem, env(safe-area-inset-top)) clamp(0.75rem, 3vw, 1.75rem) 0.65rem;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-    }
-
-    .gallery-title-wrap {
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-
-    .section-title,
-    #photosSectionTitle {
-      font-size: clamp(1.2rem, 2.5vw, 1.65rem);
-      font-weight: 800;
-      color: #0f172a !important;
-      letter-spacing: -0.02em;
-      margin: 0 0 0.25rem;
-      line-height: 1.2;
-    }
-
-    #photosSectionSubtitle {
-      font-size: clamp(0.82rem, 1.6vw, 0.92rem) !important;
-      font-weight: 600 !important;
-      color: #475569 !important;
-      margin: 0;
+      background: #ffffff;
+      border-bottom: 1px solid #eef2f6;
+      padding: max(0.85rem, env(safe-area-inset-top)) clamp(0.85rem, 3.2vw, 2rem) 0.85rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
     }
 
     .photos-head {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.75rem;
+      align-items: flex-start;
+      margin-bottom: 0.85rem;
       flex-wrap: wrap;
-      gap: 0.75rem;
+      gap: 0.85rem;
+    }
+
+    .gallery-title-wrap {
+      flex: 1 1 280px;
+      min-width: 0;
+    }
+
+    .section-title,
+    #photosSectionTitle {
+      font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+      font-weight: 800;
+      color: #0f172a !important;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.25rem;
+      line-height: 1.25;
+    }
+
+    #photosSectionSubtitle {
+      font-size: clamp(0.82rem, 1.5vw, 0.92rem) !important;
+      font-weight: 500 !important;
+      color: #64748b !important;
+      margin: 0;
+      line-height: 1.4;
     }
 
     .gallery-actions-wrap {
@@ -959,35 +958,63 @@
       align-items: center;
       gap: 0.5rem;
       flex-wrap: wrap;
+      flex-shrink: 0;
     }
 
-    .btn-gallery-head {
-      padding: 0.38rem 0.85rem;
+    .gallery-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.42rem 0.95rem;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 9999px;
       font-size: 0.82rem;
-      border-radius: 999px;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .gallery-action-btn:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+
+    .gallery-action-btn.active-mode {
+      background: #ecfdf5 !important;
+      border-color: #059669 !important;
+      color: #065f46 !important;
+      box-shadow: 0 1px 3px rgba(5, 150, 105, 0.15);
     }
 
     .gallery-close-btn {
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: #f1f5f9;
-      border: 1px solid #cbd5e1;
-      color: #334155;
-      font-size: 1.4rem;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      color: #64748b;
+      font-size: 1.35rem;
       line-height: 1;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all 0.18s ease;
+      transition: all 0.15s ease;
       flex-shrink: 0;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
 
     .gallery-close-btn:hover {
-      background: #e2e8f0;
+      background: #f8fafc;
       color: #0f172a;
-      transform: scale(1.05);
+      border-color: #cbd5e1;
+      transform: scale(1.04);
     }
 
     .gallery-scroll-body {
@@ -995,91 +1022,115 @@
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
-      padding: 1.25rem clamp(0.6rem, 2.5vw, 1.75rem) max(3rem, env(safe-area-inset-bottom));
+      padding: 1.25rem clamp(0.75rem, 3vw, 2rem) max(3.5rem, env(safe-area-inset-bottom));
       box-sizing: border-box;
+      background: #f8fafc;
     }
 
-    /* Modern Responsive Grid: 4-6 columns on desktop, 2 columns on mobile */
+    /* Stack of date sections */
     .photos-grid {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: 0;
+    }
+
+    /* Date Section */
+    .gallery-date-section {
+      width: 100%;
+      margin-bottom: 2rem;
+    }
+
+    .gallery-date-section:last-child {
+      margin-bottom: 1.25rem;
+    }
+
+    .gallery-date-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0 0.2rem 0.6rem 0.2rem;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .gallery-date-title-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+    }
+
+    .gallery-date-heading {
+      font-size: clamp(1.05rem, 2.2vw, 1.25rem);
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.015em;
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    .gallery-date-count {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #64748b;
+    }
+
+    /* Uniform Responsive Photo Grid per Date: Mobile 2 cols, Tablet 3 cols, Desktop 4-5 cols */
+    .gallery-date-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.65rem;
       width: 100%;
     }
 
-    @media (min-width: 1400px) {
-      .photos-grid {
-        grid-template-columns: repeat(6, 1fr);
-      }
-    }
-
-    @media (min-width: 1100px) and (max-width: 1399px) {
-      .photos-grid {
-        grid-template-columns: repeat(5, 1fr);
-      }
-    }
-
-    @media (min-width: 768px) and (max-width: 1099px) {
-      .photos-grid {
+    @media (min-width: 768px) {
+      .gallery-date-grid {
         grid-template-columns: repeat(3, 1fr);
         gap: 0.85rem;
       }
     }
 
-    @media (max-width: 767px) {
-      .photos-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.55rem;
-      }
-      .photo-card {
-        margin-bottom: 0 !important;
-        border-radius: 10px;
-      }
-      .photo-img-wrap {
-        min-height: 120px !important;
+    @media (min-width: 1100px) {
+      .gallery-date-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
       }
     }
 
-    .group-section-title {
-      column-span: all;
-      -webkit-column-span: all;
-      width: 100%;
-      margin: 1.5rem 0 0.85rem;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #0f172a !important;
-      border-bottom: 2px solid rgba(0, 0, 0, 0.08);
-      padding-bottom: 0.5rem;
-      display: flex;
-      align-items: baseline;
-      gap: 0.6rem;
+    @media (min-width: 1400px) {
+      .gallery-date-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1.15rem;
+      }
     }
 
-    .group-section-title span:last-child {
-      color: #475569 !important;
-      font-weight: 600 !important;
-    }
-
+    /* Photo Card */
     .photo-card {
-      break-inside: avoid;
-      page-break-inside: avoid;
-      margin-bottom: 1.25rem;
-      display: inline-block;
-      width: 100%;
-      background: var(--card);
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-      border: 1px solid var(--line);
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
-      cursor: pointer;
       position: relative;
-      contain: layout style;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+      user-select: none;
+      -webkit-user-select: none;
+      contain: content;
     }
 
     .photo-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+      border-color: #cbd5e1;
+    }
+
+    .photo-card.selected {
+      border-color: #059669 !important;
+      box-shadow: 0 0 0 2px #059669, 0 4px 14px rgba(5, 150, 105, 0.2) !important;
     }
 
     .photo-featured-badge {
@@ -1097,13 +1148,12 @@
       pointer-events: none;
     }
 
-    /* Skeleton placeholder & reserved dimensions to avoid blank lines & layout shifts */
+    /* Skeleton placeholder & consistent photographic aspect ratio */
     .photo-img-wrap {
       position: relative;
       width: 100%;
-      min-height: 220px;
       aspect-ratio: 4 / 3;
-      background: #fef08a;
+      background: #f1f5f9;
       overflow: hidden;
       display: block;
     }
@@ -1115,11 +1165,11 @@
       transform: translateX(-100%);
       background: linear-gradient(
         90deg,
-        rgba(254, 240, 138, 0) 0%,
-        rgba(255, 255, 255, 0.82) 50%,
-        rgba(254, 240, 138, 0) 100%
+        rgba(241, 245, 249, 0) 0%,
+        rgba(255, 255, 255, 0.75) 50%,
+        rgba(241, 245, 249, 0) 100%
       );
-      animation: photoShimmer 2.2s infinite ease-in-out;
+      animation: photoShimmer 1.8s infinite ease-in-out;
       pointer-events: none;
     }
 
@@ -1128,42 +1178,23 @@
       100% { transform: translateX(100%); }
     }
 
-    @media (prefers-color-scheme: dark) {
-      .photo-img-wrap {
-        background: #453713;
-      }
-      .photo-img-wrap::after {
-        background: linear-gradient(
-          90deg,
-          rgba(69, 55, 19, 0) 0%,
-          rgba(254, 240, 138, 0.35) 50%,
-          rgba(69, 55, 19, 0) 100%
-        );
-      }
-    }
-
     .photo-img {
       width: 100%;
       height: 100%;
-      aspect-ratio: 4 / 3;
       object-fit: cover;
+      object-position: center;
       display: block;
       cursor: pointer;
       opacity: 0;
-      transition: opacity 0.25s ease, filter 0.2s ease;
+      transition: opacity 0.22s ease, transform 0.28s ease;
     }
 
     .photo-img.loaded {
       opacity: 1;
-      height: auto;
-      aspect-ratio: auto;
     }
 
-    .photo-img-wrap.loaded {
-      animation: none;
-      background: transparent;
-      min-height: unset;
-      aspect-ratio: unset;
+    .photo-card:hover .photo-img.loaded {
+      transform: scale(1.035);
     }
 
     .photo-img-wrap.loaded::after {
@@ -1382,91 +1413,114 @@
       opacity: 1;
     }
 
-    /* Discovery & Filter Toolbar */
-    .discovery-toolbar {
+    /* Filter & Sort Section (Clean Light Neutral Design) */
+    .discovery-toolbar,
+    .gallery-filter-panel {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.8rem;
-      margin-bottom: 1.25rem;
-      padding: 0.65rem 0.85rem;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 12px;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-top: 0.8rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid #f1f5f9;
+      background: transparent;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .album-chips-container,
+    .gallery-chips-wrap {
+      display: flex;
       flex-wrap: wrap;
-    }
-
-    .album-chips-container {
-      display: flex;
+      gap: 0.45rem;
       align-items: center;
-      gap: 0.4rem;
-      overflow-x: auto;
-      max-width: 100%;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-      padding: 2px 0;
-    }
-
-    .album-chips-container::-webkit-scrollbar {
-      display: none;
+      width: 100%;
     }
 
     .filter-chip {
-      background: rgba(0, 0, 0, 0.04);
-      border: 1px solid var(--line);
-      border-radius: 99px;
-      padding: 0.32rem 0.75rem;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--ink);
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 9999px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #475569;
       cursor: pointer;
-      white-space: nowrap;
       transition: all 0.15s ease;
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
+      user-select: none;
+      -webkit-user-select: none;
+      white-space: nowrap;
     }
 
     .filter-chip:hover {
-      background: rgba(0, 0, 0, 0.08);
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #1e293b;
     }
 
     .filter-chip.active {
-      background: var(--accent, #0f5c4d);
-      color: #ffffff;
-      border-color: var(--accent, #0f5c4d);
-      box-shadow: 0 2px 8px rgba(15, 92, 77, 0.25);
+      background: #ecfdf5 !important;
+      border: 1.5px solid #059669 !important;
+      color: #065f46 !important;
+      font-weight: 600 !important;
+      box-shadow: 0 1px 3px rgba(5, 150, 105, 0.12);
     }
 
-    .discovery-meta-controls {
+    .filter-chip span:last-child {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .filter-chip.active span:last-child {
+      color: #047857 !important;
+      font-weight: 600 !important;
+    }
+
+    .discovery-meta-controls,
+    .gallery-sort-row {
       display: flex;
       align-items: center;
-      gap: 0.65rem;
-      margin-left: auto;
-      flex-shrink: 0;
+      justify-content: space-between;
+      gap: 0.75rem;
+      width: 100%;
+      margin: 0;
+      padding: 0;
     }
 
-    .btn-sort-toggle {
-      background: transparent;
-      border: 1px solid var(--line);
+    .btn-sort-toggle,
+    .gallery-sort-btn {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
       border-radius: 8px;
-      padding: 0.32rem 0.65rem;
+      padding: 0.32rem 0.72rem;
       font-size: 0.78rem;
       font-weight: 600;
-      color: var(--ink);
+      color: #334155;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 0.3rem;
+      gap: 0.4rem;
       transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
     }
 
-    .btn-sort-toggle:hover {
-      background: rgba(0, 0, 0, 0.04);
+    .btn-sort-toggle:hover,
+    .gallery-sort-btn:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #0f172a;
     }
 
-    .photos-progress-badge {
-      font-size: 0.8rem;
+    .photos-progress-badge,
+    .gallery-progress-text {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: #64748b;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
       font-weight: 600;
       color: var(--muted);
       white-space: nowrap;
@@ -2484,24 +2538,24 @@
             <p id="photosSectionSubtitle"></p>
           </div>
           <div class="gallery-actions-wrap">
-            <button class="btn-find-photos btn-outline btn-gallery-head" id="toggleSelectBtn">
+            <button class="gallery-action-btn" id="toggleSelectBtn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 11 12 14 22 4"></polyline></svg>
               <span id="toggleSelectText">Select Photos</span>
             </button>
-            <button class="btn-find-photos btn-outline btn-gallery-head" id="closePhotosBtn">New Search ↑</button>
+            <button class="gallery-action-btn" id="closePhotosBtn">New Search ↑</button>
             <button class="gallery-close-btn" id="galleryDismissBtn" title="Close Gallery" aria-label="Close Gallery">&times;</button>
           </div>
         </div>
 
-        <!-- Discovery & Filter Toolbar -->
-        <div id="discoveryToolbar" class="discovery-toolbar" hidden>
-          <div id="albumChipsContainer" class="album-chips-container"></div>
-          <div class="discovery-meta-controls">
-            <button id="sortOrderBtn" class="btn-sort-toggle" title="Toggle Sort Order">
+        <!-- Filter & Sort Panel (Clean Light Neutral Design) -->
+        <div id="discoveryToolbar" class="gallery-filter-panel" hidden>
+          <div id="albumChipsContainer" class="gallery-chips-wrap"></div>
+          <div class="gallery-sort-row">
+            <button id="sortOrderBtn" class="gallery-sort-btn" title="Toggle Sort Order">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               <span id="sortOrderText">Newest First</span>
             </button>
-            <span id="photosProgressText" class="photos-progress-badge"></span>
+            <span id="photosProgressText" class="gallery-progress-text"></span>
           </div>
         </div>
       </div>
@@ -2791,15 +2845,9 @@
         toggleText.textContent = isSelectionMode ? 'Done' : 'Select Photos';
       }
       if (toggleBtn) {
-        if (isSelectionMode) {
-          toggleBtn.classList.remove('btn-outline');
-          toggleBtn.style.background = 'var(--accent, #0f5c4d)';
-          toggleBtn.style.color = '#ffffff';
-        } else {
-          toggleBtn.classList.add('btn-outline');
-          toggleBtn.style.background = '';
-          toggleBtn.style.color = '';
-        }
+        toggleBtn.classList.toggle('active-mode', isSelectionMode);
+        toggleBtn.style.background = '';
+        toggleBtn.style.color = '';
       }
 
       document.querySelectorAll('.photo-card').forEach(c => {
@@ -2913,6 +2961,81 @@
       }
     }
 
+    const MONTH_NAMES = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    function parsePhotoDate(item) {
+      let album = '';
+      let event = '';
+      let dateStr = '';
+
+      if (typeof item === 'object' && item !== null) {
+        album = (item.album_name || '').trim();
+        event = (item.event_name || '').trim();
+        dateStr = (item.captured_at || item.created_at || '').trim();
+      } else if (typeof item === 'string') {
+        const parts = item.split('/');
+        if (parts.length > 2) {
+          album = parts[parts.length - 2].trim();
+          event = parts[parts.length - 3].trim();
+        } else if (parts.length > 1) {
+          album = parts[parts.length - 2].trim();
+        }
+      }
+
+      // 1. Try parsing DD-MM-YY or DD-MM-YYYY from album name (e.g. "01-11-26" or "21-10-2026")
+      const dmy = album.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+      if (dmy) {
+        const d = parseInt(dmy[1], 10);
+        const m = parseInt(dmy[2], 10);
+        let y = parseInt(dmy[3], 10);
+        if (y < 100) y += 2000;
+        const dateObj = new Date(y, m - 1, d);
+        if (!isNaN(dateObj.getTime())) {
+          const dayPad = String(d).padStart(2, '0');
+          const monthPad = String(m).padStart(2, '0');
+          return {
+            key: `${y}-${monthPad}-${dayPad}`,
+            sortTime: dateObj.getTime(),
+            title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
+            rawAlbum: album
+          };
+        }
+      }
+
+      // 2. Try parsing captured_at / created_at date (YYYY-MM-DD)
+      if (dateStr) {
+        const ymd = dateStr.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+        if (ymd) {
+          const y = parseInt(ymd[1], 10);
+          const m = parseInt(ymd[2], 10);
+          const d = parseInt(ymd[3], 10);
+          const dateObj = new Date(y, m - 1, d);
+          if (!isNaN(dateObj.getTime())) {
+            const dayPad = String(d).padStart(2, '0');
+            const monthPad = String(m).padStart(2, '0');
+            return {
+              key: `${y}-${monthPad}-${dayPad}`,
+              sortTime: dateObj.getTime(),
+              title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
+              rawAlbum: album || `${y}-${monthPad}-${dayPad}`
+            };
+          }
+        }
+      }
+
+      // 3. Fallback to album name or event name
+      const fallback = album || event || 'Celebration Photos';
+      return {
+        key: fallback,
+        sortTime: 0,
+        title: fallback,
+        rawAlbum: fallback
+      };
+    }
+
     function updateFilterChips() {
       const container = $('albumChipsContainer');
       const toolbar = $('discoveryToolbar');
@@ -2926,28 +3049,36 @@
       toolbar.hidden = false;
       container.replaceChildren();
 
-      const albumCounts = {};
+      const albumMap = new Map();
       for (const item of rawPhotosList) {
-        let alb = '';
-        if (typeof item === 'object') {
-          alb = item.album_name || item.event_name || '';
+        const parsed = parsePhotoDate(item);
+        const filterKey = parsed.rawAlbum;
+        if (!albumMap.has(filterKey)) {
+          albumMap.set(filterKey, {
+            filterKey,
+            displayTitle: parsed.title,
+            sortTime: parsed.sortTime,
+            count: 0
+          });
         }
-        if (!alb && typeof item === 'string') {
-          const parts = item.split('/');
-          if (parts.length > 1) alb = parts[parts.length - 2];
-        }
-        if (!alb) alb = 'Celebration Photos';
-        albumCounts[alb] = (albumCounts[alb] || 0) + 1;
+        albumMap.get(filterKey).count++;
       }
 
-      const albumNames = Object.keys(albumCounts);
+      const albums = Array.from(albumMap.values());
+      // Sort albums chronologically (newest date first)
+      albums.sort((a, b) => {
+        if (a.sortTime && b.sortTime) return b.sortTime - a.sortTime;
+        if (a.sortTime) return -1;
+        if (b.sortTime) return 1;
+        return a.filterKey.localeCompare(b.filterKey);
+      });
 
       // All Photos Chip
       const allChip = document.createElement('button');
       allChip.type = 'button';
       allChip.className = 'filter-chip' + (activeAlbumFilter === 'all' ? ' active' : '');
       const allCount = (totalMatchingPhotosCount > 0) ? totalMatchingPhotosCount : rawPhotosList.length;
-      allChip.innerHTML = `<span>All Photos</span> <span style="opacity:0.75;font-size:0.75rem;">(${allCount})</span>`;
+      allChip.innerHTML = `<span>All Photos</span> <span>(${allCount})</span>`;
       allChip.addEventListener('click', () => {
         if (activeAlbumFilter === 'all') return;
         activeAlbumFilter = 'all';
@@ -2955,20 +3086,19 @@
       });
       container.appendChild(allChip);
 
-      if (albumNames.length > 1) {
-        albumNames.forEach(albName => {
-          const chip = document.createElement('button');
-          chip.type = 'button';
-          chip.className = 'filter-chip' + (activeAlbumFilter === albName ? ' active' : '');
-          chip.innerHTML = `<span>${albName}</span> <span style="opacity:0.75;font-size:0.75rem;">(${albumCounts[albName]})</span>`;
-          chip.addEventListener('click', () => {
-            if (activeAlbumFilter === albName) return;
-            activeAlbumFilter = albName;
-            applyPhotoFiltersAndSort();
-          });
-          container.appendChild(chip);
+      // Date / Album Filter Chips
+      albums.forEach(alb => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'filter-chip' + (activeAlbumFilter === alb.filterKey ? ' active' : '');
+        chip.innerHTML = `<span>${alb.filterKey}</span> <span>(${alb.count})</span>`;
+        chip.addEventListener('click', () => {
+          if (activeAlbumFilter === alb.filterKey) return;
+          activeAlbumFilter = alb.filterKey;
+          applyPhotoFiltersAndSort();
         });
-      }
+        container.appendChild(chip);
+      });
 
       updateProgressText();
     }
@@ -2977,14 +3107,8 @@
       let filtered = [...rawPhotosList];
       if (activeAlbumFilter !== 'all') {
         filtered = filtered.filter(item => {
-          let alb = '';
-          if (typeof item === 'object') alb = item.album_name || item.event_name || '';
-          if (!alb && typeof item === 'string') {
-            const parts = item.split('/');
-            if (parts.length > 1) alb = parts[parts.length - 2];
-          }
-          if (!alb) alb = 'Celebration Photos';
-          return alb === activeAlbumFilter;
+          const parsed = parsePhotoDate(item);
+          return parsed.rawAlbum === activeAlbumFilter;
         });
       }
 
@@ -2993,14 +3117,12 @@
         const featB = (typeof b === 'object' && b.is_featured) ? 1 : 0;
         if (featA !== featB) return featB - featA;
 
-        const dateA = (typeof a === 'object' && (a.captured_at || a.created_at)) ? (a.captured_at || a.created_at) : '';
-        const dateB = (typeof b === 'object' && (b.captured_at || b.created_at)) ? (b.captured_at || b.created_at) : '';
+        const dateA = parsePhotoDate(a);
+        const dateB = parsePhotoDate(b);
 
-        if (dateA && dateB && dateA !== dateB) {
-          return sortOrder === 'newest' ? dateB.localeCompare(dateA) : dateA.localeCompare(dateB);
+        if (dateA.sortTime && dateB.sortTime && dateA.sortTime !== dateB.sortTime) {
+          return sortOrder === 'newest' ? dateB.sortTime - dateA.sortTime : dateA.sortTime - dateB.sortTime;
         }
-        if (dateB && !dateA) return sortOrder === 'newest' ? 1 : -1;
-        if (dateA && !dateB) return sortOrder === 'newest' ? -1 : 1;
 
         const nameA = (typeof a === 'string' ? a.split('/').pop() : (a.filename || a.rel_path.split('/').pop())).toLowerCase();
         const nameB = (typeof b === 'string' ? b.split('/').pop() : (b.filename || b.rel_path.split('/').pop())).toLowerCase();
@@ -3185,7 +3307,13 @@
         const item = added[i];
         const idx = startIdx + i;
         currentPhotosList.push(item);
-        gridRenderQueue.push({ type: 'photo', item, idx });
+        const parsed = parsePhotoDate(item);
+        gridRenderQueue.push({
+          type: 'photo',
+          groupKey: parsed.key,
+          item,
+          idx
+        });
       }
 
       totalMatchingPhotosCount = Math.max(totalMatchingPhotosCount, rawPhotosList.length);
@@ -3203,29 +3331,65 @@
 
       const grid = $('photosGrid');
       const sentinel = $('gridScrollSentinel');
-      const fragment = document.createDocumentFragment();
       const end = Math.min(gridQueueCursor + GRID_BATCH_SIZE, gridRenderQueue.length);
 
       for (let i = gridQueueCursor; i < end; i++) {
         const entry = gridRenderQueue[i];
-        if (entry.type === 'header') {
-          const header = document.createElement('div');
-          header.className = 'group-section-title';
-          header.innerHTML = `<span>${entry.title}</span> <span style="font-size:0.85rem;color:var(--muted);font-weight:500;">(${entry.count} photos)</span>`;
-          fragment.appendChild(header);
+        if (entry.type === 'section_header') {
+          let section = grid.querySelector(`.gallery-date-section[data-group-key="${CSS.escape(entry.groupKey)}"]`);
+          if (!section) {
+            section = document.createElement('section');
+            section.className = 'gallery-date-section';
+            section.dataset.groupKey = entry.groupKey;
+            section.innerHTML = `
+              <div class="gallery-date-header">
+                <div class="gallery-date-title-wrap">
+                  <h3 class="gallery-date-heading">${entry.title}</h3>
+                  <span class="gallery-date-count">${entry.count} ${entry.count === 1 ? 'photo' : 'photos'}</span>
+                </div>
+              </div>
+              <div class="gallery-date-grid"></div>
+            `;
+            if (sentinel && sentinel.parentNode === grid) {
+              grid.insertBefore(section, sentinel);
+            } else {
+              grid.appendChild(section);
+            }
+          } else {
+            const countEl = section.querySelector('.gallery-date-count');
+            if (countEl) countEl.textContent = `${entry.count} ${entry.count === 1 ? 'photo' : 'photos'}`;
+          }
         } else if (entry.type === 'photo') {
-          const card = createPhotoCard(entry.item, entry.idx);
-          fragment.appendChild(card);
+          let section = grid.querySelector(`.gallery-date-section[data-group-key="${CSS.escape(entry.groupKey)}"]`);
+          if (!section) {
+            const parsed = parsePhotoDate(entry.item);
+            section = document.createElement('section');
+            section.className = 'gallery-date-section';
+            section.dataset.groupKey = entry.groupKey;
+            section.innerHTML = `
+              <div class="gallery-date-header">
+                <div class="gallery-date-title-wrap">
+                  <h3 class="gallery-date-heading">${parsed.title}</h3>
+                  <span class="gallery-date-count">1 photo</span>
+                </div>
+              </div>
+              <div class="gallery-date-grid"></div>
+            `;
+            if (sentinel && sentinel.parentNode === grid) {
+              grid.insertBefore(section, sentinel);
+            } else {
+              grid.appendChild(section);
+            }
+          }
+          const dateGrid = section.querySelector('.gallery-date-grid');
+          if (dateGrid) {
+            const card = createPhotoCard(entry.item, entry.idx);
+            dateGrid.appendChild(card);
+          }
         }
       }
 
       gridQueueCursor = end;
-      if (sentinel && sentinel.parentNode === grid) {
-        grid.insertBefore(fragment, sentinel);
-      } else {
-        grid.appendChild(fragment);
-      }
-
       isRenderingBatch = false;
       updateProgressText();
 
@@ -3290,64 +3454,69 @@
       }
 
       if (currentPhotosList.length === 0) {
-        grid.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;text-align:center;padding:2.5rem 1rem;">No photos match the selected filter.</div>';
+        grid.innerHTML = '<div style="color:#64748b;text-align:center;padding:3rem 1rem;font-size:0.95rem;">No photos match the selected filter.</div>';
         updateProgressText();
         return;
       }
 
-      const groups = {};
+      // Group photos by date
+      const groupMap = new Map();
       for (let idx = 0; idx < currentPhotosList.length; idx++) {
         const item = currentPhotosList[idx];
-        let groupTitle = '';
-        if (typeof item === 'object') {
-          if (item.event_name && item.album_name) {
-            groupTitle = `${item.event_name} — ${item.album_name}`;
-          } else if (item.album_name) {
-            groupTitle = item.album_name;
-          } else if (item.event_name) {
-            groupTitle = item.event_name;
-          }
+        const parsed = parsePhotoDate(item);
+        if (!groupMap.has(parsed.key)) {
+          groupMap.set(parsed.key, {
+            key: parsed.key,
+            title: parsed.title,
+            sortTime: parsed.sortTime,
+            items: []
+          });
         }
-        if (!groupTitle) groupTitle = 'Celebration Photos';
-        if (!groups[groupTitle]) groups[groupTitle] = [];
-        groups[groupTitle].push({ item, idx });
+        groupMap.get(parsed.key).items.push({ item, idx });
       }
 
-      const groupKeys = Object.keys(groups);
-      const showGroupHeaders = groupKeys.length > 1;
+      const groups = Array.from(groupMap.values());
+      // Sort groups chronologically according to sortOrder
+      groups.sort((a, b) => {
+        if (a.sortTime && b.sortTime && a.sortTime !== b.sortTime) {
+          return sortOrder === 'newest' ? b.sortTime - a.sortTime : a.sortTime - b.sortTime;
+        }
+        if (a.sortTime) return -1;
+        if (b.sortTime) return 1;
+        return a.key.localeCompare(b.key);
+      });
 
       gridRenderQueue = [];
       gridQueueCursor = 0;
 
-      for (const gName of groupKeys) {
-        if (showGroupHeaders) {
-          gridRenderQueue.push({
-            type: 'header',
-            title: gName,
-            count: groups[gName].length
-          });
-        }
-        for (const entry of groups[gName]) {
+      for (const g of groups) {
+        gridRenderQueue.push({
+          type: 'section_header',
+          groupKey: g.key,
+          title: g.title,
+          count: g.items.length
+        });
+        for (const entry of g.items) {
           gridRenderQueue.push({
             type: 'photo',
+            groupKey: g.key,
             item: entry.item,
             idx: entry.idx
           });
         }
       }
 
-      if (gridRenderQueue.length > GRID_BATCH_SIZE || currentSearchHasMore) {
-        let sentinel = $('gridScrollSentinel');
-        if (!sentinel) {
-          sentinel = document.createElement('div');
-          sentinel.id = 'gridScrollSentinel';
-          sentinel.style.height = '40px';
-          sentinel.style.width = '100%';
-          sentinel.style.gridColumn = '1 / -1';
-          sentinel.style.display = 'block';
-        }
-        grid.appendChild(sentinel);
+      let sentinel = $('gridScrollSentinel');
+      if (!sentinel) {
+        sentinel = document.createElement('div');
+        sentinel.id = 'gridScrollSentinel';
+        sentinel.style.height = '30px';
+        sentinel.style.width = '100%';
+        sentinel.style.display = 'block';
+      }
+      grid.appendChild(sentinel);
 
+      if (gridRenderQueue.length > GRID_BATCH_SIZE || currentSearchHasMore) {
         gridScrollObserver = new IntersectionObserver((entries) => {
           if (entries[0] && entries[0].isIntersecting) {
             if (gridQueueCursor < gridRenderQueue.length) {
