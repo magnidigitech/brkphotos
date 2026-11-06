@@ -1827,7 +1827,7 @@
       }
     }
 
-    /* Card Stack Stage for Natural Card Stack Physics */
+    /* Single Photograph Full-Screen View */
     .lightbox-img-wrap {
       flex: 1 1 0%;
       display: flex;
@@ -1839,83 +1839,51 @@
       overflow: hidden;
       position: relative;
       touch-action: none;
-      perspective: 1200px;
       min-height: 0;
       z-index: 1000;
       box-sizing: border-box;
-      padding: 0.25rem 0.5rem;
+      padding: 0;
     }
 
-    .card-stage {
+    .single-image-stage {
       position: relative;
       width: 100%;
       height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      perspective: 1200px;
-      touch-action: none;
       overflow: hidden;
-    }
-
-    .stack-card {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      will-change: transform, filter;
+      touch-action: none;
       user-select: none;
       -webkit-user-select: none;
-      transform-origin: center center;
-      pointer-events: none;
-      overflow: hidden; /* Restricts zoomed image strictly inside image card */
-      opacity: 1 !important;
-      padding: 2px;
       box-sizing: border-box;
     }
 
-    .card-behind {
-      z-index: 1;
-      transform: scale(0.92);
-      filter: brightness(0.85);
-      pointer-events: none;
-      opacity: 1 !important;
-    }
-
-    .card-current {
-      z-index: 2;
-      transform: scale(1) translate3d(0, 0, 0) rotate(0deg);
-      filter: brightness(1);
-      cursor: pointer;
-      pointer-events: auto;
-      opacity: 1 !important;
-    }
-
-    .card-current:active {
-      cursor: grabbing;
-    }
-
-    .lightbox-img {
+    .lightbox-main-img {
       max-width: 100%;
       max-height: 100%;
       width: auto;
       height: auto;
       object-fit: contain;
-      border-radius: clamp(10px, 2vw, 16px);
-      box-shadow: 0 20px 50px -6px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
       transform-origin: center center;
       will-change: transform;
       background: transparent;
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
       pointer-events: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: grab;
+      transition: opacity 0.15s ease;
+    }
+
+    .lightbox-main-img:active {
+      cursor: grabbing;
     }
 
     @media (max-width: 640px) {
-      .lightbox-img {
-        max-width: 100%;
-        max-height: 100%;
-        border-radius: 12px;
+      .lightbox-main-img {
+        border-radius: 0;
       }
     }
 
@@ -2132,52 +2100,6 @@
     .fab-overview:hover {
       transform: translateY(-3px) scale(1.06);
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
-    }
-
-    /* Navigation Arrows */
-    .lightbox-nav-btn {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      width: clamp(38px, 6vw, 48px);
-      height: clamp(38px, 6vw, 48px);
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.18);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      z-index: 2010;
-    }
-
-    .lightbox-nav-btn svg {
-      width: clamp(20px, 3.5vw, 24px);
-      height: clamp(20px, 3.5vw, 24px);
-    }
-
-    .lightbox-nav-btn:hover {
-      background: rgba(255, 255, 255, 0.32);
-      transform: translateY(-50%) scale(1.06);
-    }
-
-    .lightbox-nav-btn.prev {
-      left: max(0.45rem, env(safe-area-inset-left));
-    }
-
-    .lightbox-nav-btn.next {
-      right: max(0.45rem, env(safe-area-inset-right));
-    }
-
-    @media (max-width: 640px) {
-      .lightbox-nav-btn {
-        width: 38px;
-        height: 38px;
-      }
     }
 
     /* MagniDigitech Spinner Loader (Matches Uploaded Reference) */
@@ -2574,33 +2496,10 @@
     </div>
 
     <div class="lightbox-img-wrap" id="lightboxImgWrap">
-      <!-- Navigation Left Arrow -->
-      <button id="lightboxPrevBtn" class="lightbox-nav-btn prev" aria-label="Previous Photo">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-          stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-      </button>
-
-      <!-- Card Stage for Dribbble/Apple Card Stack Animation -->
-      <div class="card-stage" id="cardStage">
-        <!-- Card B (underlying layer) -->
-        <div class="stack-card card-behind" id="cardB">
-          <img id="imgB" class="lightbox-img" alt="Adjacent Photo" fetchpriority="low">
-        </div>
-        <!-- Card A (foreground layer) -->
-        <div class="stack-card card-current" id="cardA">
-          <img id="imgA" class="lightbox-img" alt="Current Photo" fetchpriority="high">
-        </div>
+      <!-- Single Centered Photograph View (No Card Stack, Full Viewport Fit) -->
+      <div class="single-image-stage" id="singleImageStage">
+        <img id="lightboxMainImg" class="lightbox-main-img" alt="Photo Full View" fetchpriority="high">
       </div>
-
-      <!-- Navigation Right Arrow -->
-      <button id="lightboxNextBtn" class="lightbox-nav-btn next" aria-label="Next Photo">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-          stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-      </button>
 
       <!-- Floating Zoom Controls (appears when image view is clicked or zoom button is tapped) -->
       <div id="lightboxZoomBar" class="lightbox-zoom-bar" hidden>
@@ -2731,6 +2630,7 @@
 
     // Gallery Discovery, Album Filters & Sorting State
     let rawPhotosList = [];
+    let totalMatchingPhotosCount = 0;
     let activeAlbumFilter = 'all';
     let sortOrder = 'newest'; // 'newest' | 'oldest'
 
@@ -2915,7 +2815,8 @@
       const allChip = document.createElement('button');
       allChip.type = 'button';
       allChip.className = 'filter-chip' + (activeAlbumFilter === 'all' ? ' active' : '');
-      allChip.innerHTML = `<span>All Photos</span> <span style="opacity:0.75;font-size:0.75rem;">(${rawPhotosList.length})</span>`;
+      const allCount = (totalMatchingPhotosCount > 0) ? totalMatchingPhotosCount : rawPhotosList.length;
+      allChip.innerHTML = `<span>All Photos</span> <span style="opacity:0.75;font-size:0.75rem;">(${allCount})</span>`;
       allChip.addEventListener('click', () => {
         if (activeAlbumFilter === 'all') return;
         activeAlbumFilter = 'all';
@@ -2990,7 +2891,7 @@
     function updateProgressText() {
       const el = $('photosProgressText');
       if (!el) return;
-      const total = rawPhotosList.length;
+      const total = (totalMatchingPhotosCount > 0) ? totalMatchingPhotosCount : rawPhotosList.length;
       const loaded = Math.min(gridQueueCursor, currentPhotosList.length);
       el.textContent = `Showing ${loaded} of ${total} photos`;
     }
@@ -3114,6 +3015,9 @@
           if (data.photos && data.photos.length > 0) {
             currentSearchPage = data.page || (currentSearchPage + 1);
             currentSearchHasMore = !!data.has_more;
+            if (typeof data.total_count === 'number' && data.total_count > 0) {
+              totalMatchingPhotosCount = data.total_count;
+            }
             appendPhotosToGrid(data.photos);
           } else {
             currentSearchHasMore = false;
@@ -3153,10 +3057,12 @@
         gridRenderQueue.push({ type: 'photo', item, idx });
       }
 
+      totalMatchingPhotosCount = Math.max(totalMatchingPhotosCount, rawPhotosList.length);
       renderNextGridBatch();
       updateFilterChips();
       if (!$('photoLightboxModal').hidden) {
         buildFilmstrip();
+        updateLightboxHeader(currentPhotoIndex);
       }
     }
 
@@ -3329,35 +3235,13 @@
       updateProgressText();
     }
 
-    // Zoom & Pan State for Lightbox (Only active photo image section zooms)
+    // Lightbox State & Zoom Variables
+    let mainLightboxImg = null;
+    let isTransitioning = false;
     let zoomScale = 1;
     let panX = 0;
     let panY = 0;
     let isPanning = false;
-    let startPanX = 0;
-    let startPanY = 0;
-    let touchStartTime = 0;
-    let touchStartX = 0;
-    let touchStartY = 0;
-
-    // Card Deck Elements & Roles (Dribbble 3D Physical Deck)
-    let cardA = null;
-    let cardB = null;
-    let imgA = null;
-    let imgB = null;
-    let activeCard = null;
-    let behindCard = null;
-    let activeImg = null;
-    let behindImg = null;
-
-    // Card Drag / Swipe State
-    let isCardDragging = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
-    let currentDragX = 0;
-    let currentDragY = 0;
-    let dragDirection = 0; // 1 = right (prev), -1 = left (next)
-    let isTransitioning = false;
 
     // Web Audio API Swipe Sound & Mute Preference
     let audioCtx = null;
@@ -3405,24 +3289,13 @@
       } catch (e) { }
     }
 
-    $('lightboxSoundBtn').addEventListener('click', e => {
+    $('lightboxSoundBtn')?.addEventListener('click', e => {
       e.stopPropagation();
       isSoundMuted = !isSoundMuted;
       localStorage.setItem('magni_gallery_muted', isSoundMuted);
       updateSoundButton();
     });
     updateSoundButton();
-
-    function initCardDeck() {
-      cardA = $('cardA');
-      cardB = $('cardB');
-      imgA = $('imgA');
-      imgB = $('imgB');
-      activeCard = cardA;
-      behindCard = cardB;
-      activeImg = imgA;
-      behindImg = imgB;
-    }
 
     function toggleZoomBar(forceState) {
       const bar = $('lightboxZoomBar');
@@ -3444,7 +3317,8 @@
     }
 
     function updateImgTransform() {
-      if (!activeImg) return;
+      if (!mainLightboxImg) mainLightboxImg = $('lightboxMainImg');
+      if (!mainLightboxImg) return;
       const zoomText = $('zoomLevelText');
       if (zoomText) zoomText.textContent = `${Math.round(zoomScale * 100)}%`;
 
@@ -3452,19 +3326,17 @@
         zoomScale = 1;
         panX = 0;
         panY = 0;
-        activeImg.style.transform = 'none';
-        activeImg.style.cursor = 'pointer';
-        if (activeCard) activeCard.style.cursor = 'pointer';
+        isPanning = false;
+        mainLightboxImg.style.transform = 'none';
+        mainLightboxImg.style.cursor = 'grab';
       } else {
-        // ONLY the image section zooms, contained strictly within .stack-card (overflow: hidden)
         const maxPanX = (window.innerWidth * (zoomScale - 1)) / 1.8;
         const maxPanY = (window.innerHeight * (zoomScale - 1)) / 1.8;
         panX = Math.max(Math.min(panX, maxPanX), -maxPanX);
         panY = Math.max(Math.min(panY, maxPanY), -maxPanY);
 
-        activeImg.style.transform = `scale(${zoomScale}) translate3d(${panX / zoomScale}px, ${panY / zoomScale}px, 0)`;
-        activeImg.style.cursor = isPanning ? 'grabbing' : 'grab';
-        if (activeCard) activeCard.style.cursor = isPanning ? 'grabbing' : 'grab';
+        mainLightboxImg.style.transform = `scale(${zoomScale}) translate3d(${panX / zoomScale}px, ${panY / zoomScale}px, 0)`;
+        mainLightboxImg.style.cursor = isPanning ? 'grabbing' : 'grab';
       }
     }
 
@@ -3473,9 +3345,11 @@
       panX = 0;
       panY = 0;
       isPanning = false;
-      if (imgA) { imgA.style.transform = 'none'; imgA.style.cursor = 'pointer'; }
-      if (imgB) { imgB.style.transform = 'none'; imgB.style.cursor = 'pointer'; }
-      if (activeCard) activeCard.style.cursor = 'pointer';
+      if (!mainLightboxImg) mainLightboxImg = $('lightboxMainImg');
+      if (mainLightboxImg) {
+        mainLightboxImg.style.transform = 'none';
+        mainLightboxImg.style.cursor = 'grab';
+      }
       const zoomText = $('zoomLevelText');
       if (zoomText) zoomText.textContent = '100%';
     }
@@ -3493,11 +3367,13 @@
     }
 
     function updateLightboxHeader(index) {
+      if (index < 0 || index >= currentPhotosList.length) return;
       const item = currentPhotosList[index];
       const enc = getPhotoEnc(item);
       const filename = getPhotoFilename(item);
 
-      $('lightboxCounter').textContent = `${index + 1} / ${currentPhotosList.length}`;
+      const totalCount = (totalMatchingPhotosCount > 0) ? totalMatchingPhotosCount : currentPhotosList.length;
+      $('lightboxCounter').textContent = `${index + 1} / ${totalCount}`;
       $('lightboxFilename').textContent = filename;
       $('lightboxFilename').title = filename;
 
@@ -3510,8 +3386,10 @@
       btn4k.setAttribute('download', filename);
     }
 
-    // Studio-Quality Lightbox Viewer with Natural Card Stack Physics & Bottom Filmstrip
+    // --- Bottom Filmstrip & Sync ---
     let filmstripBuiltForCount = 0;
+    let isProgrammaticFilmstripScroll = false;
+    let filmstripScrollTimeout = null;
 
     function buildFilmstrip() {
       const track = $('lightboxFilmstripTrack');
@@ -3561,42 +3439,15 @@
 
       thumb.addEventListener('click', (e) => {
         e.stopPropagation();
-        jumpToPhoto(i);
+        if (i !== currentPhotoIndex) {
+          showPhotoAtIndex(i, { autoCenterFilmstrip: true, direction: 0 });
+        }
       });
 
       return thumb;
     }
 
-    function jumpToPhoto(targetIdx) {
-      if (targetIdx < 0 || targetIdx >= currentPhotosList.length || targetIdx === currentPhotoIndex) return;
-      currentPhotoIndex = targetIdx;
-      resetZoom();
-      updateLightboxHeader(targetIdx);
-
-      const enc = getPhotoEnc(currentPhotosList[targetIdx]);
-      const nextIdx = (targetIdx + 1) % currentPhotosList.length;
-      const nextEnc = getPhotoEnc(currentPhotosList[nextIdx]);
-
-      activeCard.style.transition = 'opacity 0.15s ease';
-      activeCard.style.opacity = '0.35';
-      activeImg.src = `/preview/${enc}`;
-      behindImg.src = `/preview/${nextEnc}`;
-
-      setTimeout(() => {
-        activeCard.style.opacity = '1';
-      }, 100);
-
-      updateFilmstripActive(targetIdx);
-
-      try {
-        history.replaceState({ brkLightboxOpen: true, photoIndex: targetIdx }, '');
-      } catch (e) {}
-
-      const prevIdx = (targetIdx - 1 + currentPhotosList.length) % currentPhotosList.length;
-      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
-    }
-
-    function updateFilmstripActive(index) {
+    function updateFilmstripActive(index, autoCenter = true) {
       const track = $('lightboxFilmstripTrack');
       if (!track || track.children.length === 0) return;
 
@@ -3606,55 +3457,124 @@
       const currentThumb = track.children[index];
       if (currentThumb) {
         currentThumb.classList.add('active');
-        currentThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        if (autoCenter) {
+          isProgrammaticFilmstripScroll = true;
+          currentThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          setTimeout(() => {
+            isProgrammaticFilmstripScroll = false;
+          }, 350);
+        }
       }
+    }
+
+    function checkAndFetchMorePhotos(index) {
+      if (index >= currentPhotosList.length - 15 && currentSearchHasMore && !isLoadingNextPage) {
+        fetchNextSearchPage();
+      }
+    }
+
+    function showPhotoAtIndex(targetIdx, { autoCenterFilmstrip = true, direction = 0 } = {}) {
+      if (targetIdx < 0 || targetIdx >= currentPhotosList.length) return;
+      if (!mainLightboxImg) mainLightboxImg = $('lightboxMainImg');
+      if (!mainLightboxImg) return;
+
+      currentPhotoIndex = targetIdx;
+      resetZoom();
+      updateLightboxHeader(targetIdx);
+      updateFilmstripActive(targetIdx, autoCenterFilmstrip);
+      checkAndFetchMorePhotos(targetIdx);
+
+      const enc = getPhotoEnc(currentPhotosList[targetIdx]);
+      const nextSrc = `/preview/${enc}`;
+
+      if (direction !== 0) {
+        // Natural single image gallery slide
+        isTransitioning = true;
+        const outX = direction > 0 ? -window.innerWidth * 0.7 : window.innerWidth * 0.7;
+        const inX = direction > 0 ? window.innerWidth * 0.7 : -window.innerWidth * 0.7;
+
+        mainLightboxImg.style.transition = 'transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.18s ease';
+        mainLightboxImg.style.transform = `translate3d(${outX}px, 0, 0)`;
+        mainLightboxImg.style.opacity = '0.35';
+
+        setTimeout(() => {
+          if (!mainLightboxImg) return;
+          mainLightboxImg.src = nextSrc;
+          mainLightboxImg.style.transition = 'none';
+          mainLightboxImg.style.transform = `translate3d(${inX}px, 0, 0)`;
+
+          requestAnimationFrame(() => {
+            if (!mainLightboxImg) return;
+            mainLightboxImg.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease';
+            mainLightboxImg.style.transform = 'translate3d(0, 0, 0)';
+            mainLightboxImg.style.opacity = '1';
+            setTimeout(() => {
+              isTransitioning = false;
+            }, 220);
+          });
+        }, 180);
+      } else {
+        mainLightboxImg.style.transition = 'opacity 0.15s ease';
+        mainLightboxImg.style.opacity = '0.35';
+        mainLightboxImg.src = nextSrc;
+        setTimeout(() => {
+          if (mainLightboxImg) mainLightboxImg.style.opacity = '1';
+        }, 60);
+      }
+
+      try {
+        history.replaceState({ brkLightboxOpen: true, photoIndex: targetIdx }, '');
+      } catch (e) {}
+
+      // Preload adjacent images
+      const prevIdx = (targetIdx - 1 + currentPhotosList.length) % currentPhotosList.length;
+      const nextIdx = (targetIdx + 1) % currentPhotosList.length;
+      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
+      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
+    }
+
+    function goToNextPhoto() {
+      if (isTransitioning || currentPhotosList.length <= 1) return;
+      const nextIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
+      playSwipeSound();
+      showPhotoAtIndex(nextIdx, { autoCenterFilmstrip: true, direction: 1 });
+    }
+
+    function goToPrevPhoto() {
+      if (isTransitioning || currentPhotosList.length <= 1) return;
+      const prevIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
+      playSwipeSound();
+      showPhotoAtIndex(prevIdx, { autoCenterFilmstrip: true, direction: -1 });
     }
 
     function openPhotoLightbox(index) {
       if (currentPhotosList.length === 0) return;
-      if (index < 0) index = currentPhotosList.length - 1;
-      if (index >= currentPhotosList.length) index = 0;
+      if (index < 0) index = 0;
+      if (index >= currentPhotosList.length) index = currentPhotosList.length - 1;
       currentPhotoIndex = index;
       resetZoom();
 
-      initCardDeck();
+      if (!mainLightboxImg) mainLightboxImg = $('lightboxMainImg');
       updateLightboxHeader(index);
-
       buildFilmstrip();
-      updateFilmstripActive(index);
+      updateFilmstripActive(index, true);
+      checkAndFetchMorePhotos(index);
 
       const enc = getPhotoEnc(currentPhotosList[index]);
-      const nextIdx = (index + 1) % currentPhotosList.length;
-      const nextEnc = getPhotoEnc(currentPhotosList[nextIdx]);
-
-      // Load Studio 1600px HD preview directly (crisp, instantaneous)
-      activeImg.src = `/preview/${enc}`;
-      behindImg.src = `/preview/${nextEnc}`;
-
-      // Reset Card Stack Positions (activeCard on top, behindCard underneath)
-      activeCard.className = 'stack-card card-current';
-      activeCard.style.zIndex = '2';
-      activeCard.style.transition = 'none';
-      activeCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
-      activeCard.style.opacity = '1';
-      activeCard.style.filter = 'brightness(1)';
-
-      behindCard.className = 'stack-card card-behind';
-      behindCard.style.zIndex = '1';
-      behindCard.style.transition = 'none';
-      behindCard.style.transform = 'scale(0.92)';
-      behindCard.style.opacity = '1';
-      behindCard.style.filter = 'brightness(0.85)';
+      if (mainLightboxImg) {
+        mainLightboxImg.style.transition = 'none';
+        mainLightboxImg.style.transform = 'translate3d(0, 0, 0)';
+        mainLightboxImg.style.opacity = '1';
+        mainLightboxImg.src = `/preview/${enc}`;
+      }
 
       const modal = $('photoLightboxModal');
       if (modal.hidden) {
         modal.hidden = false;
         requestAnimationFrame(() => {
           modal.classList.add('active');
-          activeCard.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
         });
 
-        // Android Hardware Back Button: push navigation layer to browser history
         try {
           history.pushState({ brkLightboxOpen: true, photoIndex: index }, '');
         } catch (e) {}
@@ -3664,121 +3584,10 @@
         } catch (e) {}
       }
 
-      // Preload adjacent photos for instant transitions
       const prevIdx = (index - 1 + currentPhotosList.length) % currentPhotosList.length;
-      const next2Idx = (index + 2) % currentPhotosList.length;
+      const nextIdx = (index + 1) % currentPhotosList.length;
       new Image().src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
-      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[next2Idx])}`;
-    }
-
-    // Seamless Card Role Swap after Slide Transition
-    function finishTransition(targetIdx, direction) {
-      currentPhotoIndex = targetIdx;
-      updateLightboxHeader(targetIdx);
-      updateFilmstripActive(targetIdx);
-      resetZoom();
-
-      // Incoming card is now centered and becomes activeCard at z-index 2
-      behindCard.className = 'stack-card card-current';
-      behindCard.style.zIndex = '2';
-      behindCard.style.transition = 'none';
-      behindCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
-      behindCard.style.filter = 'brightness(1)';
-      behindCard.style.opacity = '1';
-
-      // Old card is placed silently underneath as behindCard at z-index 1
-      activeCard.className = 'stack-card card-behind';
-      activeCard.style.zIndex = '1';
-      activeCard.style.transition = 'none';
-      activeCard.style.transform = 'scale(0.92)';
-      activeCard.style.filter = 'brightness(0.85)';
-      activeCard.style.opacity = '1';
-
-      // Preload next upcoming photo into the card now behind
-      const upcomingIdx = (targetIdx + 1) % currentPhotosList.length;
-      activeImg.src = `/preview/${getPhotoEnc(currentPhotosList[upcomingIdx])}`;
-
-      // Swap pointers: behindCard is now activeCard, activeCard is now behindCard
-      const tempCard = activeCard; activeCard = behindCard; behindCard = tempCard;
-      const tempImg = activeImg; activeImg = behindImg; behindImg = tempImg;
-
-      // Update history state so current position is preserved
-      try {
-        history.replaceState({ brkLightboxOpen: true, photoIndex: targetIdx }, '');
-      } catch (e) {}
-
-      // Background preload previous photo
-      const prevIdx = (targetIdx - 1 + currentPhotosList.length) % currentPhotosList.length;
-      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
-
-      dragDirection = 0;
-      isTransitioning = false;
-      isCardDragging = false;
-      currentDragX = 0;
-      currentDragY = 0;
-    }
-
-    function navigateLightbox(direction) {
-      if (isTransitioning || currentPhotosList.length <= 1) return;
-      isTransitioning = true;
-      resetZoom();
-
-      if (direction > 0) {
-        // NEXT (Swipe Left): Incoming photo appears from ABOVE existing card, stacking over current card from right
-        const targetIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
-        behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[targetIdx])}`;
-
-        behindCard.className = 'stack-card';
-        behindCard.style.zIndex = '3'; // Layer incoming card ABOVE current card
-        behindCard.style.transition = 'none';
-        behindCard.style.transform = 'translate3d(110vw, 0, 0) scale(1) rotate(6deg)';
-        behindCard.style.filter = 'brightness(1)';
-        behindCard.style.opacity = '1';
-
-        activeCard.className = 'stack-card';
-        activeCard.style.zIndex = '2';
-        activeCard.style.opacity = '1';
-
-        requestAnimationFrame(() => {
-          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
-          behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
-
-          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-          activeCard.style.transform = 'scale(0.92)';
-          activeCard.style.filter = 'brightness(0.85)';
-        });
-
-        playSwipeSound();
-        setTimeout(() => { finishTransition(targetIdx, 1); }, 280);
-
-      } else {
-        // PREVIOUS (Swipe Right): Incoming photo appears from ABOVE existing card, stacking over current card from left
-        const targetIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
-        behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[targetIdx])}`;
-
-        behindCard.className = 'stack-card';
-        behindCard.style.zIndex = '3'; // Layer incoming card ABOVE current card
-        behindCard.style.transition = 'none';
-        behindCard.style.transform = 'translate3d(-110vw, 0, 0) scale(1) rotate(-6deg)';
-        behindCard.style.filter = 'brightness(1)';
-        behindCard.style.opacity = '1';
-
-        activeCard.className = 'stack-card';
-        activeCard.style.zIndex = '2';
-        activeCard.style.opacity = '1';
-
-        requestAnimationFrame(() => {
-          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
-          behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
-
-          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-          activeCard.style.transform = 'scale(0.92)';
-          activeCard.style.filter = 'brightness(0.85)';
-        });
-
-        playSwipeSound();
-        setTimeout(() => { finishTransition(targetIdx, -1); }, 280);
-      }
+      new Image().src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
     }
 
     function closeLightbox(isFromPopState = false) {
@@ -3788,20 +3597,17 @@
       modal.classList.remove('active');
       setTimeout(() => {
         modal.hidden = true;
-        if (imgA) imgA.src = '';
-        if (imgB) imgB.src = '';
+        if (mainLightboxImg) mainLightboxImg.src = '';
         resetZoom();
         toggleZoomBar(false);
       }, 260);
 
-      // If user closed via UI close button or Esc key and a history entry exists, step back in history
       if (!isFromPopState && window.history.state && window.history.state.brkLightboxOpen) {
         try {
           window.history.back();
         } catch (e) {}
       }
 
-      // Restore Scroll Position: smoothly bring currently viewed photo into view!
       const allCards = document.querySelectorAll('.photo-card');
       if (allCards && allCards[currentPhotoIndex]) {
         allCards[currentPhotoIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -3812,24 +3618,11 @@
       }
     }
 
-    // Android Hardware Back Button & Browser Navigation Listener
     window.addEventListener('popstate', () => {
       const modal = $('photoLightboxModal');
       if (modal && !modal.hidden && modal.classList.contains('active')) {
-        // Close only the full-screen preview and preserve search session
         closeLightbox(true);
       }
-    });
-
-    // Lightbox Controls
-    $('lightboxPrevBtn').addEventListener('click', e => {
-      e.stopPropagation();
-      navigateLightbox(-1);
-    });
-
-    $('lightboxNextBtn').addEventListener('click', e => {
-      e.stopPropagation();
-      navigateLightbox(1);
     });
 
     $('closeLightboxBtn').addEventListener('click', () => closeLightbox(false));
@@ -3837,34 +3630,82 @@
     // Keyboard Navigation
     document.addEventListener('keydown', e => {
       if (!$('photoLightboxModal').hidden) {
-        if (e.key === 'ArrowRight') navigateLightbox(1);
-        if (e.key === 'ArrowLeft') navigateLightbox(-1);
+        if (e.key === 'ArrowRight') goToNextPhoto();
+        if (e.key === 'ArrowLeft') goToPrevPhoto();
         if (e.key === 'Escape') closeLightbox(false);
       }
     });
 
-    // Lightbox Swipe & Dedicated Image Zoom Controller
-    const lightboxWrap = $('lightboxImgWrap');
+    // Lightbox Filmstrip Touch Isolation & Center Detection on Scroll
     const filmstripBar = $('lightboxFilmstripBar');
+    const filmstripTrack = $('lightboxFilmstripTrack');
     if (filmstripBar) {
       filmstripBar.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
       filmstripBar.addEventListener('touchmove', e => e.stopPropagation(), { passive: true });
       filmstripBar.addEventListener('touchend', e => e.stopPropagation(), { passive: true });
     }
-    let lastLightboxTap = 0;
+
+    if (filmstripTrack) {
+      filmstripTrack.addEventListener('scroll', () => {
+        // Trigger infinite scroll when filmstrip approaches end
+        if (filmstripTrack.scrollLeft + filmstripTrack.clientWidth >= filmstripTrack.scrollWidth - 350) {
+          if (currentSearchHasMore && !isLoadingNextPage) {
+            fetchNextSearchPage();
+          }
+        }
+
+        if (isProgrammaticFilmstripScroll) return;
+
+        if (filmstripScrollTimeout) clearTimeout(filmstripScrollTimeout);
+        filmstripScrollTimeout = setTimeout(() => {
+          if (isProgrammaticFilmstripScroll) return;
+          const trackRect = filmstripTrack.getBoundingClientRect();
+          const trackCenter = trackRect.left + trackRect.width / 2;
+          let closestThumb = null;
+          let closestDist = Infinity;
+          const thumbs = filmstripTrack.children;
+          for (let i = 0; i < thumbs.length; i++) {
+            const rect = thumbs[i].getBoundingClientRect();
+            const thumbCenter = rect.left + rect.width / 2;
+            const dist = Math.abs(thumbCenter - trackCenter);
+            if (dist < closestDist) {
+              closestDist = dist;
+              closestThumb = thumbs[i];
+            }
+          }
+          if (closestThumb) {
+            const newIdx = parseInt(closestThumb.dataset.index, 10);
+            if (!isNaN(newIdx) && newIdx !== currentPhotoIndex && newIdx >= 0 && newIdx < currentPhotosList.length) {
+              showPhotoAtIndex(newIdx, { autoCenterFilmstrip: false, direction: 0 });
+            }
+          }
+        }, 75);
+      }, { passive: true });
+    }
+
+    // Touch & Swipe Controller on Lightbox Wrap
+    const lightboxWrap = $('lightboxImgWrap');
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    let currentDragX = 0;
+    let currentDragY = 0;
+    let startPanX = 0;
+    let startPanY = 0;
+    let isTouchSwiping = false;
     let isPinching = false;
     let initialPinchDist = 0;
     let initialPinchScale = 1;
+    let lastLightboxTap = 0;
 
     lightboxWrap.addEventListener('touchstart', e => {
       if (isTransitioning) return;
       if (e.target.closest('button, a, .lightbox-zoom-bar')) return;
 
       if (e.touches.length === 2) {
-        // Pinch-to-zoom gesture
         isPinching = true;
-        isCardDragging = false;
         isPanning = false;
+        isTouchSwiping = false;
         initialPinchDist = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
@@ -3879,18 +3720,18 @@
         touchStartY = e.touches[0].clientY;
         currentDragX = 0;
         currentDragY = 0;
-        dragDirection = 0;
 
         if (zoomScale > 1.05) {
           isPanning = true;
-          isCardDragging = false;
+          isTouchSwiping = false;
           startPanX = e.touches[0].clientX - panX;
           startPanY = e.touches[0].clientY - panY;
         } else {
           isPanning = false;
-          isCardDragging = true;
-          if (activeCard) activeCard.style.transition = 'none';
-          if (behindCard) behindCard.style.transition = 'none';
+          isTouchSwiping = true;
+          if (mainLightboxImg) {
+            mainLightboxImg.style.transition = 'none';
+          }
         }
       }
     }, { passive: false });
@@ -3921,52 +3762,13 @@
           panX = e.touches[0].clientX - startPanX;
           panY = e.touches[0].clientY - startPanY;
           updateImgTransform();
-        } else if (isCardDragging && zoomScale <= 1.05) {
-          e.preventDefault();
-
-          if (diffX < -5) {
-            // Dragging Left: next photo stacks on top from right
-            if (dragDirection !== -1) {
-              dragDirection = -1;
-              const nextIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
-              behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
-              behindCard.className = 'stack-card';
-              behindCard.style.zIndex = '3'; // Layer incoming card ABOVE current card
-              behindCard.style.opacity = '1';
-              behindCard.style.filter = 'brightness(1)';
-              activeCard.className = 'stack-card';
-              activeCard.style.zIndex = '2';
-              activeCard.style.opacity = '1';
+        } else if (isTouchSwiping && zoomScale <= 1.05) {
+          if (Math.abs(diffX) > Math.abs(diffY)) {
+            e.preventDefault();
+            if (mainLightboxImg) {
+              const resistance = (currentPhotosList.length <= 1) ? 0.25 : 1;
+              mainLightboxImg.style.transform = `translate3d(${diffX * resistance}px, 0, 0)`;
             }
-            const incomingX = window.innerWidth + diffX;
-            const rot = Math.max(Math.min((diffX + 100) * 0.02, 6), -6);
-            behindCard.style.transform = `translate3d(${incomingX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg) scale(1)`;
-
-            const progress = Math.min(Math.abs(diffX) / 200, 1);
-            activeCard.style.transform = `scale(${1 - 0.08 * progress})`;
-            activeCard.style.filter = `brightness(${1 - 0.15 * progress})`;
-
-          } else if (diffX > 5) {
-            // Dragging Right: previous photo stacks on top from left
-            if (dragDirection !== 1) {
-              dragDirection = 1;
-              const prevIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
-              behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
-              behindCard.className = 'stack-card';
-              behindCard.style.zIndex = '3'; // Layer incoming card ABOVE current card
-              behindCard.style.opacity = '1';
-              behindCard.style.filter = 'brightness(1)';
-              activeCard.className = 'stack-card';
-              activeCard.style.zIndex = '2';
-              activeCard.style.opacity = '1';
-            }
-            const incomingX = -window.innerWidth + diffX;
-            const rot = Math.max(Math.min((diffX - 100) * 0.02, 6), -6);
-            behindCard.style.transform = `translate3d(${incomingX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg) scale(1)`;
-
-            const progress = Math.min(diffX / 200, 1);
-            activeCard.style.transform = `scale(${1 - 0.08 * progress})`;
-            activeCard.style.filter = `brightness(${1 - 0.15 * progress})`;
           }
         }
       }
@@ -3981,13 +3783,12 @@
         const elapsed = Date.now() - touchStartTime;
         const dist = Math.hypot(currentDragX, currentDragY);
 
-        // Tap on image view: check for double tap to zoom, or single tap to toggle zoom toolbar
+        // Tap Detection
         if (dist < 10 && elapsed < 350) {
           isPanning = false;
-          isCardDragging = false;
+          isTouchSwiping = false;
           const now = Date.now();
-          if (now - lastLightboxTap < 320) {
-            // Double tap zoom toggle
+          if (now - lastLightboxTap < 300) {
             if (zoomScale > 1.2) {
               resetZoom();
             } else {
@@ -4007,77 +3808,29 @@
           return;
         }
 
-        if (isCardDragging && zoomScale <= 1.05) {
-          isCardDragging = false;
+        if (isTouchSwiping && zoomScale <= 1.05) {
+          isTouchSwiping = false;
           const diffX = currentDragX;
+          const isQuickSwipe = elapsed < 280 && Math.abs(diffX) > 35;
+          const isThresholdPassed = Math.abs(diffX) > 60;
 
-          if (diffX < -60 && !isTransitioning) {
-            // Swipe Left Confirmed: Slide incoming next photo in on top from right
-            isTransitioning = true;
-            const targetIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
-
-            behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
-            behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
-
-            activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-            activeCard.style.transform = 'scale(0.92)';
-            activeCard.style.filter = 'brightness(0.85)';
-
-            playSwipeSound();
-            setTimeout(() => { finishTransition(targetIdx, 1); }, 280);
-
-          } else if (diffX > 60 && !isTransitioning) {
-            // Swipe Right Confirmed: Slide incoming previous photo in on top from left
-            isTransitioning = true;
-            const targetIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
-
-            behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
-            behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
-
-            activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-            activeCard.style.transform = 'scale(0.92)';
-            activeCard.style.filter = 'brightness(0.85)';
-
-            playSwipeSound();
-            setTimeout(() => { finishTransition(targetIdx, -1); }, 280);
-
-          } else {
-            // Threshold not reached: Spring cancel
-            if (dragDirection === 1) {
-              behindCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
-              behindCard.style.transform = 'translate3d(-110vw, 0, 0) scale(1)';
-              activeCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease';
-              activeCard.style.transform = 'scale(1) translate3d(0, 0, 0)';
-              activeCard.style.filter = 'brightness(1)';
-              setTimeout(() => {
-                behindCard.style.zIndex = '1';
-                behindCard.style.transform = 'scale(0.92)';
-                behindCard.style.filter = 'brightness(0.85)';
-              }, 250);
-            } else if (dragDirection === -1) {
-              behindCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
-              behindCard.style.transform = 'translate3d(110vw, 0, 0) scale(1)';
-              activeCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease';
-              activeCard.style.transform = 'scale(1) translate3d(0, 0, 0)';
-              activeCard.style.filter = 'brightness(1)';
-              setTimeout(() => {
-                behindCard.style.zIndex = '1';
-                behindCard.style.transform = 'scale(0.92)';
-                behindCard.style.filter = 'brightness(0.85)';
-              }, 250);
+          if ((isThresholdPassed || isQuickSwipe) && !isTransitioning) {
+            if (diffX < 0) {
+              goToNextPhoto();
             } else {
-              activeCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-              activeCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
-              behindCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.26s ease';
-              behindCard.style.transform = 'scale(0.92)';
-              behindCard.style.filter = 'brightness(0.85)';
+              goToPrevPhoto();
             }
-            dragDirection = 0;
+          } else {
+            if (mainLightboxImg) {
+              mainLightboxImg.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
+              mainLightboxImg.style.transform = 'translate3d(0, 0, 0)';
+            }
           }
         }
       }
     }, { passive: true });
 
+    // Desktop Mouse Drag / Click Handling
     let mouseIsDown = false;
     let mouseStartTime = 0;
     let mouseStartX = 0;
@@ -4103,9 +3856,7 @@
         startPanY = e.clientY - panY;
       } else {
         isPanning = false;
-        dragDirection = 0;
-        if (activeCard) activeCard.style.transition = 'none';
-        if (behindCard) behindCard.style.transition = 'none';
+        if (mainLightboxImg) mainLightboxImg.style.transition = 'none';
       }
     });
 
@@ -4121,47 +3872,8 @@
         panY = e.clientY - startPanY;
         updateImgTransform();
       } else if (zoomScale <= 1.05) {
-        if (diffX < -5) {
-          if (dragDirection !== -1) {
-            dragDirection = -1;
-            const nextIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
-            behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[nextIdx])}`;
-            behindCard.className = 'stack-card';
-            behindCard.style.zIndex = '3';
-            behindCard.style.opacity = '1';
-            behindCard.style.filter = 'brightness(1)';
-            activeCard.className = 'stack-card';
-            activeCard.style.zIndex = '2';
-            activeCard.style.opacity = '1';
-          }
-          const incomingX = window.innerWidth + diffX;
-          const rot = Math.max(Math.min((diffX + 100) * 0.02, 6), -6);
-          behindCard.style.transform = `translate3d(${incomingX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg) scale(1)`;
-
-          const progress = Math.min(Math.abs(diffX) / 200, 1);
-          activeCard.style.transform = `scale(${1 - 0.08 * progress})`;
-          activeCard.style.filter = `brightness(${1 - 0.15 * progress})`;
-
-        } else if (diffX > 5) {
-          if (dragDirection !== 1) {
-            dragDirection = 1;
-            const prevIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
-            behindImg.src = `/preview/${getPhotoEnc(currentPhotosList[prevIdx])}`;
-            behindCard.className = 'stack-card';
-            behindCard.style.zIndex = '3';
-            behindCard.style.opacity = '1';
-            behindCard.style.filter = 'brightness(1)';
-            activeCard.className = 'stack-card';
-            activeCard.style.zIndex = '2';
-            activeCard.style.opacity = '1';
-          }
-          const incomingX = -window.innerWidth + diffX;
-          const rot = Math.max(Math.min((diffX - 100) * 0.02, 6), -6);
-          behindCard.style.transform = `translate3d(${incomingX}px, ${diffY * 0.25}px, 0) rotate(${rot}deg) scale(1)`;
-
-          const progress = Math.min(diffX / 200, 1);
-          activeCard.style.transform = `scale(${1 - 0.08 * progress})`;
-          activeCard.style.filter = `brightness(${1 - 0.15 * progress})`;
+        if (mainLightboxImg) {
+          mainLightboxImg.style.transform = `translate3d(${diffX}px, 0, 0)`;
         }
       }
     });
@@ -4173,9 +3885,8 @@
       const elapsed = Date.now() - mouseStartTime;
       const dist = Math.hypot(mouseDragX, mouseDragY);
 
-      // Click on image view toggles Zoom Controls Option
       if (dist < 8 && elapsed < 350) {
-        if (e.target.closest('#cardStage, .stack-card, .lightbox-img')) {
+        if (e.target.closest('#singleImageStage, .lightbox-main-img')) {
           toggleZoomBar();
         }
         isPanning = false;
@@ -4190,65 +3901,20 @@
 
       if (zoomScale <= 1.05 && !isTransitioning) {
         const diffX = mouseDragX;
-        if (diffX < -60) {
-          // Swipe Left Confirmed
-          isTransitioning = true;
-          const targetIdx = (currentPhotoIndex + 1) % currentPhotosList.length;
-          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
-          behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
-          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-          activeCard.style.transform = 'scale(0.92)';
-          activeCard.style.filter = 'brightness(0.85)';
-          playSwipeSound();
-          setTimeout(() => { finishTransition(targetIdx, 1); }, 280);
+        const isQuickSwipe = elapsed < 280 && Math.abs(diffX) > 35;
+        const isThresholdPassed = Math.abs(diffX) > 60;
 
-        } else if (diffX > 60) {
-          // Swipe Right Confirmed
-          isTransitioning = true;
-          const targetIdx = (currentPhotoIndex - 1 + currentPhotosList.length) % currentPhotosList.length;
-          behindCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)';
-          behindCard.style.transform = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
-          activeCard.style.transition = 'transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease';
-          activeCard.style.transform = 'scale(0.92)';
-          activeCard.style.filter = 'brightness(0.85)';
-          playSwipeSound();
-          setTimeout(() => { finishTransition(targetIdx, -1); }, 280);
-
-        } else {
-          if (dragDirection === 1) {
-            behindCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
-            behindCard.style.transform = 'translate3d(-110vw, 0, 0) scale(1)';
-            activeCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease';
-            activeCard.style.transform = 'scale(1) translate3d(0, 0, 0)';
-            activeCard.style.filter = 'brightness(1)';
-            setTimeout(() => {
-              behindCard.style.zIndex = '1';
-              behindCard.style.transform = 'scale(0.92)';
-              behindCard.style.filter = 'brightness(0.85)';
-            }, 250);
-          } else if (dragDirection === -1) {
-            behindCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
-            behindCard.style.transform = 'translate3d(110vw, 0, 0) scale(1)';
-            activeCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease';
-            activeCard.style.transform = 'scale(1) translate3d(0, 0, 0)';
-            activeCard.style.filter = 'brightness(1)';
-            setTimeout(() => {
-              behindCard.style.zIndex = '1';
-              behindCard.style.transform = 'scale(0.92)';
-              behindCard.style.filter = 'brightness(0.85)';
-            }, 250);
+        if (isThresholdPassed || isQuickSwipe) {
+          if (diffX < 0) {
+            goToNextPhoto();
           } else {
-            if (activeCard) {
-              activeCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-              activeCard.style.transform = 'scale(1) translate3d(0, 0, 0) rotate(0deg)';
-            }
-            if (behindCard) {
-              behindCard.style.transition = 'transform 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.26s ease';
-              behindCard.style.transform = 'scale(0.92)';
-              behindCard.style.filter = 'brightness(0.85)';
-            }
+            goToPrevPhoto();
           }
-          dragDirection = 0;
+        } else {
+          if (mainLightboxImg) {
+            mainLightboxImg.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)';
+            mainLightboxImg.style.transform = 'translate3d(0, 0, 0)';
+          }
         }
       }
     });
@@ -4627,6 +4293,7 @@
         const photos = JSON.parse(savedPhotosJson);
         if (Array.isArray(photos) && photos.length > 0) {
           const actualCount = savedCount > 0 ? savedCount : photos.length;
+          totalMatchingPhotosCount = actualCount;
           currentSearchFaceThumb = savedThumb || null;
           currentSearchPage = 1;
           currentSearchHasMore = actualCount > photos.length;
@@ -4658,6 +4325,7 @@
       localStorage.removeItem('brk_saved_time');
       currentSearchFaceThumb = null;
       currentSearchHasMore = false;
+      totalMatchingPhotosCount = 0;
       const badge = $('savedProfileBadge');
       if (badge) badge.hidden = true;
     }
@@ -4748,6 +4416,7 @@
           const totalMatches = (typeof j.total_count === 'number' && j.total_count > 0)
             ? j.total_count
             : (typeof j.count === 'number' && j.count > 0 ? j.count : j.photos.length);
+          totalMatchingPhotosCount = totalMatches;
 
           currentSearchFaceThumb = j.face_thumb || null;
           currentSearchPage = j.page || 1;
