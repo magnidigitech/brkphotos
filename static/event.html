@@ -1413,14 +1413,14 @@
       opacity: 1;
     }
 
-    /* Filter & Calendar Section (Clean Light Neutral Design) */
+    /* Filter & Controls Row (Compact shadcn/ui Inspired Design) */
     .discovery-toolbar,
     .gallery-filter-panel {
       display: flex;
       flex-direction: column;
-      gap: 0.65rem;
-      margin-top: 0.75rem;
-      padding-top: 0.75rem;
+      gap: 0.5rem;
+      margin-top: 0.65rem;
+      padding-top: 0.65rem;
       border-top: 1px solid #f1f5f9;
       background: transparent;
       width: 100%;
@@ -1447,7 +1447,7 @@
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 9999px;
-      padding: 0.35rem 0.85rem;
+      padding: 0.35rem 0.82rem;
       font-size: 0.8rem;
       font-weight: 500;
       color: #475569;
@@ -1485,13 +1485,103 @@
       font-weight: 600 !important;
     }
 
-    .calendar-toggle-btn,
-    .other-albums-toggle-btn {
+    /* Compact Filter Trigger Button */
+    .btn-filter-trigger {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 9999px;
-      padding: 0.35rem 0.82rem;
+      padding: 0.35rem 0.85rem;
       font-size: 0.8rem;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      user-select: none;
+      -webkit-user-select: none;
+      white-space: nowrap;
+    }
+
+    .btn-filter-trigger:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+
+    .btn-filter-trigger.has-filter {
+      background: #ecfdf5;
+      border-color: #059669;
+      color: #065f46;
+    }
+
+    .filter-active-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #059669;
+      display: inline-block;
+    }
+
+    /* Active Filter Pill next to Filter button */
+    .active-filter-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 9999px;
+      padding: 0.28rem 0.65rem 0.28rem 0.75rem;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: #065f46;
+      user-select: none;
+      -webkit-user-select: none;
+      white-space: nowrap;
+      animation: fadeInPill 0.18s ease;
+    }
+
+    @keyframes fadeInPill {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .pill-remove-btn {
+      background: transparent;
+      border: none;
+      color: #059669;
+      font-size: 1.05rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 2px;
+      margin-left: 2px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: color 0.15s ease;
+    }
+
+    .pill-remove-btn:hover {
+      color: #064e3b;
+    }
+
+    .gallery-sort-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-left: auto;
+    }
+
+    .gallery-sort-btn {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.32rem 0.72rem;
+      font-size: 0.78rem;
       font-weight: 600;
       color: #334155;
       cursor: pointer;
@@ -1500,55 +1590,244 @@
       gap: 0.4rem;
       transition: all 0.15s ease;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-      user-select: none;
-      -webkit-user-select: none;
-      white-space: nowrap;
     }
 
-    .calendar-toggle-btn:hover,
-    .other-albums-toggle-btn:hover {
+    .gallery-sort-btn:hover {
       background: #f8fafc;
       border-color: #cbd5e1;
       color: #0f172a;
     }
 
-    .calendar-toggle-btn.has-filter {
+    .gallery-progress-text {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: #64748b;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
+    /* =========================================================================
+       shadcn/ui-Style Bottom Sheet & Centered Dialog for Filters
+       ========================================================================= */
+    .filter-sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 10000;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .filter-sheet-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .filter-sheet-container {
+      background: #ffffff;
+      width: 100%;
+      max-height: 88vh;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      box-sizing: border-box;
+      overflow: hidden;
+      touch-action: pan-y;
+    }
+
+    .filter-sheet-backdrop.active .filter-sheet-container {
+      transform: translateY(0);
+    }
+
+    /* Desktop View: Centered dialog modal */
+    @media (min-width: 641px) {
+      .filter-sheet-backdrop {
+        align-items: center;
+        padding: 1.5rem;
+      }
+
+      .filter-sheet-container {
+        max-width: 440px;
+        border-radius: 16px;
+        max-height: 84vh;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+        transform: scale(0.96);
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+      }
+
+      .filter-sheet-backdrop.active .filter-sheet-container {
+        transform: scale(1);
+      }
+
+      .filter-sheet-drag-handle {
+        display: none !important;
+      }
+    }
+
+    .filter-sheet-drag-handle {
+      width: 38px;
+      height: 4.5px;
+      background: #cbd5e1;
+      border-radius: 999px;
+      margin: 10px auto 4px;
+      flex-shrink: 0;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .filter-sheet-header {
+      padding: 0.85rem 1.25rem 0.75rem;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      background: #ffffff;
+    }
+
+    .filter-sheet-title-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .filter-sheet-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.015em;
+      margin: 0;
+    }
+
+    .filter-sheet-subtitle {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .filter-sheet-close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .filter-sheet-close-btn:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+      border-color: #cbd5e1;
+    }
+
+    .filter-sheet-content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.15rem;
+      box-sizing: border-box;
+    }
+
+    .sheet-active-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
       background: #ecfdf5;
-      border-color: #059669;
+      border: 1px solid #a7f3d0;
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.82rem;
       color: #065f46;
     }
 
-    .calendar-selected-pill {
+    .sheet-active-info {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.82rem;
+    }
+
+    .sheet-active-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #059669;
+      flex-shrink: 0;
+    }
+
+    .sheet-clear-chip-btn {
+      background: transparent;
+      border: 1px solid #059669;
+      border-radius: 999px;
+      color: #065f46;
       font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .sheet-clear-chip-btn:hover {
       background: #059669;
       color: #ffffff;
-      padding: 1px 6px;
-      border-radius: 999px;
+    }
+
+    .sheet-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .sheet-section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    .sheet-section-title {
+      font-size: 0.84rem;
       font-weight: 700;
+      color: #1e293b;
+      letter-spacing: -0.01em;
     }
 
-    .other-albums-count {
-      font-size: 0.75rem;
-      color: #64748b;
-      font-weight: 500;
+    .sheet-section-hint {
+      font-size: 0.72rem;
+      color: #94a3b8;
     }
 
-    /* Monthly Calendar Card */
-    .monthly-calendar-card {
-      background: #ffffff;
+    /* Monthly Calendar Card in Sheet */
+    .monthly-calendar-card.in-sheet {
       border: 1px solid #e2e8f0;
-      border-radius: 14px;
+      background: #fafbfd;
+      border-radius: 12px;
       padding: 0.75rem 0.85rem;
+      max-width: 340px;
+      margin: 0 auto;
       width: 100%;
-      max-width: 320px;
-      margin: 0.35rem auto 0;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
       box-sizing: border-box;
-      transition: all 0.2s ease;
-    }
-
-    .monthly-calendar-card.collapsed {
-      display: none;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
     }
 
     .calendar-header-nav {
@@ -1563,7 +1842,7 @@
       height: 30px;
       border-radius: 50%;
       border: 1px solid #e2e8f0;
-      background: #f8fafc;
+      background: #ffffff;
       color: #334155;
       display: flex;
       align-items: center;
@@ -1636,7 +1915,7 @@
       cursor: pointer;
       font-weight: 700;
       color: #0f172a;
-      background: #f8fafc;
+      background: #ffffff;
       border-color: #e2e8f0;
     }
 
@@ -1687,23 +1966,49 @@
       display: inline-block;
     }
 
-    /* Other Albums Drawer */
-    .other-albums-drawer {
-      background: #ffffff;
+    /* Other Albums Accordion & Drawer */
+    .sheet-accordion-btn {
+      background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 0.65rem 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       width: 100%;
+      cursor: pointer;
+      transition: all 0.15s ease;
       box-sizing: border-box;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-      margin-top: 0.35rem;
     }
 
-    .other-albums-header {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: #334155;
-      margin-bottom: 0.45rem;
+    .sheet-accordion-btn:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .sheet-accordion-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .other-albums-count {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .sheet-accordion-chevron {
+      color: #64748b;
+      transition: transform 0.2s ease;
+    }
+
+    .sheet-accordion-btn.open .sheet-accordion-chevron {
+      transform: rotate(180deg);
+    }
+
+    .sheet-accordion-content {
+      padding: 0.5rem 0.25rem 0;
     }
 
     .other-albums-chips-wrap {
@@ -1712,88 +2017,55 @@
       gap: 0.4rem;
     }
 
-    /* Active Filter Banner above Gallery Grid */
-    .active-date-filter-banner {
+    /* Bottom Sheet Fixed Footer Action Bar */
+    .filter-sheet-footer {
+      padding: 0.85rem 1.25rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid #f1f5f9;
+      background: #ffffff;
       display: flex;
       align-items: center;
-      justify-content: space-between;
       gap: 0.75rem;
-      background: #ecfdf5;
-      border: 1px solid rgba(5, 150, 105, 0.3);
-      border-radius: 10px;
-      padding: 0.55rem 0.9rem;
-      margin-bottom: 1.25rem;
-      font-size: 0.84rem;
-      color: #065f46;
-      width: 100%;
+      flex-shrink: 0;
       box-sizing: border-box;
     }
 
-    .active-filter-info {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .btn-clear-date-filter {
+    .sheet-btn-secondary {
       background: #ffffff;
-      border: 1px solid #059669;
-      color: #065f46;
-      border-radius: 9999px;
-      padding: 0.28rem 0.75rem;
-      font-size: 0.76rem;
-      font-weight: 700;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.65rem 1.05rem;
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: #475569;
       cursor: pointer;
       transition: all 0.15s ease;
       white-space: nowrap;
     }
 
-    .btn-clear-date-filter:hover {
-      background: #059669;
-      color: #ffffff;
-    }
-
-    .gallery-sort-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      margin-left: auto;
-    }
-
-    .gallery-sort-btn {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 0.32rem 0.72rem;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: #334155;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      transition: all 0.15s ease;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-    }
-
-    .gallery-sort-btn:hover {
+    .sheet-btn-secondary:hover {
       background: #f8fafc;
       border-color: #cbd5e1;
       color: #0f172a;
     }
 
-    .gallery-progress-text {
-      font-size: 0.78rem;
-      font-weight: 500;
-      color: #64748b;
-      letter-spacing: -0.01em;
+    .sheet-btn-primary {
+      flex: 1;
+      background: #059669;
+      border: none;
+      border-radius: 8px;
+      padding: 0.65rem 1.25rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+      text-align: center;
       white-space: nowrap;
     }
-      font-weight: 600;
-      color: var(--muted);
-      white-space: nowrap;
+
+    .sheet-btn-primary:hover {
+      background: #047857;
     }
 
     /* New Photos Notification Banner for Returning Users */
@@ -2817,31 +3089,32 @@
           </div>
         </div>
 
-        <!-- Filter & Calendar Panel (Compact Monthly Calendar Interface) -->
+        <!-- Filter Controls Bar (Compact shadcn/ui Inspired Row) -->
         <div id="discoveryToolbar" class="gallery-filter-panel" hidden>
-          <!-- Compact Controls Bar: All Photos, Calendar Toggle, Other Albums, Sort -->
           <div class="calendar-controls-bar">
             <div class="calendar-main-actions">
               <button type="button" class="filter-chip active" id="allPhotosChip">
                 <span>All Photos</span> <span id="allPhotosChipCount">(0)</span>
               </button>
-              <button type="button" class="calendar-toggle-btn" id="calendarToggleBtn" title="Filter by Calendar Date">
+              <button type="button" class="btn-filter-trigger" id="openFilterSheetBtn" title="Filter by date or album">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  <line x1="4" y1="21" x2="4" y2="14"></line>
+                  <line x1="4" y1="10" x2="4" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12" y2="3"></line>
+                  <line x1="20" y1="21" x2="20" y2="16"></line>
+                  <line x1="20" y1="12" x2="20" y2="3"></line>
+                  <line x1="1" y1="14" x2="7" y2="14"></line>
+                  <line x1="9" y1="8" x2="15" y2="8"></line>
+                  <line x1="17" y1="16" x2="23" y2="16"></line>
                 </svg>
-                <span id="calendarToggleText">Calendar</span>
-                <span id="calendarSelectedIndicator" class="calendar-selected-pill" hidden></span>
+                <span>Filter</span>
+                <span id="filterActiveBadge" class="filter-active-dot" hidden></span>
               </button>
-              <button type="button" class="other-albums-toggle-btn" id="otherAlbumsToggleBtn" title="View Non-Date Albums" hidden>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <span>Other Albums</span>
-                <span id="otherAlbumsCountBadge" class="other-albums-count">(0)</span>
-              </button>
+              <div id="activeFilterPill" class="active-filter-pill" hidden>
+                <span id="activeFilterPillText">01 Nov 2026</span>
+                <button type="button" id="removeActiveFilterBtn" class="pill-remove-btn" title="Clear filter" aria-label="Clear filter">&times;</button>
+              </div>
             </div>
 
             <div class="gallery-sort-row">
@@ -2852,62 +3125,13 @@
               <span id="photosProgressText" class="gallery-progress-text"></span>
             </div>
           </div>
-
-          <!-- Compact Interactive Monthly Calendar Card -->
-          <div id="monthlyCalendarCard" class="monthly-calendar-card">
-            <div class="calendar-header-nav">
-              <button type="button" class="calendar-nav-btn" id="calPrevMonthBtn" title="Previous Month" aria-label="Previous Month">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-              </button>
-              <div class="calendar-month-year-title" id="calMonthYearTitle">November 2026</div>
-              <button type="button" class="calendar-nav-btn" id="calNextMonthBtn" title="Next Month" aria-label="Next Month">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </button>
-            </div>
-
-            <!-- Weekdays Row (Sun - Sat) -->
-            <div class="calendar-weekdays-row">
-              <span>Sun</span>
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
-            </div>
-
-            <!-- Days Grid (aligned correctly for active month) -->
-            <div class="calendar-days-grid" id="calendarDaysGrid"></div>
-
-            <!-- Calendar Footer Hint -->
-            <div class="calendar-footer-hint">
-              <span class="calendar-legend-dot"></span>
-              <span>Dates with matching photos</span>
-            </div>
-          </div>
-
-          <!-- Other Albums Collapsible Section -->
-          <div id="otherAlbumsSection" class="other-albums-drawer" hidden>
-            <div class="other-albums-header">Other Albums & Events</div>
-            <div id="otherAlbumsChipsContainer" class="other-albums-chips-wrap"></div>
-          </div>
         </div>
       </div>
 
       <!-- Scrollable Gallery Content Body -->
       <div class="gallery-scroll-body" id="galleryScrollBody">
-        <!-- Active Filter Indicator Banner (shows selected date & photo count + Clear option) -->
-        <div id="activeDateFilterBanner" class="active-date-filter-banner" hidden>
-          <div class="active-filter-info">
-            <span class="active-filter-icon">📅</span>
-            <span id="activeFilterLabel">Filtered: <strong>01 Nov 2026</strong> (1 photo)</span>
-          </div>
-          <button type="button" id="clearDateFilterBtn" class="btn-clear-date-filter">Show All Photos &times;</button>
-        </div>
+        <!-- Active Filter Indicator Banner (legacy/optional fallback) -->
+        <div id="activeDateFilterBanner" class="active-date-filter-banner" hidden></div>
         <!-- Helpful Empty State Card (Appears if 0 matches found) -->
         <div id="emptyResultsCard" class="empty-state-card" hidden>
           <div class="empty-state-icon">
@@ -2948,6 +3172,101 @@
 
     <!-- Toast Notification Element -->
     <div id="galleryToast" class="gallery-toast"></div>
+
+    <!-- shadcn/ui-Style Filter Sheet / Centered Dialog Backdrop -->
+    <div id="filterSheetBackdrop" class="filter-sheet-backdrop" hidden>
+      <div id="filterSheetContainer" class="filter-sheet-container" role="dialog" aria-modal="true" aria-labelledby="filterSheetTitle">
+        <!-- Drag Handle (Mobile) -->
+        <div class="filter-sheet-drag-handle" id="filterSheetDragHandle" title="Drag down to close"></div>
+
+        <!-- Sheet Fixed Header -->
+        <div class="filter-sheet-header">
+          <div class="filter-sheet-title-wrap">
+            <h3 id="filterSheetTitle" class="filter-sheet-title">Filter Photos</h3>
+            <p class="filter-sheet-subtitle">Select a date or event album to refine your matches</p>
+          </div>
+          <button type="button" id="closeFilterSheetBtn" class="filter-sheet-close-btn" aria-label="Close Filter Sheet">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Sheet Scrollable Content -->
+        <div class="filter-sheet-content" id="filterSheetContent">
+          <!-- Section C: Active Draft Selection (shown if draft selection exists) -->
+          <div id="sheetActiveFilterBanner" class="sheet-active-banner" hidden>
+            <div class="sheet-active-info">
+              <span class="sheet-active-dot"></span>
+              <span id="sheetActiveFilterLabel">Selected: <strong>01 Nov 2026</strong> (1 photo)</span>
+            </div>
+            <button type="button" id="sheetClearSelectionBtn" class="sheet-clear-chip-btn">Clear &times;</button>
+          </div>
+
+          <!-- Section A: Date Selection (Calendar) -->
+          <div class="sheet-section">
+            <div class="sheet-section-header">
+              <span class="sheet-section-title">Select Date</span>
+              <span class="sheet-section-hint">Dates with green dots have photos</span>
+            </div>
+            <div class="monthly-calendar-card in-sheet">
+              <div class="calendar-header-nav">
+                <button type="button" class="calendar-nav-btn" id="calPrevMonthBtn" title="Previous Month" aria-label="Previous Month">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <div class="calendar-month-year-title" id="calMonthYearTitle">November 2026</div>
+                <button type="button" class="calendar-nav-btn" id="calNextMonthBtn" title="Next Month" aria-label="Next Month">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Weekdays Row -->
+              <div class="calendar-weekdays-row">
+                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+              </div>
+
+              <!-- Days Grid -->
+              <div class="calendar-days-grid" id="calendarDaysGrid"></div>
+
+              <!-- Calendar Footer Hint -->
+              <div class="calendar-footer-hint">
+                <span class="calendar-legend-dot"></span>
+                <span>Dates with matching photos</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section B: Other Albums (Collapsible) -->
+          <div id="sheetOtherAlbumsSection" class="sheet-section" hidden>
+            <button type="button" id="sheetOtherAlbumsToggle" class="sheet-accordion-btn">
+              <div class="sheet-accordion-title-wrap">
+                <span class="sheet-section-title">Other Albums & Events</span>
+                <span id="sheetOtherAlbumsCountBadge" class="other-albums-count">(0)</span>
+              </div>
+              <svg class="sheet-accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div id="sheetOtherAlbumsDrawer" class="sheet-accordion-content" hidden>
+              <div id="otherAlbumsChipsContainer" class="other-albums-chips-wrap"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sheet Fixed Bottom Action Bar -->
+        <div class="filter-sheet-footer">
+          <button type="button" id="sheetClearAllBtn" class="sheet-btn-secondary">Clear All</button>
+          <button type="button" id="sheetApplyBtn" class="sheet-btn-primary">
+            <span id="sheetApplyBtnText">Show All Photos</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
   </main>
 
@@ -3164,15 +3483,19 @@
     let totalMatchingPhotosCount = 0;
     let sortOrder = 'newest'; // 'newest' | 'oldest'
 
-    // Compact Monthly Calendar & Filter State
-    let calendarViewYear = 2026;
-    let calendarViewMonth = 10; // 0-indexed (10 = November)
+    // Applied Filters State
     let selectedCalendarDate = null; // 'YYYY-MM-DD'
     let selectedOtherAlbum = null; // rawAlbum string e.g. 'PART 01'
     const datePhotoCounts = new Map(); // 'YYYY-MM-DD' -> count
     const otherAlbumCounts = new Map(); // rawAlbum -> count
     let newestCalendarDate = null; // 'YYYY-MM-DD'
-    let hasUserNavigatedMonth = false;
+
+    // Draft State for Filter Bottom Sheet (allows cancel / tap-away without altering active filters)
+    let draftCalendarDate = null;
+    let draftOtherAlbum = null;
+    let sheetViewYear = 2026;
+    let sheetViewMonth = 10;
+    let hasUserNavigatedSheetMonth = false;
 
     // Selection Mode State
     let isSelectionMode = false;
@@ -3476,67 +3799,131 @@
 
       newestCalendarDate = latestDateKey;
 
-      // Automatically set viewing month to newest photograph's month unless user has manually navigated months
-      if (!hasUserNavigatedMonth && newestCalendarDate) {
+      if (!hasUserNavigatedSheetMonth && newestCalendarDate) {
         const parts = newestCalendarDate.split('-');
-        calendarViewYear = parseInt(parts[0], 10);
-        calendarViewMonth = parseInt(parts[1], 10) - 1;
+        sheetViewYear = parseInt(parts[0], 10);
+        sheetViewMonth = parseInt(parts[1], 10) - 1;
       }
 
-      // Update "All Photos" Chip
+      updateMainFilterControls();
+
+      // If bottom sheet is currently open, refresh its content
+      const backdrop = $('filterSheetBackdrop');
+      if (backdrop && !backdrop.hidden && backdrop.classList.contains('active')) {
+        renderSheetContent();
+      }
+    }
+
+    function updateMainFilterControls() {
       const allCount = (totalMatchingPhotosCount > 0) ? totalMatchingPhotosCount : rawPhotosList.length;
       const allChip = $('allPhotosChip');
       const allChipCount = $('allPhotosChipCount');
       if (allChipCount) allChipCount.textContent = `(${allCount})`;
       if (allChip) allChip.classList.toggle('active', !selectedCalendarDate && !selectedOtherAlbum);
 
-      // Update Other Albums Button Visibility & Count
-      const otherBtn = $('otherAlbumsToggleBtn');
-      const otherBadge = $('otherAlbumsCountBadge');
-      const otherSection = $('otherAlbumsSection');
-      if (otherBtn && otherBadge) {
-        if (otherAlbumCounts.size > 0) {
-          otherBtn.hidden = false;
-          otherBadge.textContent = `(${otherAlbumCounts.size})`;
+      const filterBtn = $('openFilterSheetBtn');
+      const badge = $('filterActiveBadge');
+      const pill = $('activeFilterPill');
+      const pillText = $('activeFilterPillText');
+
+      const isFiltered = !!(selectedCalendarDate || selectedOtherAlbum);
+      if (filterBtn) filterBtn.classList.toggle('has-filter', isFiltered);
+      if (badge) badge.hidden = !isFiltered;
+
+      if (pill && pillText) {
+        if (selectedCalendarDate) {
+          pill.hidden = false;
+          const parts = selectedCalendarDate.split('-');
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10);
+          const count = datePhotoCounts.get(selectedCalendarDate) || 0;
+          pillText.textContent = `${String(d).padStart(2, '0')} ${MONTH_NAMES[m]} (${count})`;
+          pill.title = `Filtered by date: ${String(d).padStart(2, '0')} ${MONTH_NAMES[m]} ${y}`;
+        } else if (selectedOtherAlbum) {
+          pill.hidden = false;
+          const count = otherAlbumCounts.get(selectedOtherAlbum) || 0;
+          pillText.textContent = `${selectedOtherAlbum} (${count})`;
+          pill.title = `Filtered by album: ${selectedOtherAlbum}`;
         } else {
-          otherBtn.hidden = true;
-          if (otherSection) otherSection.hidden = true;
+          pill.hidden = true;
         }
       }
 
-      renderCalendarGrid();
-      renderOtherAlbums();
-      updateActiveFilterBanner();
       updateProgressText();
     }
 
-    function renderCalendarGrid() {
+    function openFilterSheet() {
+      // Sync draft state with currently applied state
+      draftCalendarDate = selectedCalendarDate;
+      draftOtherAlbum = selectedOtherAlbum;
+
+      if (selectedCalendarDate) {
+        const parts = selectedCalendarDate.split('-');
+        sheetViewYear = parseInt(parts[0], 10);
+        sheetViewMonth = parseInt(parts[1], 10) - 1;
+      } else if (!hasUserNavigatedSheetMonth && newestCalendarDate) {
+        const parts = newestCalendarDate.split('-');
+        sheetViewYear = parseInt(parts[0], 10);
+        sheetViewMonth = parseInt(parts[1], 10) - 1;
+      }
+
+      renderSheetContent();
+
+      const backdrop = $('filterSheetBackdrop');
+      const container = $('filterSheetContainer');
+      if (!backdrop || !container) return;
+
+      container.style.transform = '';
+      backdrop.hidden = false;
+      requestAnimationFrame(() => {
+        backdrop.classList.add('active');
+      });
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeFilterSheet() {
+      const backdrop = $('filterSheetBackdrop');
+      if (!backdrop || backdrop.hidden) return;
+
+      backdrop.classList.remove('active');
+      setTimeout(() => {
+        backdrop.hidden = true;
+      }, 230);
+
+      // Restore scrolling if gallery overlay is hidden
+      const galleryOverlay = $('photosSection');
+      if (!galleryOverlay || galleryOverlay.hidden) {
+        document.body.style.overflow = '';
+      }
+    }
+
+    function renderSheetContent() {
       const titleEl = $('calMonthYearTitle');
       const gridEl = $('calendarDaysGrid');
       if (!titleEl || !gridEl) return;
 
-      titleEl.textContent = `${FULL_MONTH_NAMES[calendarViewMonth]} ${calendarViewYear}`;
+      titleEl.textContent = `${FULL_MONTH_NAMES[sheetViewMonth]} ${sheetViewYear}`;
       gridEl.replaceChildren();
 
-      // Weekday offset for 1st day of month: 0 = Sun, 1 = Mon, ..., 6 = Sat
-      const firstDayOfWeek = new Date(calendarViewYear, calendarViewMonth, 1).getDay();
-      const daysInMonth = new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate();
+      // Weekday offset for 1st day of active sheet month: 0 = Sun .. 6 = Sat
+      const firstDayOfWeek = new Date(sheetViewYear, sheetViewMonth, 1).getDay();
+      const daysInMonth = new Date(sheetViewYear, sheetViewMonth + 1, 0).getDate();
 
-      // Leading empty placeholders
       for (let i = 0; i < firstDayOfWeek; i++) {
         const emptyCell = document.createElement('div');
         emptyCell.className = 'calendar-day-cell empty';
         gridEl.appendChild(emptyCell);
       }
 
-      const monthPad = String(calendarViewMonth + 1).padStart(2, '0');
+      const monthPad = String(sheetViewMonth + 1).padStart(2, '0');
 
       for (let day = 1; day <= daysInMonth; day++) {
         const dayPad = String(day).padStart(2, '0');
-        const dateKey = `${calendarViewYear}-${monthPad}-${dayPad}`;
+        const dateKey = `${sheetViewYear}-${monthPad}-${dayPad}`;
         const count = datePhotoCounts.get(dateKey) || 0;
         const hasPhotos = count > 0;
-        const isSelected = selectedCalendarDate === dateKey;
+        const isSelected = draftCalendarDate === dateKey;
 
         const cell = document.createElement('button');
         cell.type = 'button';
@@ -3544,93 +3931,115 @@
         cell.innerHTML = `<span>${day}</span>${hasPhotos ? '<span class="calendar-day-dot"></span>' : ''}`;
 
         if (hasPhotos) {
-          cell.title = `${dayPad} ${MONTH_NAMES[calendarViewMonth]} ${calendarViewYear} (${count} ${count === 1 ? 'photo' : 'photos'})`;
+          cell.title = `${dayPad} ${MONTH_NAMES[sheetViewMonth]} ${sheetViewYear} (${count} ${count === 1 ? 'photo' : 'photos'})`;
           cell.addEventListener('click', () => {
-            selectCalendarDate(dateKey);
+            toggleDraftCalendarDate(dateKey);
           });
         }
 
         gridEl.appendChild(cell);
       }
-    }
 
-    function selectCalendarDate(dateKey) {
-      if (selectedCalendarDate === dateKey) {
-        selectedCalendarDate = null;
-      } else {
-        selectedCalendarDate = dateKey;
-        selectedOtherAlbum = null;
-      }
-      applyPhotoFiltersAndSort();
-      updateCalendarAndFilters();
-    }
+      // Render Other Albums Section
+      const otherSection = $('sheetOtherAlbumsSection');
+      const otherBadge = $('sheetOtherAlbumsCountBadge');
+      const otherContainer = $('otherAlbumsChipsContainer');
 
-    function selectOtherAlbum(albumName) {
-      if (selectedOtherAlbum === albumName) {
-        selectedOtherAlbum = null;
-      } else {
-        selectedOtherAlbum = albumName;
-        selectedCalendarDate = null;
-      }
-      applyPhotoFiltersAndSort();
-      updateCalendarAndFilters();
-    }
+      if (otherSection && otherBadge && otherContainer) {
+        if (otherAlbumCounts.size > 0) {
+          otherSection.hidden = false;
+          otherBadge.textContent = `(${otherAlbumCounts.size})`;
+          otherContainer.replaceChildren();
 
-    function renderOtherAlbums() {
-      const container = $('otherAlbumsChipsContainer');
-      if (!container) return;
-      container.replaceChildren();
+          const sortedAlbums = Array.from(otherAlbumCounts.entries()).sort((a, b) => {
+            return b[1] - a[1] || a[0].localeCompare(b[0]);
+          });
 
-      const sortedAlbums = Array.from(otherAlbumCounts.entries()).sort((a, b) => {
-        return b[1] - a[1] || a[0].localeCompare(b[0]);
-      });
-
-      for (const [alb, count] of sortedAlbums) {
-        const chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'filter-chip' + (selectedOtherAlbum === alb ? ' active' : '');
-        chip.innerHTML = `<span>${alb}</span> <span>(${count})</span>`;
-        chip.addEventListener('click', () => {
-          selectOtherAlbum(alb);
-        });
-        container.appendChild(chip);
-      }
-    }
-
-    function updateActiveFilterBanner() {
-      const banner = $('activeDateFilterBanner');
-      const label = $('activeFilterLabel');
-      const calIndicator = $('calendarSelectedIndicator');
-      const calToggleBtn = $('calendarToggleBtn');
-      if (!banner || !label) return;
-
-      if (selectedCalendarDate) {
-        banner.hidden = false;
-        const parts = selectedCalendarDate.split('-');
-        const y = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10) - 1;
-        const d = parseInt(parts[2], 10);
-        const count = datePhotoCounts.get(selectedCalendarDate) || 0;
-        const formatted = `${String(d).padStart(2, '0')} ${MONTH_NAMES[m]} ${y}`;
-        label.innerHTML = `Filtered: <strong>${formatted}</strong> (${count} ${count === 1 ? 'photo' : 'photos'})`;
-
-        if (calIndicator) {
-          calIndicator.textContent = `${d} ${MONTH_NAMES[m]}`;
-          calIndicator.hidden = false;
+          for (const [alb, count] of sortedAlbums) {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'filter-chip' + (draftOtherAlbum === alb ? ' active' : '');
+            chip.innerHTML = `<span>${alb}</span> <span>(${count})</span>`;
+            chip.addEventListener('click', () => {
+              toggleDraftOtherAlbum(alb);
+            });
+            otherContainer.appendChild(chip);
+          }
+        } else {
+          otherSection.hidden = true;
         }
-        if (calToggleBtn) calToggleBtn.classList.add('has-filter');
-      } else if (selectedOtherAlbum) {
-        banner.hidden = false;
-        const count = otherAlbumCounts.get(selectedOtherAlbum) || 0;
-        label.innerHTML = `Filtered: <strong>${selectedOtherAlbum}</strong> (${count} ${count === 1 ? 'photo' : 'photos'})`;
-
-        if (calIndicator) calIndicator.hidden = true;
-        if (calToggleBtn) calToggleBtn.classList.remove('has-filter');
-      } else {
-        banner.hidden = true;
-        if (calIndicator) calIndicator.hidden = true;
-        if (calToggleBtn) calToggleBtn.classList.remove('has-filter');
       }
+
+      // Update Draft Active Banner in Sheet
+      const banner = $('sheetActiveFilterBanner');
+      const label = $('sheetActiveFilterLabel');
+      if (banner && label) {
+        if (draftCalendarDate) {
+          banner.hidden = false;
+          const parts = draftCalendarDate.split('-');
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10);
+          const count = datePhotoCounts.get(draftCalendarDate) || 0;
+          const formatted = `${String(d).padStart(2, '0')} ${MONTH_NAMES[m]} ${y}`;
+          label.innerHTML = `Selected: <strong>${formatted}</strong> (${count} ${count === 1 ? 'photo' : 'photos'})`;
+        } else if (draftOtherAlbum) {
+          banner.hidden = false;
+          const count = otherAlbumCounts.get(draftOtherAlbum) || 0;
+          label.innerHTML = `Selected: <strong>${draftOtherAlbum}</strong> (${count} ${count === 1 ? 'photo' : 'photos'})`;
+        } else {
+          banner.hidden = true;
+        }
+      }
+
+      // Update "Show X Photos" Button
+      const applyBtnText = $('sheetApplyBtnText');
+      if (applyBtnText) {
+        if (draftCalendarDate) {
+          const count = datePhotoCounts.get(draftCalendarDate) || 0;
+          applyBtnText.textContent = `Show ${count} ${count === 1 ? 'Photo' : 'Photos'}`;
+        } else if (draftOtherAlbum) {
+          const count = otherAlbumCounts.get(draftOtherAlbum) || 0;
+          applyBtnText.textContent = `Show ${count} ${count === 1 ? 'Photo' : 'Photos'}`;
+        } else {
+          const total = (totalMatchingPhotosCount > 0) ? totalMatchingPhotosCount : rawPhotosList.length;
+          applyBtnText.textContent = `Show All ${total} Photos`;
+        }
+      }
+    }
+
+    function toggleDraftCalendarDate(dateKey) {
+      if (draftCalendarDate === dateKey) {
+        draftCalendarDate = null;
+      } else {
+        draftCalendarDate = dateKey;
+        draftOtherAlbum = null;
+      }
+      renderSheetContent();
+    }
+
+    function toggleDraftOtherAlbum(albumName) {
+      if (draftOtherAlbum === albumName) {
+        draftOtherAlbum = null;
+      } else {
+        draftOtherAlbum = albumName;
+        draftCalendarDate = null;
+      }
+      renderSheetContent();
+    }
+
+    function clearSheetDraftFilters() {
+      draftCalendarDate = null;
+      draftOtherAlbum = null;
+      renderSheetContent();
+    }
+
+    function applySheetFilters() {
+      selectedCalendarDate = draftCalendarDate;
+      selectedOtherAlbum = draftOtherAlbum;
+      closeFilterSheet();
+      applyPhotoFiltersAndSort();
+      updateMainFilterControls();
     }
 
     function applyPhotoFiltersAndSort() {
@@ -4577,6 +4986,11 @@
     }
 
     window.addEventListener('popstate', () => {
+      const filterSheet = $('filterSheetBackdrop');
+      if (filterSheet && !filterSheet.hidden && filterSheet.classList.contains('active')) {
+        closeFilterSheet();
+        return;
+      }
       const lightbox = $('photoLightboxModal');
       if (lightbox && !lightbox.hidden && lightbox.classList.contains('active')) {
         closeLightbox(true);
@@ -4593,6 +5007,13 @@
 
     // Keyboard Navigation
     document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        const filterSheet = $('filterSheetBackdrop');
+        if (filterSheet && !filterSheet.hidden && filterSheet.classList.contains('active')) {
+          closeFilterSheet();
+          return;
+        }
+      }
       if (!$('photoLightboxModal').hidden) {
         if (e.key === 'ArrowRight') goToNextPhoto();
         if (e.key === 'ArrowLeft') goToPrevPhoto();
@@ -5464,46 +5885,104 @@
     $('bulkDownloadZipBtn')?.addEventListener('click', downloadSelectedZip);
     $('bulkCancelBtn')?.addEventListener('click', clearSelection);
 
-    // Discovery, Calendar & Date Filter Listeners
+    // Discovery & Sort Listeners
     $('sortOrderBtn')?.addEventListener('click', toggleSortOrder);
+
+    // Main Page Filter Actions
+    $('openFilterSheetBtn')?.addEventListener('click', openFilterSheet);
     $('allPhotosChip')?.addEventListener('click', () => {
       selectedCalendarDate = null;
       selectedOtherAlbum = null;
       applyPhotoFiltersAndSort();
-      updateCalendarAndFilters();
+      updateMainFilterControls();
     });
-    $('calendarToggleBtn')?.addEventListener('click', () => {
-      const cal = $('monthlyCalendarCard');
-      if (cal) cal.classList.toggle('collapsed');
-    });
-    $('otherAlbumsToggleBtn')?.addEventListener('click', () => {
-      const drawer = $('otherAlbumsSection');
-      if (drawer) drawer.hidden = !drawer.hidden;
-    });
-    $('calPrevMonthBtn')?.addEventListener('click', () => {
-      hasUserNavigatedMonth = true;
-      calendarViewMonth--;
-      if (calendarViewMonth < 0) {
-        calendarViewMonth = 11;
-        calendarViewYear--;
-      }
-      renderCalendarGrid();
-    });
-    $('calNextMonthBtn')?.addEventListener('click', () => {
-      hasUserNavigatedMonth = true;
-      calendarViewMonth++;
-      if (calendarViewMonth > 11) {
-        calendarViewMonth = 0;
-        calendarViewYear++;
-      }
-      renderCalendarGrid();
-    });
-    $('clearDateFilterBtn')?.addEventListener('click', () => {
+    $('removeActiveFilterBtn')?.addEventListener('click', () => {
       selectedCalendarDate = null;
       selectedOtherAlbum = null;
       applyPhotoFiltersAndSort();
-      updateCalendarAndFilters();
+      updateMainFilterControls();
     });
+
+    // Filter Bottom Sheet Actions
+    $('closeFilterSheetBtn')?.addEventListener('click', closeFilterSheet);
+    $('filterSheetBackdrop')?.addEventListener('click', (e) => {
+      if (e.target === $('filterSheetBackdrop')) closeFilterSheet();
+    });
+    $('sheetClearSelectionBtn')?.addEventListener('click', clearSheetDraftFilters);
+    $('sheetClearAllBtn')?.addEventListener('click', clearSheetDraftFilters);
+    $('sheetApplyBtn')?.addEventListener('click', applySheetFilters);
+    $('sheetOtherAlbumsToggle')?.addEventListener('click', () => {
+      const drawer = $('sheetOtherAlbumsDrawer');
+      const btn = $('sheetOtherAlbumsToggle');
+      if (drawer && btn) {
+        drawer.hidden = !drawer.hidden;
+        btn.classList.toggle('open', !drawer.hidden);
+      }
+    });
+
+    // Calendar Navigation inside Filter Sheet
+    $('calPrevMonthBtn')?.addEventListener('click', () => {
+      hasUserNavigatedSheetMonth = true;
+      sheetViewMonth--;
+      if (sheetViewMonth < 0) {
+        sheetViewMonth = 11;
+        sheetViewYear--;
+      }
+      renderSheetContent();
+    });
+    $('calNextMonthBtn')?.addEventListener('click', () => {
+      hasUserNavigatedSheetMonth = true;
+      sheetViewMonth++;
+      if (sheetViewMonth > 11) {
+        sheetViewMonth = 0;
+        sheetViewYear++;
+      }
+      renderSheetContent();
+    });
+
+    // Mobile Drag / Swipe Down to Dismiss Filter Sheet
+    let sheetTouchStartY = 0;
+    let sheetCurrentDiffY = 0;
+    let isSheetDragging = false;
+    const sheetContainer = $('filterSheetContainer');
+
+    if (sheetContainer) {
+      sheetContainer.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        const content = $('filterSheetContent');
+        if (e.target.closest('#filterSheetDragHandle, .filter-sheet-header') || (content && content.scrollTop <= 0)) {
+          sheetTouchStartY = e.touches[0].clientY;
+          sheetCurrentDiffY = 0;
+          isSheetDragging = true;
+          sheetContainer.style.transition = 'none';
+        }
+      }, { passive: true });
+
+      sheetContainer.addEventListener('touchmove', (e) => {
+        if (!isSheetDragging) return;
+        const currentY = e.touches[0].clientY;
+        const diffY = currentY - sheetTouchStartY;
+        if (diffY > 0) {
+          sheetCurrentDiffY = diffY;
+          sheetContainer.style.transform = `translateY(${diffY}px)`;
+          if (e.cancelable) e.preventDefault();
+        } else {
+          sheetCurrentDiffY = 0;
+          sheetContainer.style.transform = '';
+        }
+      }, { passive: false });
+
+      sheetContainer.addEventListener('touchend', () => {
+        if (!isSheetDragging) return;
+        isSheetDragging = false;
+        sheetContainer.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+        if (sheetCurrentDiffY > 80) {
+          closeFilterSheet();
+        } else {
+          sheetContainer.style.transform = '';
+        }
+      }, { passive: true });
+    }
 
     // Lightbox Desktop Double-Click Zoom & Native Share
     lightboxWrap?.addEventListener('dblclick', e => {
