@@ -46,7 +46,6 @@ MODELS.mkdir(parents=True, exist_ok=True)
 DATA.mkdir(parents=True, exist_ok=True)
 QUEUE_DIR.mkdir(parents=True, exist_ok=True)
 THRESHOLD = float(os.environ.get("MATCH_THRESHOLD", "0.40"))
-MAX_RESULTS = 300
 MAX_UPLOAD = 10 * 1024 * 1024
 ADMIN_KEY = os.environ.get("ADMIN_KEY", "Magni@3939")
 
@@ -1173,14 +1172,15 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
         if fname not in best_by_filename or score > best_by_filename[fname]["score"]:
             best_by_filename[fname] = {"rel_path": n, "score": score}
 
-    ranked = sorted(best_by_filename.items(), key=lambda kv: -kv[1]["score"])[:MAX_RESULTS]
+    total_count = len(best_by_filename)
+    ranked = sorted(best_by_filename.items(), key=lambda kv: -kv[1]["score"])
     reload_drive_map()
 
     # Query event & album names for grouping
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT p.filename, p.rel_path, p.drive_file_id, p.captured_at, p.created_at,
+        SELECT p.filename, p.rel_path, p.is_featured, p.drive_file_id, p.captured_at, p.created_at,
                a.name as album_name, a.slug as album_slug, 
                e.name as event_name, e.slug as event_slug
         FROM photos p
@@ -1201,18 +1201,22 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
             "rel_path": n,
             "filename": fname,
             "drive_file_id": info.get("drive_file_id") or drive_map.get(n) or drive_map.get(fname),
+            "similarity": round(float(score), 3),
             "confidence": round(float(score), 3),
+            "is_featured": bool(info.get("is_featured", 0)),
             "captured_at": cap_dt,
             "created_at": info.get("created_at", ""),
             "album_name": info.get("album_name", ""),
             "event_name": info.get("event_name", ""),
             "event_slug": info.get("event_slug", event_slug)
         })
-    # Sort search results by latest date first (Newest to Oldest)
+    # Sort search results by latest date first (Newest to Oldest), featured photos first
     photos_data.sort(key=lambda p: p.get("captured_at") or p.get("created_at") or "", reverse=True)
+    photos_data.sort(key=lambda p: 0 if p.get("is_featured") else 1)
     return {
         "multiple_faces": False,
-        "count": len(photos_data),
+        "count": total_count,
+        "total_count": total_count,
         "photos": photos_data,
         "legacy_photos": [p["rel_path"] for p in photos_data],
         "face_thumb": selected_face_thumb,
@@ -1327,6 +1331,7 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
     return {
         "status": "ok",
         "count": total_count,
+        "total_count": total_count,
         "photos": photos_data,
         "query_embedding": query_emb.tolist(),
         "has_new": has_new,

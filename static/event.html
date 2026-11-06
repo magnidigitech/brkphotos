@@ -1001,6 +1001,8 @@
       border: 1px solid var(--line);
       transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
       cursor: pointer;
+      position: relative;
+      contain: layout style;
     }
 
     .photo-card:hover {
@@ -1008,13 +1010,67 @@
       box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
     }
 
+    .photo-featured-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(217, 119, 6, 0.92);
+      color: #fff;
+      padding: 3px 9px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Skeleton placeholder & reserved dimensions to avoid blank lines & layout shifts */
+    .photo-img-wrap {
+      position: relative;
+      width: 100%;
+      min-height: 220px;
+      aspect-ratio: 4 / 3;
+      background: linear-gradient(90deg, #edf2ef 0%, #f7faf8 50%, #edf2ef 100%);
+      background-size: 200% 100%;
+      animation: photoShimmer 1.5s infinite ease-in-out;
+      overflow: hidden;
+      display: block;
+    }
+
+    @keyframes photoShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .photo-img-wrap {
+        background: linear-gradient(90deg, #182821 0%, #22372d 50%, #182821 100%);
+      }
+    }
+
     .photo-img {
       width: 100%;
-      height: auto;
+      height: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
       display: block;
       cursor: pointer;
-      background: #e4ebe7;
-      transition: filter 0.2s ease;
+      opacity: 0;
+      transition: opacity 0.25s ease, filter 0.2s ease;
+    }
+
+    .photo-img.loaded {
+      opacity: 1;
+      height: auto;
+      aspect-ratio: auto;
+    }
+
+    .photo-img-wrap.loaded {
+      animation: none;
+      background: transparent;
+      min-height: unset;
+      aspect-ratio: unset;
     }
 
     .photo-img:hover {
@@ -1874,6 +1930,119 @@
       }
     }
 
+    let gridRenderQueue = [];
+    let gridQueueCursor = 0;
+    let gridScrollObserver = null;
+    let isRenderingBatch = false;
+    const GRID_BATCH_SIZE = 40;
+
+    function createPhotoCard(item, idx) {
+      const p = typeof item === 'string' ? item : item.rel_path;
+      const enc = p.split('/').map(encodeURIComponent).join('/');
+      const filename = p.split('/').pop();
+      const isFeat = typeof item === 'object' && item.is_featured;
+
+      const card = document.createElement('div');
+      card.className = 'photo-card';
+
+      if (isFeat) {
+        const badge = document.createElement('span');
+        badge.className = 'photo-featured-badge';
+        badge.textContent = '★ Featured';
+        card.appendChild(badge);
+      }
+
+      const wrap = document.createElement('div');
+      wrap.className = 'photo-img-wrap';
+
+      const img = document.createElement('img');
+      img.className = 'photo-img';
+      img.alt = filename;
+      img.loading = idx < 12 ? 'eager' : 'lazy';
+      img.decoding = 'async';
+
+      const onLoad = () => {
+        wrap.classList.add('loaded');
+        img.classList.add('loaded');
+      };
+
+      const onError = () => {
+        wrap.classList.add('loaded');
+        wrap.classList.add('error');
+        wrap.style.display = 'flex';
+        wrap.style.alignItems = 'center';
+        wrap.style.justifyContent = 'center';
+        wrap.style.minHeight = '180px';
+        wrap.style.background = 'var(--card)';
+        wrap.innerHTML = `<div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:1rem;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin:0 auto 6px;display:block;opacity:0.5;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          <span>Image unavailable</span>
+        </div>`;
+      };
+
+      img.addEventListener('load', onLoad, { once: true });
+      img.addEventListener('error', onError, { once: true });
+      img.src = `/thumb/${enc}`;
+
+      if (img.complete && img.naturalWidth > 0) {
+        onLoad();
+      }
+
+      wrap.appendChild(img);
+      card.appendChild(wrap);
+      card.addEventListener('click', () => openPhotoLightbox(idx));
+      return card;
+    }
+
+    function renderNextGridBatch() {
+      if (isRenderingBatch || gridQueueCursor >= gridRenderQueue.length) return;
+      isRenderingBatch = true;
+
+      const grid = $('photosGrid');
+      const sentinel = $('gridScrollSentinel');
+      const fragment = document.createDocumentFragment();
+      const end = Math.min(gridQueueCursor + GRID_BATCH_SIZE, gridRenderQueue.length);
+
+      for (let i = gridQueueCursor; i < end; i++) {
+        const entry = gridRenderQueue[i];
+        if (entry.type === 'header') {
+          const header = document.createElement('div');
+          header.className = 'group-section-title';
+          header.innerHTML = `<span>${entry.title}</span> <span style="font-size:0.85rem;color:var(--muted);font-weight:500;">(${entry.count} photos)</span>`;
+          fragment.appendChild(header);
+        } else if (entry.type === 'photo') {
+          const card = createPhotoCard(entry.item, entry.idx);
+          fragment.appendChild(card);
+        }
+      }
+
+      gridQueueCursor = end;
+      if (sentinel && sentinel.parentNode === grid) {
+        grid.insertBefore(fragment, sentinel);
+      } else {
+        grid.appendChild(fragment);
+      }
+
+      isRenderingBatch = false;
+
+      if (gridQueueCursor >= gridRenderQueue.length) {
+        if (gridScrollObserver && sentinel) {
+          gridScrollObserver.unobserve(sentinel);
+        }
+        if (sentinel) sentinel.remove();
+      }
+    }
+
+    // Scroll listener fallback for high-speed scrolling
+    window.addEventListener('scroll', () => {
+      if (gridQueueCursor < gridRenderQueue.length) {
+        const scrollBottom = window.innerHeight + window.scrollY;
+        if (scrollBottom >= document.documentElement.scrollHeight - 1400) {
+          renderNextGridBatch();
+        }
+      }
+    }, { passive: true });
+
     function renderPhotos(photosList) {
       // 1. Deduplicate by unique filename so same photo in multiple folders is only shown once
       const seenFnames = new Set();
@@ -1910,6 +2079,10 @@
       const grid = $('photosGrid');
       grid.replaceChildren();
 
+      if (gridScrollObserver) {
+        gridScrollObserver.disconnect();
+      }
+
       if (currentPhotosList.length === 0) {
         grid.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;">No photos found in this view.</div>';
         return;
@@ -1937,32 +2110,55 @@
       const groupKeys = Object.keys(groups);
       const showGroupHeaders = groupKeys.length > 1;
 
+      // Build flattened render queue
+      gridRenderQueue = [];
+      gridQueueCursor = 0;
+
       for (const gName of groupKeys) {
         if (showGroupHeaders) {
-          const header = document.createElement('div');
-          header.className = 'group-section-title';
-          header.innerHTML = `<span>${gName}</span> <span style="font-size:0.85rem;color:var(--muted);font-weight:500;">(${groups[gName].length} photos)</span>`;
-          grid.append(header);
+          gridRenderQueue.push({
+            type: 'header',
+            title: gName,
+            count: groups[gName].length
+          });
         }
-
-        for (const { item, idx } of groups[gName]) {
-          const p = typeof item === 'string' ? item : item.rel_path;
-          const enc = p.split('/').map(encodeURIComponent).join('/');
-          const filename = p.split('/').pop();
-          const isFeat = typeof item === 'object' && item.is_featured;
-
-          const card = document.createElement('div');
-          card.className = 'photo-card';
-          card.style.position = 'relative';
-
-          card.innerHTML = `
-        ${isFeat ? '<span style="position:absolute;top:10px;right:10px;background:rgba(217,119,6,0.92);color:#fff;padding:3px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,0.25);z-index:2;pointer-events:none;">★ Featured</span>' : ''}
-        <img class="photo-img" src="/thumb/${enc}" alt="${filename}" loading="${idx < 16 ? 'eager' : 'lazy'}">
-      `;
-          card.addEventListener('click', () => openPhotoLightbox(idx));
-          grid.append(card);
+        for (const entry of groups[gName]) {
+          gridRenderQueue.push({
+            type: 'photo',
+            item: entry.item,
+            idx: entry.idx
+          });
         }
       }
+
+      // Append sentinel if queue has more than initial batch
+      if (gridRenderQueue.length > GRID_BATCH_SIZE) {
+        let sentinel = $('gridScrollSentinel');
+        if (!sentinel) {
+          sentinel = document.createElement('div');
+          sentinel.id = 'gridScrollSentinel';
+          sentinel.style.height = '40px';
+          sentinel.style.width = '100%';
+          sentinel.style.columnSpan = 'all';
+          sentinel.style.webkitColumnSpan = 'all';
+          sentinel.style.display = 'block';
+        }
+        grid.appendChild(sentinel);
+
+        gridScrollObserver = new IntersectionObserver((entries) => {
+          if (entries[0] && entries[0].isIntersecting) {
+            renderNextGridBatch();
+          }
+        }, {
+          root: null,
+          rootMargin: '1200px 0px',
+          threshold: 0
+        });
+        gridScrollObserver.observe(sentinel);
+      }
+
+      // Render initial batch immediately
+      renderNextGridBatch();
     }
 
     // Zoom & Pan State for Lightbox
@@ -2827,27 +3023,25 @@
         }
         if (res.ok) {
           const data = await res.json();
-          if (typeof data.count === 'number') {
-            const newCount = data.count;
-            if (newCount > 0) {
-              localStorage.setItem('brk_saved_count', newCount);
-              if (data.photos && data.photos.length > 0) {
-                localStorage.setItem('brk_saved_photos', JSON.stringify(data.photos));
-              }
-              if (data.query_embedding && !embedding) {
-                localStorage.setItem('brk_saved_embedding', JSON.stringify(data.query_embedding));
-              }
+          const newCount = (typeof data.total_count === 'number' && data.total_count > 0) ? data.total_count : data.count;
+          if (typeof newCount === 'number' && newCount > 0) {
+            localStorage.setItem('brk_saved_count', newCount);
+            if (data.photos && data.photos.length > 0) {
+              localStorage.setItem('brk_saved_photos', JSON.stringify(data.photos));
+            }
+            if (data.query_embedding && !embedding) {
+              localStorage.setItem('brk_saved_embedding', JSON.stringify(data.query_embedding));
+            }
 
-              const countText = $('savedPhotosCountText');
-              if (countText) {
-                countText.textContent = `Found ${newCount} photo${newCount === 1 ? '' : 's'} with BRK Sir`;
-              }
+            const countText = $('savedPhotosCountText');
+            if (countText) {
+              countText.textContent = `Found ${newCount} photo${newCount === 1 ? '' : 's'} with BRK Sir`;
+            }
 
-              const newBadge = $('newBadgeIndicator');
-              if (newBadge) {
-                // Show subtle flickering NEW only when newly indexed matching photos detected
-                newBadge.hidden = !(newCount > acknowledgedCount);
-              }
+            const newBadge = $('newBadgeIndicator');
+            if (newBadge) {
+              // Show subtle flickering NEW only when newly indexed matching photos detected
+              newBadge.hidden = !(newCount > acknowledgedCount);
             }
           }
         }
@@ -2984,6 +3178,10 @@
         hideMultiFacePicker();
 
         if (j.photos && j.photos.length > 0) {
+          const totalMatches = (typeof j.total_count === 'number' && j.total_count > 0)
+            ? j.total_count
+            : (typeof j.count === 'number' && j.count > 0 ? j.count : j.photos.length);
+
           // Save result & face thumbnail in localStorage for 1-click return access
           try {
             if (j.face_thumb) {
@@ -2993,8 +3191,8 @@
               localStorage.setItem('brk_saved_embedding', JSON.stringify(j.query_embedding));
             }
             localStorage.setItem('brk_saved_photos', JSON.stringify(j.photos));
-            localStorage.setItem('brk_saved_count', j.count);
-            localStorage.setItem('brk_acknowledged_count', j.count);
+            localStorage.setItem('brk_saved_count', totalMatches);
+            localStorage.setItem('brk_acknowledged_count', totalMatches);
             localStorage.setItem('brk_saved_time', new Date().toISOString());
             checkSavedProfile();
           } catch (e) {
@@ -3002,10 +3200,10 @@
           }
 
           if (statusEl) {
-            statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ Found ${j.count} photo${j.count === 1 ? '' : 's'} with BRK Sir!</span>`;
+            statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ Found ${totalMatches} photo${totalMatches === 1 ? '' : 's'} with BRK Sir!</span>`;
           }
           $('photosSectionTitle').textContent = 'Photos with Bhashyam Ramakrishna Sir';
-          $('photosSectionSubtitle').textContent = j.count === 1 ? '1 photograph found featuring your face' : `${j.count} unique photographs found featuring your face`;
+          $('photosSectionSubtitle').textContent = totalMatches === 1 ? '1 photograph found featuring your face' : `${totalMatches} unique photographs found featuring your face`;
           renderPhotos(j.photos);
           $('photosSection').hidden = false;
           $('photosSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
