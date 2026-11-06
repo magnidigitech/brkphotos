@@ -1114,7 +1114,7 @@ def crop_face_thumb(img, bbox, target_size=(160, 160)):
     _, buf = cv2.imencode(".jpg", crop_resized, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
     return "data:image/jpeg;base64," + base64.b64encode(buf).decode("utf-8")
 
-def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_index: Optional[int] = None):
+def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_index: Optional[int] = None, page: int = 1, page_size: int = 50):
     embs, names, known = get_event_index(event_slug)
     if len(names) == 0:
         raise HTTPException(503, "Photos are still being prepared for this event. Please check back soon.")
@@ -1213,27 +1213,43 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
     # Sort search results by latest date first (Newest to Oldest), featured photos first
     photos_data.sort(key=lambda p: p.get("captured_at") or p.get("created_at") or "", reverse=True)
     photos_data.sort(key=lambda p: 0 if p.get("is_featured") else 1)
+
+    # Server-side pagination
+    if page_size > 0:
+        start_idx = max(0, (page - 1) * page_size)
+        end_idx = start_idx + page_size
+        paged_photos = photos_data[start_idx:end_idx]
+        has_more = end_idx < total_count
+        next_page = page + 1 if has_more else None
+    else:
+        paged_photos = photos_data
+        has_more = False
+        next_page = None
+
     return {
         "multiple_faces": False,
         "count": total_count,
         "total_count": total_count,
-        "photos": photos_data,
-        "legacy_photos": [p["rel_path"] for p in photos_data],
+        "page": page,
+        "page_size": page_size if page_size > 0 else total_count,
+        "has_more": has_more,
+        "next_page": next_page,
+        "photos": paged_photos,
+        "legacy_photos": [p["rel_path"] for p in paged_photos],
         "face_thumb": selected_face_thumb,
         "total_faces_in_query": len(faces),
-        "selected_face_index": selected_idx,
-        "query_embedding": face.normed_embedding.tolist()
+        "selected_face_index": selected_idx
     }
 
 @app.post("/api/search")
-def default_search(selfie: UploadFile = File(...), face_index: Optional[int] = Form(None)):
-    """Search for matching photos using face recognition."""
-    return perform_face_search(selfie, "brk-sir", face_index=face_index)
+def default_search(selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50)):
+    """Search for matching photos using face recognition with server-side pagination."""
+    return perform_face_search(selfie, "brk-sir", face_index=face_index, page=page, page_size=page_size)
 
 @app.post("/api/{slug}/search")
-def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[int] = Form(None)):
-    """Search for matching photos using face recognition."""
-    return perform_face_search(selfie, slug, face_index=face_index)
+def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50)):
+    """Search for matching photos using face recognition with server-side pagination."""
+    return perform_face_search(selfie, slug, face_index=face_index, page=page, page_size=page_size)
 
 @app.post("/api/events/{slug}/check-profile-matches")
 @app.post("/api/check-profile-matches")
@@ -1250,10 +1266,12 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
     embedding = body.get("embedding")
     face_thumb = body.get("face_thumb")
     last_count = int(body.get("last_count", 0) or 0)
+    page = int(body.get("page", 1) or 1)
+    page_size = int(body.get("page_size", 50) or 50)
 
     embs, names, _ = get_event_index(slug)
     if len(embs) == 0:
-        return {"status": "ok", "count": 0, "photos": [], "has_new": False, "new_count": 0}
+        return {"status": "ok", "count": 0, "total_count": 0, "page": page, "photos": [], "has_more": False, "has_new": False, "new_count": 0}
 
     query_emb = None
     if embedding and isinstance(embedding, list) and len(embedding) == 512:
@@ -1276,7 +1294,7 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
             print("Error decoding face_thumb in match check:", e)
 
     if query_emb is None:
-        return {"status": "error", "message": "No face embedding available to query", "count": 0, "has_new": False}
+        return {"status": "error", "message": "No face embedding available to query", "count": 0, "total_count": 0, "has_new": False}
 
     sims = embs @ query_emb
     matches = np.where(sims >= THRESHOLD)[0]
@@ -1328,12 +1346,26 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
     has_new = total_count > last_count if last_count > 0 else False
     new_count = max(0, total_count - last_count) if last_count > 0 else 0
 
+    if page_size > 0:
+        start_idx = max(0, (page - 1) * page_size)
+        end_idx = start_idx + page_size
+        paged_photos = photos_data[start_idx:end_idx]
+        has_more = end_idx < total_count
+        next_page = page + 1 if has_more else None
+    else:
+        paged_photos = photos_data
+        has_more = False
+        next_page = None
+
     return {
         "status": "ok",
         "count": total_count,
         "total_count": total_count,
-        "photos": photos_data,
-        "query_embedding": query_emb.tolist(),
+        "page": page,
+        "page_size": page_size if page_size > 0 else total_count,
+        "has_more": has_more,
+        "next_page": next_page,
+        "photos": paged_photos,
         "has_new": has_new,
         "new_count": new_count
     }

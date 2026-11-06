@@ -1873,36 +1873,65 @@
     </svg>
   </button>
 
-  <!-- Live WebCam Viewfinder Modal (Desktop) -->
+  <!-- Live In-Browser Selfie Camera Modal (Mobile & Desktop) -->
   <div id="webcamModal" class="modal-backdrop" hidden>
-    <div class="modal-box" style="max-width:520px;text-align:center;">
-      <button class="modal-close" id="closeWebcamModalBtn">&times;</button>
-      <h3 style="font-size:1.35rem;font-weight:700;margin-bottom:0.35rem;color:var(--ink);">Take a Selfie</h3>
-      <p style="color:var(--muted);font-size:0.86rem;margin-bottom:1rem;">Center your face in the camera frame and click
-        Capture.</p>
+    <div class="modal-box" style="max-width:480px;text-align:center;padding:1.4rem 1.25rem;">
+      <button class="modal-close" id="closeWebcamModalBtn" title="Close Camera">&times;</button>
+      <h3 id="cameraModalTitle" style="font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Take a Selfie</h3>
+      <p id="cameraModalSubtitle" style="color:var(--muted);font-size:0.85rem;margin-bottom:0.85rem;">Position your face inside the frame and tap Capture</p>
 
-      <div
-        style="position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3;box-shadow:inset 0 0 20px rgba(0,0,0,0.5);">
-        <video id="webcamVideo" autoplay playsinline
+      <div style="position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:3/4;max-height:58vh;margin:0 auto;box-shadow:inset 0 0 20px rgba(0,0,0,0.6);">
+        <video id="webcamVideo" autoplay playsinline muted
           style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block;"></video>
-        <!-- Face oval guide -->
-        <div
-          style="position:absolute;inset:0;pointer-events:none;border:2px dashed rgba(255,255,255,0.45);border-radius:50%;width:58%;height:75%;margin:auto;">
+        <img id="cameraPreviewImg" alt="Captured Selfie"
+          style="display:none;width:100%;height:100%;object-fit:cover;">
+        
+        <!-- Face oval guide overlay (hidden during preview) -->
+        <div id="cameraFaceGuide"
+          style="position:absolute;inset:0;pointer-events:none;border:2px dashed rgba(255,255,255,0.6);border-radius:50%;width:64%;height:70%;margin:auto;box-shadow:0 0 0 9999px rgba(0,0,0,0.25);">
         </div>
+
+        <!-- Camera Flip Button (Top Right over video) -->
+        <button type="button" id="flipCameraBtn" title="Switch Front/Rear Camera"
+          style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.55);color:#fff;border:1px solid rgba(255,255,255,0.3);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px);z-index:2;transition:background 0.2s;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 10c0-4.418-3.582-8-8-8s-8 3.582-8 8c0 1.956.702 3.748 1.874 5.143L4 17h5v-5L7.26 13.74C6.474 12.68 6 11.39 6 10c0-3.314 2.686-6 6-6s6 2.686 6 6c0 1.39-.474 2.68-1.26 3.74L19 15c.628-.96 1-2.106 1-3.333z"/>
+            <polyline points="1 20 5 16 9 20"/>
+          </svg>
+        </button>
       </div>
 
-      <div style="display:flex;gap:0.75rem;justify-content:center;margin-top:1.25rem;">
+      <!-- Controls: Capture Mode -->
+      <div id="cameraCaptureControls" style="display:flex;gap:0.75rem;justify-content:center;align-items:center;margin-top:1.15rem;">
         <button type="button" id="snapPhotoBtn" class="btn-find-photos"
-          style="padding:0.75rem 1.6rem;font-size:0.95rem;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-            stroke-linecap="round" stroke-linejoin="round">
+          style="padding:0.8rem 1.8rem;font-size:1rem;display:inline-flex;align-items:center;gap:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10" />
             <circle cx="12" cy="12" r="3" />
           </svg>
           <span>Capture Photo</span>
         </button>
-        <button type="button" id="cancelWebcamBtn" class="btn-find-photos btn-outline" style="padding:0.75rem 1.25rem;">
+        <button type="button" id="cancelWebcamBtn" class="btn-find-photos btn-outline" style="padding:0.8rem 1.25rem;">
           Cancel
+        </button>
+      </div>
+
+      <!-- Controls: Preview / Retake Mode -->
+      <div id="cameraPreviewControls" style="display:none;gap:0.75rem;justify-content:center;align-items:center;margin-top:1.15rem;">
+        <button type="button" id="retakePhotoBtn" class="btn-find-photos btn-outline"
+          style="padding:0.8rem 1.4rem;font-size:0.95rem;display:inline-flex;align-items:center;gap:6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+          </svg>
+          <span>Retake</span>
+        </button>
+        <button type="button" id="usePhotoBtn" class="btn-find-photos"
+          style="padding:0.8rem 1.8rem;font-size:0.95rem;display:inline-flex;align-items:center;gap:6px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>Use Photo</span>
         </button>
       </div>
     </div>
@@ -1994,8 +2023,81 @@
       return card;
     }
 
+    let currentSearchFaceThumb = null;
+    let currentSearchPage = 1;
+    let currentSearchHasMore = false;
+    let isLoadingNextPage = false;
+
+    async function fetchNextSearchPage() {
+      if (isLoadingNextPage || !currentSearchHasMore || !currentSearchFaceThumb) return;
+      isLoadingNextPage = true;
+
+      try {
+        const payload = {
+          face_thumb: currentSearchFaceThumb,
+          page: currentSearchPage + 1,
+          page_size: 50
+        };
+        let res = await fetch('/api/check-profile-matches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          res = await fetch(`/api/events/${slug}/check-profile-matches`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+        if (res.ok) {
+          const data = await res.json();
+          if (data.photos && data.photos.length > 0) {
+            currentSearchPage = data.page || (currentSearchPage + 1);
+            currentSearchHasMore = !!data.has_more;
+            appendPhotosToGrid(data.photos);
+          } else {
+            currentSearchHasMore = false;
+          }
+        } else {
+          currentSearchHasMore = false;
+        }
+      } catch (err) {
+        console.warn('Error loading next batch of photos:', err);
+      } finally {
+        isLoadingNextPage = false;
+      }
+    }
+
+    function appendPhotosToGrid(newPhotos) {
+      if (!newPhotos || newPhotos.length === 0) return;
+      const seenFnames = new Set(currentPhotosList.map(item => {
+        return (typeof item === 'string' ? item.split('/').pop() : (item.filename || item.rel_path.split('/').pop())).toLowerCase();
+      }));
+
+      const added = [];
+      for (const item of newPhotos) {
+        const fn = (typeof item === 'string' ? item.split('/').pop() : (item.filename || item.rel_path.split('/').pop())).toLowerCase();
+        if (!seenFnames.has(fn)) {
+          seenFnames.add(fn);
+          added.push(item);
+        }
+      }
+      if (added.length === 0) return;
+
+      const startIdx = currentPhotosList.length;
+      for (let i = 0; i < added.length; i++) {
+        const item = added[i];
+        const idx = startIdx + i;
+        currentPhotosList.push(item);
+        gridRenderQueue.push({ type: 'photo', item, idx });
+      }
+
+      renderNextGridBatch();
+    }
+
     function renderNextGridBatch() {
-      if (isRenderingBatch || gridQueueCursor >= gridRenderQueue.length) return;
+      if (isRenderingBatch) return;
       isRenderingBatch = true;
 
       const grid = $('photosGrid');
@@ -2025,7 +2127,12 @@
 
       isRenderingBatch = false;
 
-      if (gridQueueCursor >= gridRenderQueue.length) {
+      // Check if we are approaching the end of current render queue and more pages exist on server
+      if (gridQueueCursor >= gridRenderQueue.length - 16 && currentSearchHasMore && !isLoadingNextPage) {
+        fetchNextSearchPage();
+      }
+
+      if (gridQueueCursor >= gridRenderQueue.length && !currentSearchHasMore) {
         if (gridScrollObserver && sentinel) {
           gridScrollObserver.unobserve(sentinel);
         }
@@ -2035,10 +2142,12 @@
 
     // Scroll listener fallback for high-speed scrolling
     window.addEventListener('scroll', () => {
-      if (gridQueueCursor < gridRenderQueue.length) {
-        const scrollBottom = window.innerHeight + window.scrollY;
-        if (scrollBottom >= document.documentElement.scrollHeight - 1400) {
+      const scrollBottom = window.innerHeight + window.scrollY;
+      if (scrollBottom >= document.documentElement.scrollHeight - 1400) {
+        if (gridQueueCursor < gridRenderQueue.length) {
           renderNextGridBatch();
+        } else if (currentSearchHasMore && !isLoadingNextPage) {
+          fetchNextSearchPage();
         }
       }
     }, { passive: true });
@@ -2131,8 +2240,8 @@
         }
       }
 
-      // Append sentinel if queue has more than initial batch
-      if (gridRenderQueue.length > GRID_BATCH_SIZE) {
+      // Append sentinel if queue has more than initial batch or server has more pages
+      if (gridRenderQueue.length > GRID_BATCH_SIZE || currentSearchHasMore) {
         let sentinel = $('gridScrollSentinel');
         if (!sentinel) {
           sentinel = document.createElement('div');
@@ -2147,7 +2256,11 @@
 
         gridScrollObserver = new IntersectionObserver((entries) => {
           if (entries[0] && entries[0].isIntersecting) {
-            renderNextGridBatch();
+            if (gridQueueCursor < gridRenderQueue.length) {
+              renderNextGridBatch();
+            } else if (currentSearchHasMore && !isLoadingNextPage) {
+              fetchNextSearchPage();
+            }
           }
         }, {
           root: null,
@@ -2883,13 +2996,191 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // Device detection: Mobile opens native front camera, Desktop opens webcam stream
-    function isMobileDevice() {
-      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        (('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.matchMedia("(max-width: 768px)").matches);
+    // In-Browser Selfie Camera Controller (Mobile & Desktop)
+    let mediaStream = null;
+    let cameraFacingMode = 'user'; // front camera by default
+    let cameraCanvas = null;
+
+    function isCameraSupported() {
+      return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
     }
 
-    let mediaStream = null;
+    async function openWebcamModal() {
+      const modal = $('webcamModal');
+      const video = $('webcamVideo');
+      const previewImg = $('cameraPreviewImg');
+      const captureControls = $('cameraCaptureControls');
+      const previewControls = $('cameraPreviewControls');
+      const faceGuide = $('cameraFaceGuide');
+      const title = $('cameraModalTitle');
+      const subtitle = $('cameraModalSubtitle');
+      const flipBtn = $('flipCameraBtn');
+
+      if (!modal || !video) return;
+
+      if (!isCameraSupported() || (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1')) {
+        console.warn('In-browser camera requires HTTPS or is unsupported; opening file upload fallback.');
+        $('selfieFileInput').click();
+        return;
+      }
+
+      // Reset to live capture mode
+      if (previewImg) { previewImg.src = ''; previewImg.style.display = 'none'; }
+      if (video) { video.style.display = 'block'; }
+      if (faceGuide) { faceGuide.style.display = 'block'; }
+      if (flipBtn) { flipBtn.style.display = 'flex'; }
+      if (captureControls) { captureControls.style.display = 'flex'; }
+      if (previewControls) { previewControls.style.display = 'none'; }
+      if (title) { title.textContent = 'Take a Selfie'; }
+      if (subtitle) { subtitle.textContent = 'Position your face inside the frame and tap Capture'; }
+
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+
+      await startCameraStream();
+    }
+
+    async function startCameraStream() {
+      const video = $('webcamVideo');
+      if (!video) return;
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+      }
+
+      video.style.transform = cameraFacingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+
+      try {
+        const constraints = {
+          video: {
+            facingMode: cameraFacingMode,
+            width: { ideal: 1280 },
+            height: { ideal: 960 }
+          },
+          audio: false
+        };
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = mediaStream;
+        await video.play();
+      } catch (err) {
+        console.warn('Camera stream error:', err);
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          video.srcObject = mediaStream;
+          await video.play();
+        } catch (fallbackErr) {
+          console.error('All camera attempts failed:', fallbackErr);
+          stopWebcam();
+          const statusEl = $('searchStatus');
+          if (statusEl) {
+            statusEl.innerHTML = `<span style="color:#d97706;font-weight:600;">Camera access was blocked or is unavailable. Please upload a photo instead.</span>`;
+          }
+          $('selfieFileInput').click();
+        }
+      }
+    }
+
+    async function toggleCameraFlip() {
+      cameraFacingMode = cameraFacingMode === 'user' ? 'environment' : 'user';
+      await startCameraStream();
+    }
+
+    function captureWebcamPhoto() {
+      const video = $('webcamVideo');
+      const previewImg = $('cameraPreviewImg');
+      const captureControls = $('cameraCaptureControls');
+      const previewControls = $('cameraPreviewControls');
+      const faceGuide = $('cameraFaceGuide');
+      const flipBtn = $('flipCameraBtn');
+      const title = $('cameraModalTitle');
+      const subtitle = $('cameraModalSubtitle');
+
+      if (!video || !video.videoWidth) return;
+
+      if (!cameraCanvas) {
+        cameraCanvas = document.createElement('canvas');
+      }
+      cameraCanvas.width = video.videoWidth;
+      cameraCanvas.height = video.videoHeight;
+      const ctx = cameraCanvas.getContext('2d');
+
+      // Mirror horizontally if front camera was used
+      if (cameraFacingMode === 'user') {
+        ctx.translate(cameraCanvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0, cameraCanvas.width, cameraCanvas.height);
+
+      const previewDataUrl = cameraCanvas.toDataURL('image/jpeg', 0.92);
+      if (previewImg) {
+        previewImg.src = previewDataUrl;
+        previewImg.style.display = 'block';
+      }
+      video.style.display = 'none';
+      if (faceGuide) faceGuide.style.display = 'none';
+      if (flipBtn) flipBtn.style.display = 'none';
+      if (captureControls) captureControls.style.display = 'none';
+      if (previewControls) previewControls.style.display = 'flex';
+      if (title) title.textContent = 'Preview Selfie';
+      if (subtitle) subtitle.textContent = 'Is your face clear? Tap Use Photo to search or Retake';
+    }
+
+    function retakeWebcamPhoto() {
+      const video = $('webcamVideo');
+      const previewImg = $('cameraPreviewImg');
+      const captureControls = $('cameraCaptureControls');
+      const previewControls = $('cameraPreviewControls');
+      const faceGuide = $('cameraFaceGuide');
+      const flipBtn = $('flipCameraBtn');
+      const title = $('cameraModalTitle');
+      const subtitle = $('cameraModalSubtitle');
+
+      if (previewImg) { previewImg.src = ''; previewImg.style.display = 'none'; }
+      if (video) { video.style.display = 'block'; }
+      if (faceGuide) faceGuide.style.display = 'block';
+      if (flipBtn) flipBtn.style.display = 'flex';
+      if (captureControls) captureControls.style.display = 'flex';
+      if (previewControls) previewControls.style.display = 'none';
+      if (title) title.textContent = 'Take a Selfie';
+      if (subtitle) subtitle.textContent = 'Position your face inside the frame and tap Capture';
+    }
+
+    async function useCapturedPhoto() {
+      if (!cameraCanvas) return;
+      const useBtn = $('usePhotoBtn');
+      const originalText = useBtn ? useBtn.innerHTML : '';
+      if (useBtn) {
+        useBtn.disabled = true;
+        useBtn.innerHTML = `<span>Processing...</span>`;
+      }
+
+      try {
+        const blob = await new Promise((resolve, reject) => {
+          cameraCanvas.toBlob(b => {
+            if (b) resolve(b);
+            else reject(new Error('Failed to create photo image.'));
+          }, 'image/jpeg', 0.92);
+        });
+
+        if (!blob || blob.size === 0) {
+          throw new Error('Captured photo was empty. Please retake.');
+        }
+
+        const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+        stopWebcam();
+        await processAndSearchSelfie(file);
+      } catch (err) {
+        console.error('Error in useCapturedPhoto:', err);
+        alert(err.message || 'Could not process photo. Please try again.');
+        retakeWebcamPhoto();
+      } finally {
+        if (useBtn) {
+          useBtn.disabled = false;
+          useBtn.innerHTML = originalText;
+        }
+      }
+    }
 
     function stopWebcam() {
       if (mediaStream) {
@@ -2898,56 +3189,22 @@
       }
       const modal = $('webcamModal');
       if (modal) modal.hidden = true;
+      document.body.style.overflow = '';
     }
 
-    async function openWebcamModal() {
-      const modal = $('webcamModal');
-      const video = $('webcamVideo');
-      if (!modal || !video) return;
-
-      stopWebcam();
-      modal.hidden = false;
-
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false
-        });
-        video.srcObject = mediaStream;
-      } catch (err) {
-        console.warn('Webcam permission or device error, falling back to file input:', err);
+    // Stop camera if user navigates or switches away
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && mediaStream) {
         stopWebcam();
-        $('selfieCameraInput').click();
       }
-    }
-
-    function captureWebcamPhoto() {
-      const video = $('webcamVideo');
-      if (!video || !video.videoWidth) return;
-
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      // Mirror to match front camera view
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      stopWebcam();
-
-      canvas.toBlob(blob => {
-        if (blob) {
-          const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
-          processAndSearchSelfie(file);
-        }
-      }, 'image/jpeg', 0.92);
-    }
+    });
 
     function triggerCamera() {
-      if (isMobileDevice() || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        $('selfieCameraInput').click();
-      } else {
+      // In-browser camera works seamlessly on both mobile and desktop
+      if (isCameraSupported()) {
         openWebcamModal();
+      } else {
+        $('selfieFileInput').click();
       }
     }
 
@@ -2992,12 +3249,7 @@
     async function syncLatestProfileCount() {
       if (isSyncingProfileCount) return;
       const savedThumb = localStorage.getItem('brk_saved_face_thumb');
-      const savedEmbeddingRaw = localStorage.getItem('brk_saved_embedding');
-      let embedding = null;
-      if (savedEmbeddingRaw) {
-        try { embedding = JSON.parse(savedEmbeddingRaw); } catch (e) {}
-      }
-      if (!savedThumb && !embedding) return;
+      if (!savedThumb) return;
 
       const lastCount = parseInt(localStorage.getItem('brk_saved_count') || '0', 10);
       const acknowledgedCount = parseInt(localStorage.getItem('brk_acknowledged_count') || `${lastCount}`, 10);
@@ -3005,9 +3257,10 @@
       isSyncingProfileCount = true;
       try {
         const payload = {
-          embedding: embedding,
-          face_thumb: embedding ? null : savedThumb,
-          last_count: lastCount
+          face_thumb: savedThumb,
+          last_count: lastCount,
+          page: 1,
+          page_size: 50
         };
         let res = await fetch('/api/check-profile-matches', {
           method: 'POST',
@@ -3029,9 +3282,6 @@
             if (data.photos && data.photos.length > 0) {
               localStorage.setItem('brk_saved_photos', JSON.stringify(data.photos));
             }
-            if (data.query_embedding && !embedding) {
-              localStorage.setItem('brk_saved_embedding', JSON.stringify(data.query_embedding));
-            }
 
             const countText = $('savedPhotosCountText');
             if (countText) {
@@ -3040,7 +3290,6 @@
 
             const newBadge = $('newBadgeIndicator');
             if (newBadge) {
-              // Show subtle flickering NEW only when newly indexed matching photos detected
               newBadge.hidden = !(newCount > acknowledgedCount);
             }
           }
@@ -3056,9 +3305,9 @@
       if (e) e.preventDefault();
       const savedPhotosJson = localStorage.getItem('brk_saved_photos');
       const savedCount = parseInt(localStorage.getItem('brk_saved_count') || '0', 10);
+      const savedThumb = localStorage.getItem('brk_saved_face_thumb');
       if (!savedPhotosJson) return;
 
-      // User has viewed/acknowledged these photographs: dismiss NEW badge
       localStorage.setItem('brk_acknowledged_count', savedCount);
       const newBadge = $('newBadgeIndicator');
       if (newBadge) newBadge.hidden = true;
@@ -3066,12 +3315,17 @@
       try {
         const photos = JSON.parse(savedPhotosJson);
         if (Array.isArray(photos) && photos.length > 0) {
+          const actualCount = savedCount > 0 ? savedCount : photos.length;
+          currentSearchFaceThumb = savedThumb || null;
+          currentSearchPage = 1;
+          currentSearchHasMore = actualCount > photos.length;
+
           const statusEl = $('searchStatus');
           if (statusEl) {
-            statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ Restored ${savedCount} saved photo${savedCount === 1 ? '' : 's'} with BRK Sir!</span>`;
+            statusEl.innerHTML = `<span style="color:var(--emerald,#059669);font-weight:700;">✓ Restored ${actualCount} saved photo${actualCount === 1 ? '' : 's'} with BRK Sir!</span>`;
           }
           $('photosSectionTitle').textContent = 'Photos with Bhashyam Ramakrishna Sir';
-          $('photosSectionSubtitle').textContent = savedCount === 1 ? '1 photograph found featuring your face' : `${savedCount} unique photographs found featuring your face`;
+          $('photosSectionSubtitle').textContent = actualCount === 1 ? '1 photograph found featuring your face' : `${actualCount} unique photographs found featuring your face`;
           renderPhotos(photos);
           $('photosSection').hidden = false;
           $('photosSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3087,11 +3341,12 @@
         e.stopPropagation();
       }
       localStorage.removeItem('brk_saved_face_thumb');
-      localStorage.removeItem('brk_saved_embedding');
       localStorage.removeItem('brk_saved_photos');
       localStorage.removeItem('brk_saved_count');
       localStorage.removeItem('brk_acknowledged_count');
       localStorage.removeItem('brk_saved_time');
+      currentSearchFaceThumb = null;
+      currentSearchHasMore = false;
       const badge = $('savedProfileBadge');
       if (badge) badge.hidden = true;
     }
@@ -3113,7 +3368,6 @@
           <span class="multi-face-btn-label">Person ${idx + 1}</span>
         `;
         item.addEventListener('click', () => {
-          // Highlight active choice
           picker.querySelectorAll('.multi-face-item').forEach(el => el.classList.remove('active'));
           item.classList.add('active');
           if (currentSearchFile) {
@@ -3156,6 +3410,8 @@
       if (faceIndex !== null) {
         fd.append('face_index', faceIndex);
       }
+      fd.append('page', 1);
+      fd.append('page_size', 50);
 
       try {
         let res = await fetch('/api/search', { method: 'POST', body: fd });
@@ -3182,13 +3438,14 @@
             ? j.total_count
             : (typeof j.count === 'number' && j.count > 0 ? j.count : j.photos.length);
 
+          currentSearchFaceThumb = j.face_thumb || null;
+          currentSearchPage = j.page || 1;
+          currentSearchHasMore = !!j.has_more;
+
           // Save result & face thumbnail in localStorage for 1-click return access
           try {
             if (j.face_thumb) {
               localStorage.setItem('brk_saved_face_thumb', j.face_thumb);
-            }
-            if (j.query_embedding) {
-              localStorage.setItem('brk_saved_embedding', JSON.stringify(j.query_embedding));
             }
             localStorage.setItem('brk_saved_photos', JSON.stringify(j.photos));
             localStorage.setItem('brk_saved_count', totalMatches);
@@ -3224,12 +3481,6 @@
     $('cameraBtn').addEventListener('click', triggerCamera);
     $('uploadFileBtn').addEventListener('click', () => $('selfieFileInput').click());
 
-    $('selfieCameraInput').addEventListener('change', () => {
-      if ($('selfieCameraInput').files && $('selfieCameraInput').files[0]) {
-        processAndSearchSelfie($('selfieCameraInput').files[0]);
-      }
-    });
-
     $('selfieFileInput').addEventListener('change', () => {
       if ($('selfieFileInput').files && $('selfieFileInput').files[0]) {
         processAndSearchSelfie($('selfieFileInput').files[0]);
@@ -3237,6 +3488,9 @@
     });
 
     $('snapPhotoBtn')?.addEventListener('click', captureWebcamPhoto);
+    $('retakePhotoBtn')?.addEventListener('click', retakeWebcamPhoto);
+    $('usePhotoBtn')?.addEventListener('click', useCapturedPhoto);
+    $('flipCameraBtn')?.addEventListener('click', toggleCameraFlip);
     $('cancelWebcamBtn')?.addEventListener('click', stopWebcam);
     $('closeWebcamModalBtn')?.addEventListener('click', stopWebcam);
 
