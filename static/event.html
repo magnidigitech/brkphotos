@@ -4341,16 +4341,20 @@
     }
 
     let currentSearchFaceThumb = null;
+    let currentSearchEmbedding = null;
+    let currentSelectedFaceIndex = null;
     let currentSearchPage = 1;
     let currentSearchHasMore = false;
     let isLoadingNextPage = false;
 
     async function fetchNextSearchPage() {
-      if (isLoadingNextPage || !currentSearchHasMore || !currentSearchFaceThumb) return;
+      if (isLoadingNextPage || !currentSearchHasMore) return;
+      if (!currentSearchFaceThumb && !currentSearchEmbedding && !currentSearchFile) return;
       isLoadingNextPage = true;
 
       try {
         const payload = {
+          embedding: currentSearchEmbedding,
           face_thumb: currentSearchFaceThumb,
           page: currentSearchPage + 1,
           page_size: 50
@@ -4367,23 +4371,63 @@
             body: JSON.stringify(payload)
           });
         }
+
+        let data = null;
         if (res.ok) {
-          const data = await res.json();
+          data = await res.json();
+        }
+
+        // Resilient fallback: If check-profile-matches returned error or no photos, and we have the original uploaded file,
+        // fallback to /api/search with page parameter
+        if ((!data || data.status === 'error' || !data.photos || data.photos.length === 0) && currentSearchFile) {
+          try {
+            const fd = new FormData();
+            fd.append('selfie', currentSearchFile);
+            if (currentSelectedFaceIndex !== null && currentSelectedFaceIndex !== undefined) {
+              fd.append('face_index', currentSelectedFaceIndex);
+            }
+            fd.append('page', currentSearchPage + 1);
+            fd.append('page_size', 50);
+            let sRes = await fetch('/api/search', { method: 'POST', body: fd });
+            if (!sRes.ok) {
+              sRes = await fetch(`/api/${slug}/search`, { method: 'POST', body: fd });
+            }
+            if (sRes.ok) {
+              const sData = await sRes.json();
+              if (sData && sData.photos && sData.photos.length > 0) {
+                data = sData;
+              }
+            }
+          } catch (eFallback) {
+            console.warn('Fallback search pagination failed:', eFallback);
+          }
+        }
+
+        if (data && data.photos && data.photos.length > 0) {
+          if (data.embedding && !currentSearchEmbedding) {
+            currentSearchEmbedding = data.embedding;
+            try { localStorage.setItem('brk_saved_embedding', JSON.stringify(data.embedding)); } catch (e) {}
+          }
           if (data.date_summary) {
             serverDateSummary = data.date_summary;
             try {
               localStorage.setItem('brk_saved_date_summary', JSON.stringify(data.date_summary));
             } catch (e) {}
           }
-          if (data.photos && data.photos.length > 0) {
-            currentSearchPage = data.page || (currentSearchPage + 1);
-            currentSearchHasMore = !!data.has_more;
-            if (typeof data.total_count === 'number' && data.total_count > 0) {
-              totalMatchingPhotosCount = data.total_count;
-            }
-            appendPhotosToGrid(data.photos);
-          } else {
-            currentSearchHasMore = false;
+          currentSearchPage = data.page || (currentSearchPage + 1);
+          currentSearchHasMore = !!data.has_more;
+          if (typeof data.total_count === 'number' && data.total_count > 0) {
+            totalMatchingPhotosCount = data.total_count;
+          }
+          appendPhotosToGrid(data.photos);
+
+          // Automatically prefetch remaining pages smoothly in background
+          if (currentSearchHasMore) {
+            setTimeout(() => {
+              if (currentSearchHasMore && !isLoadingNextPage) {
+                fetchNextSearchPage();
+              }
+            }, 200);
           }
         } else {
           currentSearchHasMore = false;
@@ -4412,19 +4456,28 @@
       }
       if (added.length === 0) return;
 
-      const startIdx = currentPhotosList.length;
       for (let i = 0; i < added.length; i++) {
         const item = added[i];
-        const idx = startIdx + i;
-        currentPhotosList.push(item);
         const parsed = parsePhotoDate(item);
-        gridRenderQueue.push({
-          type: 'photo',
-          groupKey: parsed.key,
-          item,
-          idx
-        });
+        const matchesFilter = (!selectedCalendarDate && !selectedOtherAlbum) ||
+          (selectedCalendarDate && parsed.isDate && parsed.dateKey === selectedCalendarDate) ||
+          (selectedOtherAlbum && !parsed.isDate && parsed.rawAlbum === selectedOtherAlbum);
+
+        if (matchesFilter) {
+          const idx = currentPhotosList.length;
+          currentPhotosList.push(item);
+          gridRenderQueue.push({
+            type: 'photo',
+            groupKey: parsed.key,
+            item,
+            idx
+          });
+        }
       }
+
+      try {
+        localStorage.setItem('brk_saved_photos', JSON.stringify(rawPhotosList));
+      } catch (e) {}
 
       totalMatchingPhotosCount = Math.max(totalMatchingPhotosCount, rawPhotosList.length);
       renderNextGridBatch();
@@ -4495,6 +4548,11 @@
           if (dateGrid) {
             const card = createPhotoCard(entry.item, entry.idx);
             dateGrid.appendChild(card);
+            const countEl = section.querySelector('.gallery-date-count');
+            if (countEl) {
+              const c = dateGrid.children.length;
+              countEl.textContent = `${c} ${c === 1 ? 'photo' : 'photos'}`;
+            }
           }
         }
       }
@@ -5801,7 +5859,12 @@
     async function syncLatestProfileCount() {
       if (isSyncingProfileCount) return;
       const savedThumb = localStorage.getItem('brk_saved_face_thumb');
-      if (!savedThumb) return;
+      const savedEmbJson = localStorage.getItem('brk_saved_embedding');
+      let savedEmb = null;
+      if (savedEmbJson) {
+        try { savedEmb = JSON.parse(savedEmbJson); } catch (e) {}
+      }
+      if (!savedThumb && !savedEmb) return;
 
       const lastCount = parseInt(localStorage.getItem('brk_saved_count') || '0', 10);
       const acknowledgedCount = parseInt(localStorage.getItem('brk_acknowledged_count') || `${lastCount}`, 10);
@@ -5810,6 +5873,7 @@
       try {
         const payload = {
           face_thumb: savedThumb,
+          embedding: savedEmb,
           last_count: lastCount,
           page: 1,
           page_size: 50
@@ -5828,6 +5892,9 @@
         }
         if (res.ok) {
           const data = await res.json();
+          if (data.embedding && !savedEmb) {
+            try { localStorage.setItem('brk_saved_embedding', JSON.stringify(data.embedding)); } catch (e) {}
+          }
           const newCount = (typeof data.total_count === 'number' && data.total_count > 0) ? data.total_count : data.count;
           if (typeof newCount === 'number' && newCount > 0) {
             localStorage.setItem('brk_saved_count', newCount);
@@ -5888,7 +5955,11 @@
           const actualCount = savedCount > 0 ? savedCount : photos.length;
           totalMatchingPhotosCount = actualCount;
           currentSearchFaceThumb = savedThumb || null;
-          currentSearchPage = 1;
+          const savedEmbJson = localStorage.getItem('brk_saved_embedding');
+          if (savedEmbJson) {
+            try { currentSearchEmbedding = JSON.parse(savedEmbJson); } catch (e) {}
+          }
+          currentSearchPage = Math.max(1, Math.floor(photos.length / 50));
           currentSearchHasMore = actualCount > photos.length;
 
           const savedDateSummaryJson = localStorage.getItem('brk_saved_date_summary');
@@ -5921,11 +5992,14 @@
         e.stopPropagation();
       }
       localStorage.removeItem('brk_saved_face_thumb');
+      localStorage.removeItem('brk_saved_embedding');
       localStorage.removeItem('brk_saved_photos');
       localStorage.removeItem('brk_saved_count');
       localStorage.removeItem('brk_acknowledged_count');
       localStorage.removeItem('brk_saved_time');
       currentSearchFaceThumb = null;
+      currentSearchEmbedding = null;
+      currentSelectedFaceIndex = null;
       currentSearchHasMore = false;
       totalMatchingPhotosCount = 0;
       const badge = $('savedProfileBadge');
@@ -6028,6 +6102,8 @@
           }
 
           currentSearchFaceThumb = j.face_thumb || null;
+          currentSearchEmbedding = j.embedding || null;
+          currentSelectedFaceIndex = faceIndex;
           currentSearchPage = j.page || 1;
           currentSearchHasMore = !!j.has_more;
 
@@ -6035,6 +6111,9 @@
           try {
             if (j.face_thumb) {
               localStorage.setItem('brk_saved_face_thumb', j.face_thumb);
+            }
+            if (j.embedding) {
+              localStorage.setItem('brk_saved_embedding', JSON.stringify(j.embedding));
             }
             localStorage.setItem('brk_saved_photos', JSON.stringify(j.photos));
             localStorage.setItem('brk_saved_count', totalMatches);

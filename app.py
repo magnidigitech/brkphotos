@@ -1098,7 +1098,7 @@ async def add_cache_control_headers(request: Request, call_next):
 
 # --- Search & Public Delivery APIs ---
 
-def crop_face_thumb(img, bbox, target_size=(160, 160)):
+def crop_face_thumb(img, bbox, target_size=(240, 240)):
     h_img, w_img = img.shape[:2]
     x1, y1, x2, y2 = [int(v) for v in bbox]
     bw, bh = max(1, x2 - x1), max(1, y2 - y1)
@@ -1324,6 +1324,7 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
         "filter_date": filter_date,
         "filter_album": filter_album,
         "face_thumb": selected_face_thumb,
+        "embedding": face.normed_embedding.tolist() if (face is not None and hasattr(face, "normed_embedding") and face.normed_embedding is not None) else None,
         "total_faces_in_query": len(faces),
         "selected_face_index": selected_idx
     }
@@ -1377,11 +1378,20 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
             if faces:
                 target_f = max(faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
                 query_emb = target_f.normed_embedding
+            elif img is not None and img.size > 0:
+                h_c, w_c = img.shape[:2]
+                scale = max(640.0 / max(h_c, w_c), 2.5)
+                upscaled = cv2.resize(img, (int(w_c * scale), int(h_c * scale)), interpolation=cv2.INTER_CUBIC)
+                with lock:
+                    up_faces = face_app.get(upscaled)
+                if up_faces:
+                    target_f = max(up_faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
+                    query_emb = target_f.normed_embedding
         except Exception as e:
             print("Error decoding face_thumb in match check:", e)
 
     if query_emb is None:
-        return {"status": "error", "message": "No face embedding available to query", "count": 0, "total_count": 0, "has_new": False}
+        return {"status": "error", "message": "No face embedding available to query", "count": 0, "total_count": 0, "photos": [], "has_more": False, "has_new": False, "new_count": 0}
 
     sims = embs @ query_emb
     matches = np.where(sims >= THRESHOLD)[0]
@@ -1468,6 +1478,7 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
         "next_page": next_page,
         "photos": paged_photos,
         "date_summary": date_summary,
+        "embedding": query_emb.tolist() if (query_emb is not None and hasattr(query_emb, "tolist")) else None,
         "filter_date": filter_date,
         "filter_album": filter_album,
         "has_new": has_new,
