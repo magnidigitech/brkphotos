@@ -70,14 +70,34 @@ lock = threading.Lock()
 # Multi-event vector index cache: { slug: { "embs": ..., "names": ..., "known": ..., "mtime": ... } }
 event_indices = {}
 drive_map = {}
+_drive_map_mtime = 0
 thumb_semaphore = threading.Semaphore(2)
+zip_semaphore = threading.Semaphore(2)
+
+# Lightweight in-memory metadata caches with TTL
+_public_event_cache = {}
+_public_event_cache_time = {}
+_system_metrics_cache = {}
+_system_metrics_cache_time = 0
+
+def invalidate_public_event_cache(slug: str = None):
+    """Invalidates cached event and album metadata when changes occur."""
+    if slug:
+        _public_event_cache.pop(slug, None)
+        _public_event_cache_time.pop(slug, None)
+    else:
+        _public_event_cache.clear()
+        _public_event_cache_time.clear()
 
 def reload_drive_map():
-    global drive_map
+    global drive_map, _drive_map_mtime
     map_file = DATA / "drive_map.json"
     if map_file.exists():
         try:
-            drive_map = json.loads(map_file.read_text())
+            mtime = map_file.stat().st_mtime
+            if mtime != _drive_map_mtime:
+                drive_map = json.loads(map_file.read_text())
+                _drive_map_mtime = mtime
         except Exception:
             pass
 
@@ -1245,27 +1265,36 @@ def query_matched_photos(embs, names, query_emb, event_slug="brk-sir", filter_da
     ranked = sorted(best_by_filename.items(), key=lambda kv: -kv[1]["score"])
     reload_drive_map()
 
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT p.filename, p.rel_path, p.is_featured, p.drive_file_id, p.captured_at, p.created_at,
-               a.name as album_name, a.slug as album_slug, 
-               e.name as event_name, e.slug as event_slug
-        FROM photos p
-        JOIN events e ON p.event_id = e.id
-        LEFT JOIN albums a ON p.album_id = a.id
-        WHERE (e.slug = ? OR ? IN ('brk-sir', 'brksir', 'wedding', 'default', '')) AND p.is_deleted = 0
-    """, (event_slug, event_slug))
-    rows = cursor.fetchall()
-    conn.close()
-
     photo_info = {}
-    for r in rows:
-        d = dict(r)
-        if d.get("filename"):
-            photo_info[d["filename"]] = d
-        if d.get("rel_path"):
-            photo_info[d["rel_path"]] = d
+    if ranked:
+        conn = get_db()
+        cursor = conn.cursor()
+        # Query only matched items in batches of 400 to respect SQLite parameter limits
+        chunk_size = 400
+        for i in range(0, len(ranked), chunk_size):
+            chunk = ranked[i:i + chunk_size]
+            chunk_fnames = [fname for fname, _ in chunk]
+            chunk_paths = [item["rel_path"] for _, item in chunk]
+            all_ids = list(set(chunk_fnames + chunk_paths))
+            placeholders = ",".join("?" for _ in all_ids)
+            cursor.execute(f"""
+                SELECT p.filename, p.rel_path, p.is_featured, p.drive_file_id, p.captured_at, p.created_at,
+                       a.name as album_name, a.slug as album_slug, 
+                       e.name as event_name, e.slug as event_slug
+                FROM photos p
+                JOIN events e ON p.event_id = e.id
+                LEFT JOIN albums a ON p.album_id = a.id
+                WHERE (p.filename IN ({placeholders}) OR p.rel_path IN ({placeholders}))
+                  AND (e.slug = ? OR ? IN ('brk-sir', 'brksir', 'wedding', 'default', ''))
+                  AND p.is_deleted = 0
+            """, all_ids + all_ids + [event_slug, event_slug])
+            for r in cursor.fetchall():
+                d = dict(r)
+                if d.get("filename"):
+                    photo_info[d["filename"]] = d
+                if d.get("rel_path"):
+                    photo_info[d["rel_path"]] = d
+        conn.close()
 
     photos_data = []
     for fname, item in ranked:
@@ -1564,27 +1593,66 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
         "new_count": new_count
     }
 
+def resolve_photo_path(name: str) -> Optional[Path]:
+    """Fast indexed resolution of a photo file path without recursive disk scans."""
+    if not name:
+        return None
+    fname = Path(name).name
+    photos_root = PHOTOS.resolve()
+    # 1. Direct path check
+    try:
+        target = (PHOTOS / name).resolve()
+        if str(target).startswith(str(photos_root)) and target.is_file():
+            return target
+    except Exception:
+        pass
+
+    # 2. Fast database indexed lookup by filename or rel_path
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT rel_path FROM photos WHERE (filename = ? OR rel_path = ?) AND is_deleted = 0 LIMIT 1", (fname, name))
+        row = c.fetchone()
+        conn.close()
+        if row and row["rel_path"]:
+            p = (PHOTOS / row["rel_path"]).resolve()
+            if str(p).startswith(str(photos_root)) and p.is_file():
+                return p
+    except Exception:
+        pass
+
+    # 3. Direct match in root photos dir
+    try:
+        direct = (PHOTOS / fname).resolve()
+        if str(direct).startswith(str(photos_root)) and direct.is_file():
+            return direct
+    except Exception:
+        pass
+    return None
+
 @app.get("/thumb/{name:path}")
 def thumb(name: str):
-    """Delivers 480px web thumbnail or cropped face avatar safely."""
+    """Delivers 480px web thumbnail or cropped face avatar safely with HTTP caching."""
+    cache_headers = {"Cache-Control": "public, max-age=604800, immutable"}
+
     # 0. Query review crops
     if name.startswith("review_crops/"):
         crop_name = Path(name).name
         target = DATA / "review_crops" / crop_name
         if target.exists():
-            return FileResponse(target)
+            return FileResponse(target, headers=cache_headers)
 
     # 1. Face avatars
     if name.startswith("faces/"):
         face_name = Path(name).name
         target = DATA / "faces" / face_name
         if target.exists():
-            return FileResponse(target)
+            return FileResponse(target, headers=cache_headers)
 
     # 2. Direct match in root thumbs directory
     direct_thumb = DATA / "thumbs" / (name.replace("/", "__") + ".jpg")
     if direct_thumb.exists():
-        return FileResponse(direct_thumb)
+        return FileResponse(direct_thumb, headers=cache_headers)
 
     # 3. Match in event-scoped thumbs: events/<slug>/<subpath> -> DATA/events/<slug>/thumbs/<subpath.replace('/', '__')>.jpg
     if name.startswith("events/"):
@@ -1594,39 +1662,34 @@ def thumb(name: str):
             sub = parts[2]
             ev_thumb = DATA / "events" / slug / "thumbs" / (sub.replace("/", "__") + ".jpg")
             if ev_thumb.exists():
-                return FileResponse(ev_thumb)
+                return FileResponse(ev_thumb, headers=cache_headers)
 
-    # 4. Search in any events/*/thumbs/ directory
-    fname = Path(name).name
-    candidates = list(DATA.glob(f"events/*/thumbs/*{fname}*.jpg"))
-    if candidates and candidates[0].exists():
-        return FileResponse(candidates[0])
-
-    candidates = list(DATA.glob(f"thumbs/*{fname}*.jpg"))
-    if candidates and candidates[0].exists():
-        return FileResponse(candidates[0])
+    # 4. Fast database resolution to check if thumb is cached under original rel_path
+    photo_file = resolve_photo_path(name)
+    if photo_file:
+        try:
+            rel = str(photo_file.relative_to(PHOTOS))
+            resolved_thumb = DATA / "thumbs" / (rel.replace("/", "__") + ".jpg")
+            if resolved_thumb.exists():
+                return FileResponse(resolved_thumb, headers=cache_headers)
+        except Exception:
+            pass
 
     # 5. On-the-fly thumbnail generation from original photo on disk with concurrency limit
-    photo_file = PHOTOS / name
-    if not photo_file.exists():
-        matches = list(PHOTOS.glob(f"**/{fname}"))
-        if matches:
-            photo_file = matches[0]
-
-    if photo_file.exists():
+    if photo_file and photo_file.exists():
         with thumb_semaphore:
             cache_thumb = DATA / "thumbs" / (name.replace("/", "__") + ".jpg")
             if cache_thumb.exists():
-                return FileResponse(cache_thumb)
+                return FileResponse(cache_thumb, headers=cache_headers)
             try:
                 cache_thumb.parent.mkdir(parents=True, exist_ok=True)
                 with Image.open(photo_file) as img:
                     img = ImageOps.exif_transpose(img).convert("RGB")
-                    img.thumbnail((1080, 1080), Image.Resampling.LANCZOS)
-                    img.save(cache_thumb, "JPEG", quality=84, optimize=True)
-                return FileResponse(cache_thumb)
+                    img.thumbnail((480, 480), Image.Resampling.LANCZOS)
+                    img.save(cache_thumb, "JPEG", quality=80, optimize=True)
+                return FileResponse(cache_thumb, headers=cache_headers)
             except Exception:
-                return FileResponse(photo_file)
+                return FileResponse(photo_file, headers=cache_headers)
 
     raise HTTPException(404, "Thumbnail not found")
 
@@ -1634,26 +1697,22 @@ def thumb(name: str):
 def photo(name: str):
     """Delivers photo directly from VPS without redirecting to Google Drive."""
     fname = Path(name).name
-    target = PHOTOS / name
-    if not target.exists():
-        matches = list(PHOTOS.glob(f"**/{fname}"))
-        if matches:
-            target = matches[0]
+    target = resolve_photo_path(name)
 
-    if target.exists():
-        return FileResponse(target, filename=fname)
+    if target and target.exists():
+        return FileResponse(target, filename=fname, headers={"Cache-Control": "public, max-age=86400"})
 
     # Fallback to high-res thumbnail on VPS if original was pruned
     direct_thumb = DATA / "thumbs" / (name.replace("/", "__") + ".jpg")
     if direct_thumb.exists():
-        return FileResponse(direct_thumb, filename=fname)
+        return FileResponse(direct_thumb, filename=fname, headers={"Cache-Control": "public, max-age=86400"})
 
     if name.startswith("events/"):
         parts = name.split("/", 2)
         if len(parts) >= 3:
             ev_thumb = DATA / "events" / parts[1] / "thumbs" / (parts[2].replace("/", "__") + ".jpg")
             if ev_thumb.exists():
-                return FileResponse(ev_thumb, filename=fname)
+                return FileResponse(ev_thumb, filename=fname, headers={"Cache-Control": "public, max-age=86400"})
 
     # Fallback to Google Drive only if file not present on VPS
     reload_drive_map()
@@ -1673,39 +1732,36 @@ def photo(name: str):
 @app.get("/preview/{name:path}")
 def preview(name: str):
     """Serves studio-quality 1600px HD preview for lightbox viewer, cached on VPS for instant 1ms response."""
+    cache_headers = {"Cache-Control": "public, max-age=604800, immutable"}
     cache_preview = DATA / "previews" / (name.replace("/", "__") + ".jpg")
     if cache_preview.exists():
-        return FileResponse(cache_preview, media_type="image/jpeg")
+        return FileResponse(cache_preview, media_type="image/jpeg", headers=cache_headers)
 
     fname = Path(name).name
-    target = PHOTOS / name
-    if not target.exists():
-        matches = list(PHOTOS.glob(f"**/{fname}"))
-        if matches:
-            target = matches[0]
+    target = resolve_photo_path(name)
 
-    if target.exists():
+    if target and target.exists():
         try:
             cache_preview.parent.mkdir(parents=True, exist_ok=True)
             with Image.open(target) as img:
                 img = ImageOps.exif_transpose(img).convert("RGB")
                 img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
                 img.save(cache_preview, "JPEG", quality=86, optimize=True)
-            return FileResponse(cache_preview, media_type="image/jpeg")
+            return FileResponse(cache_preview, media_type="image/jpeg", headers=cache_headers)
         except Exception:
-            return FileResponse(target, media_type="image/jpeg")
+            return FileResponse(target, media_type="image/jpeg", headers=cache_headers)
 
     # Fallback to high-res thumbnail if original not found
     thumb_path = DATA / "thumbs" / (name.replace("/", "__") + ".jpg")
     if thumb_path.exists():
-        return FileResponse(thumb_path, media_type="image/jpeg")
+        return FileResponse(thumb_path, media_type="image/jpeg", headers=cache_headers)
 
     if name.startswith("events/"):
         parts = name.split("/", 2)
         if len(parts) >= 3:
             ev_thumb = DATA / "events" / parts[1] / "thumbs" / (parts[2].replace("/", "__") + ".jpg")
             if ev_thumb.exists():
-                return FileResponse(ev_thumb, media_type="image/jpeg")
+                return FileResponse(ev_thumb, media_type="image/jpeg", headers=cache_headers)
 
     raise HTTPException(404, "Preview photo not found")
 
@@ -1744,13 +1800,9 @@ def download_hd(name: str, req: Request):
                 )
 
     # 3. Generate 1080p/1920p HD on the fly from original on disk
-    target = PHOTOS / name
-    if not target.exists():
-        matches = list(PHOTOS.glob(f"**/{fname}"))
-        if matches:
-            target = matches[0]
+    target = resolve_photo_path(name)
 
-    if target.exists():
+    if target and target.exists():
         try:
             cache_thumb.parent.mkdir(parents=True, exist_ok=True)
             with Image.open(target) as img:
@@ -1781,13 +1833,9 @@ def download_4k(name: str, req: Request):
     analytics.record_photo_download(name, quality="4k", session_id=sess_id, visitor_id=vis_id)
     fname = Path(name).name
     # 1. Check if original photo exists on VPS storage
-    target = PHOTOS / name
-    if not target.exists():
-        matches = list(PHOTOS.glob(f"**/{fname}"))
-        if matches:
-            target = matches[0]
+    target = resolve_photo_path(name)
 
-    if target.exists():
+    if target and target.exists():
         return FileResponse(
             target,
             filename=fname,
@@ -1815,7 +1863,8 @@ def download_4k(name: str, req: Request):
 async def download_bulk_zip(request: Request, background_tasks: BackgroundTasks, slug: str = "brk-sir"):
     """
     Creates and streams a downloadable ZIP file containing the selected original full-resolution photos.
-    Uses ZIP_STORED (0% CPU recompression overhead, fast disk stream) and prevents directory traversal.
+    Uses ZIP_STORED (0% CPU recompression overhead, fast disk stream), bounds concurrency via zip_semaphore,
+    and prevents directory traversal.
     """
     try:
         body = await request.json()
@@ -1848,58 +1897,40 @@ async def download_bulk_zip(request: Request, background_tasks: BackgroundTasks,
 
     added_names = set()
     missing_photos = []
-    photos_root = PHOTOS.resolve()
 
-    # Use ZIP_STORED to eliminate heavy CPU re-compression overhead on JPEG photos
-    with zipfile.ZipFile(tmp_zip_path, "w", compression=zipfile.ZIP_STORED) as zf:
-        for item in selected:
-            if isinstance(item, dict):
-                p_path = item.get("rel_path") or item.get("filename") or ""
-            else:
-                p_path = str(item).strip()
+    # Bound concurrent zip creation to protect VPS RAM and disk I/O
+    with zip_semaphore:
+        with zipfile.ZipFile(tmp_zip_path, "w", compression=zipfile.ZIP_STORED) as zf:
+            for item in selected:
+                if isinstance(item, dict):
+                    p_path = item.get("rel_path") or item.get("filename") or ""
+                else:
+                    p_path = str(item).strip()
 
-            if not p_path:
-                continue
+                if not p_path:
+                    continue
 
-            fname = Path(p_path).name
-            clean_name = fname
-            count = 1
-            while clean_name.lower() in added_names:
-                stem = Path(fname).stem
-                ext = Path(fname).suffix or ".jpg"
-                clean_name = f"{stem}_{count}{ext}"
-                count += 1
+                fname = Path(p_path).name
+                clean_name = fname
+                count = 1
+                while clean_name.lower() in added_names:
+                    stem = Path(fname).stem
+                    ext = Path(fname).suffix or ".jpg"
+                    clean_name = f"{stem}_{count}{ext}"
+                    count += 1
 
-            # Prevent directory traversal attacks
-            candidate = None
-            try:
-                target = (PHOTOS / p_path).resolve()
-                if str(target).startswith(str(photos_root)) and target.is_file():
-                    candidate = target
-            except Exception:
-                candidate = None
+                # Fast indexed candidate resolution
+                candidate = resolve_photo_path(p_path)
 
-            # Fallback search within PHOTOS by filename
-            if candidate is None:
-                matches = list(PHOTOS.glob(f"**/{fname}"))
-                for m in matches:
+                if candidate and candidate.is_file():
                     try:
-                        resolved_m = m.resolve()
-                        if str(resolved_m).startswith(str(photos_root)) and resolved_m.is_file():
-                            candidate = resolved_m
-                            break
-                    except Exception:
-                        pass
-
-            if candidate and candidate.is_file():
-                try:
-                    zf.write(candidate, arcname=clean_name)
-                    added_names.add(clean_name.lower())
-                except Exception as e:
-                    print(f"Error adding {candidate} to zip: {e}")
+                        zf.write(candidate, arcname=clean_name)
+                        added_names.add(clean_name.lower())
+                    except Exception as e:
+                        print(f"Error adding {candidate} to zip: {e}")
+                        missing_photos.append(p_path)
+                else:
                     missing_photos.append(p_path)
-            else:
-                missing_photos.append(p_path)
 
     zip_size = os.path.getsize(tmp_zip_path) if os.path.exists(tmp_zip_path) else 0
     if zip_size <= 22 or len(added_names) == 0:
@@ -1946,6 +1977,11 @@ def public_album_direct(album_slug: str):
 
 @app.get("/api/public/events/{slug}")
 def public_event_details(slug: str):
+    # Check in-memory metadata cache (30s TTL)
+    now_t = time.time()
+    if slug in _public_event_cache and (now_t - _public_event_cache_time.get(slug, 0) < 30):
+        return _public_event_cache[slug]
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM events WHERE slug = ? AND status != 'archived'", (slug,))
@@ -1957,28 +1993,28 @@ def public_event_details(slug: str):
     if not event:
         conn.close()
         raise HTTPException(404, "No gallery found")
-        
+
+    # Efficient single-query album metadata with consolidated cover image resolution (eliminates N+1 queries)
     cursor.execute("""
-        SELECT a.*, COUNT(p.id) as photo_count 
+        SELECT a.*, COUNT(p.id) as photo_count,
+               COALESCE(a.cover_image_path, (
+                   SELECT p2.rel_path FROM photos p2
+                   WHERE p2.album_id = a.id AND p2.is_deleted = 0 AND p2.is_hidden = 0
+                   ORDER BY p2.is_featured DESC, p2.id DESC LIMIT 1
+               )) as effective_cover_image
         FROM albums a
         LEFT JOIN photos p ON a.id = p.album_id AND p.is_deleted = 0 AND p.is_hidden = 0
         WHERE a.event_id = ? AND a.is_published = 1 AND a.is_deleted = 0
         GROUP BY a.id
         ORDER BY a.sort_order ASC, a.name ASC
     """, (event["id"],))
-    albums = [dict(row) for row in cursor.fetchall()]
-    
-    # Auto-populate album cover image if not explicitly set
-    for a in albums:
-        if not a["cover_image_path"]:
-            cursor.execute("""
-                SELECT rel_path FROM photos 
-                WHERE album_id = ? AND is_deleted = 0 AND is_hidden = 0 
-                ORDER BY is_featured DESC, id DESC LIMIT 1
-            """, (a["id"],))
-            p_row = cursor.fetchone()
-            if p_row:
-                a["cover_image_path"] = p_row["rel_path"]
+    albums = []
+    for row in cursor.fetchall():
+        d = dict(row)
+        if not d.get("cover_image_path"):
+            d["cover_image_path"] = d.get("effective_cover_image")
+        d.pop("effective_cover_image", None)
+        albums.append(d)
 
     event_dict = dict(event)
     if not event_dict["cover_image_path"]:
@@ -1990,16 +2026,19 @@ def public_event_details(slug: str):
         e_cov = cursor.fetchone()
         if e_cov:
             event_dict["cover_image_path"] = e_cov["rel_path"]
-    
+
     cursor.execute("SELECT COUNT(id) as total FROM photos WHERE event_id = ? AND is_deleted = 0", (event["id"],))
     photo_count = cursor.fetchone()["total"]
     conn.close()
-    
-    return {
+
+    result = {
         "event": event_dict,
         "albums": albums,
         "photo_count": photo_count
     }
+    _public_event_cache[slug] = result
+    _public_event_cache_time[slug] = now_t
+    return result
 
 @app.get("/api/public/events/{slug}/albums/{album_slug}")
 def public_album_photos(slug: str, album_slug: str):
@@ -2081,12 +2120,11 @@ def admin_overview(token: str = Depends(get_auth_token)):
     total_people = cursor.fetchone()["total_people"]
     
     cursor.execute("""
-        SELECT e.*, COUNT(p.id) as photo_count, COUNT(DISTINCT a.id) as album_count
+        SELECT e.*,
+               (SELECT COUNT(p.id) FROM photos p WHERE p.event_id = e.id AND p.is_deleted = 0) as photo_count,
+               (SELECT COUNT(a.id) FROM albums a WHERE a.event_id = e.id AND (a.is_deleted = 0 OR a.is_deleted IS NULL)) as album_count
         FROM events e
-        LEFT JOIN photos p ON e.id = p.event_id AND p.is_deleted = 0
-        LEFT JOIN albums a ON e.id = a.event_id
         WHERE e.status != 'archived'
-        GROUP BY e.id
         ORDER BY e.created_at DESC
     """)
     events = [dict(row) for row in cursor.fetchall()]
@@ -2147,8 +2185,15 @@ def admin_create_event(payload: dict, token: str = Depends(get_auth_token)):
     
     return {"status": "ok", "slug": slug}
 
-def sync_event_folders_and_photos(slug: str):
-    """Auto-detect physical folders on disk, register missing albums, and link unassigned photos."""
+_last_sync_folders_time = {}
+
+def sync_event_folders_and_photos(slug: str, force: bool = False):
+    """Auto-detect physical folders on disk, register missing albums, and link unassigned photos (throttled to 5 mins)."""
+    now_t = time.time()
+    if not force and (now_t - _last_sync_folders_time.get(slug, 0) < 300):
+        return
+    _last_sync_folders_time[slug] = now_t
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM events WHERE slug = ?", (slug,))
@@ -2957,6 +3002,11 @@ def admin_get_queue_task_logs(task_id: str, token: str = Depends(get_auth_token)
 
 @app.get("/api/admin/system/metrics")
 def admin_system_metrics(token: str = Depends(get_auth_token)):
+    global _system_metrics_cache, _system_metrics_cache_time
+    now_t = time.time()
+    if _system_metrics_cache and (now_t - _system_metrics_cache_time < 5):
+        return _system_metrics_cache
+
     import resource
     try:
         load1, load5, load15 = os.getloadavg()
@@ -2965,6 +3015,16 @@ def admin_system_metrics(token: str = Depends(get_auth_token)):
 
     usage = resource.getrusage(resource.RUSAGE_SELF)
     max_rss_mb = round(usage.ru_maxrss / (1024 * 1024) if sys.platform == "darwin" else usage.ru_maxrss / 1024, 1)
+
+    # Disk usage on storage volume
+    try:
+        disk = shutil.disk_usage(STORAGE)
+        disk_total_gb = round(disk.total / (1024**3), 1)
+        disk_used_gb = round(disk.used / (1024**3), 1)
+        disk_free_gb = round(disk.free / (1024**3), 1)
+        disk_pct = round((disk.used / max(disk.total, 1)) * 100, 1)
+    except Exception:
+        disk_total_gb = disk_used_gb = disk_free_gb = disk_pct = 0.0
 
     db_size_mb = 0.0
     db_file = DATA / "magniwedding.db"
@@ -2975,16 +3035,43 @@ def admin_system_metrics(token: str = Depends(get_auth_token)):
     with task_lock:
         mem_task = dict(current_task)
 
-    return {
+    # Photo & face library metrics
+    total_photos = 0
+    total_faces = 0
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT COUNT(id) FROM photos WHERE is_deleted = 0")
+        total_photos = c.fetchone()[0] or 0
+        c.execute("SELECT COUNT(id) FROM face_detections")
+        total_faces = c.fetchone()[0] or 0
+        conn.close()
+    except Exception:
+        pass
+
+    result = {
         "status": "healthy",
         "load_avg": [round(load1, 2), round(load5, 2), round(load15, 2)],
         "memory_rss_mb": max_rss_mb,
         "db_size_mb": db_size_mb,
+        "disk": {
+            "total_gb": disk_total_gb,
+            "used_gb": disk_used_gb,
+            "free_gb": disk_free_gb,
+            "used_pct": disk_pct
+        },
+        "library_stats": {
+            "total_photos": total_photos,
+            "total_faces": total_faces
+        },
         "active_worker": queue_worker_running,
         "current_task_status": mem_task.get("status", "idle"),
         "queue_stats": stats,
         "timestamp": now_ist().strftime("%Y-%m-%d %H:%M:%S")
     }
+    _system_metrics_cache = result
+    _system_metrics_cache_time = now_t
+    return result
 
 @app.post("/api/admin/queue/{task_id}/cancel")
 def admin_cancel_queue_task(task_id: str, token: str = Depends(get_auth_token)):

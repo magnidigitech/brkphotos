@@ -6611,7 +6611,12 @@
     // Check for saved profile on startup and sync dynamic counts
     checkSavedProfile();
     syncLatestProfileCount();
-    setInterval(syncLatestProfileCount, 45000);
+    // Periodic background profile sync - only when page is visible
+    setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        syncLatestProfileCount();
+      }
+    }, 45000);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         syncLatestProfileCount();

@@ -6,6 +6,7 @@ and photo quality metrics (blur, exposure, quality grade).
 """
 import argparse
 import fcntl
+import gc
 import json
 import os
 import sys
@@ -182,6 +183,10 @@ def index_event(event_slug="brk-sir", run_clustering=False, task_id=""):
     for idx, path in enumerate(pending_files, 1):
         rel = norm_rel(path)
         detected_here = 0
+        raw_img = None
+        thumb = None
+        work_img = None
+        bgr = None
         try:
             # 1. Hashes & File size
             fsize = path.stat().st_size
@@ -241,9 +246,23 @@ def index_event(event_slug="brk-sir", run_clustering=False, task_id=""):
             err_msg = str(e)
             print(f"[{ist_ts()}] Error processing {rel}: {err_msg}", flush=True)
             record_indexing_error(task_id, event_slug, rel, "indexing", err_msg)
+        finally:
+            # Explicitly release image objects and large arrays to prevent memory growth
+            try:
+                if raw_img: raw_img.close()
+                if thumb: thumb.close()
+                if work_img: work_img.close()
+                del bgr
+                del raw_img, thumb, work_img
+            except Exception:
+                pass
 
         done.add(rel)
         processed_new += 1
+
+        # Periodic garbage collection every 50 photos to keep RSS memory bounded
+        if processed_new % 50 == 0:
+            gc.collect()
 
         # Yield CPU briefly so server remains completely responsive
         time.sleep(0.04)

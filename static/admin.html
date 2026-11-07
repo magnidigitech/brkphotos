@@ -2158,6 +2158,43 @@
             </button>
           </div>
         </div>
+
+        <div class="card-block" style="margin-top:1.25rem;">
+          <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <span class="card-block-title">Server Performance & System Health</span>
+              <span id="sysStatusBadge" style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:rgba(5,150,105,0.12);color:#059669;font-weight:700;">HEALTHY</span>
+            </div>
+            <button class="btn-outline" style="padding:4px 10px;font-size:0.8rem;" onclick="loadSystemMetrics(true)">
+              <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Refresh Metrics</span>
+            </button>
+          </div>
+          <div class="card-block-body">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;">
+              <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;padding:0.85rem;">
+                <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">CPU Load (1m, 5m, 15m)</div>
+                <div id="sysCpuLoad" style="font-size:1.15rem;font-weight:700;color:var(--text-main);margin-top:0.25rem;">0.00, 0.00, 0.00</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Multi-core load average</div>
+              </div>
+              <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;padding:0.85rem;">
+                <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Memory Usage (RSS)</div>
+                <div id="sysMemRss" style="font-size:1.15rem;font-weight:700;color:var(--text-main);margin-top:0.25rem;">0 MB</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Resident Set Size memory</div>
+              </div>
+              <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;padding:0.85rem;">
+                <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Storage Volume</div>
+                <div id="sysDiskUsage" style="font-size:1.15rem;font-weight:700;color:var(--text-main);margin-top:0.25rem;">0 GB Free</div>
+                <div id="sysDiskSub" style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Disk space available</div>
+              </div>
+              <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;padding:0.85rem;">
+                <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Database & WAL</div>
+                <div id="sysDbSize" style="font-size:1.15rem;font-weight:700;color:var(--text-main);margin-top:0.25rem;">0 MB</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">SQLite WAL + MMap enabled</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- PANEL 2: ALBUMS & FOLDERS -->
@@ -3536,6 +3573,7 @@ let activeUploadAlbumSlug = '';
 let lastHistoryRefreshTime = 0;
 let lastSidebarAutoSyncTime = 0;
 let lastQueueRefreshTime = 0;
+let lastAutoPhotoRefreshTime = 0;
 let hasActiveQueueTasks = false;
 
 // Mobile Sidebar Off-Canvas Navigation Controls
@@ -4184,13 +4222,49 @@ $('btnFastIndexActive')?.addEventListener('click', async (e) => {
 async function loadDashboard() {
   try {
     const res = await fetch('/api/admin/overview');
+    if (res.ok) {
+      const d = await res.json();
+      if ($('metricAlbums')) $('metricAlbums').textContent = d.metrics.total_albums || 0;
+      if ($('metricActiveAlbums')) $('metricActiveAlbums').textContent = d.metrics.total_albums || 0;
+      if ($('metricPhotos')) $('metricPhotos').textContent = d.metrics.total_photos || 0;
+      if ($('metricPeople')) $('metricPeople').textContent = d.metrics.identified_people || 0;
+    }
+  } catch (e) {}
+  loadSystemMetrics();
+}
+
+async function loadSystemMetrics(isManual = false) {
+  try {
+    const res = await fetch('/api/admin/system/metrics');
     if (!res.ok) return;
     const d = await res.json();
-    if ($('metricAlbums')) $('metricAlbums').textContent = d.metrics.total_albums || 0;
-    if ($('metricActiveAlbums')) $('metricActiveAlbums').textContent = d.metrics.total_albums || 0;
-    if ($('metricPhotos')) $('metricPhotos').textContent = d.metrics.total_photos || 0;
-    if ($('metricPeople')) $('metricPeople').textContent = d.metrics.identified_people || 0;
-  } catch (e) {}
+    if ($('sysCpuLoad') && d.load_avg) {
+      $('sysCpuLoad').textContent = d.load_avg.map(n => Number(n).toFixed(2)).join(', ');
+    }
+    if ($('sysMemRss')) {
+      $('sysMemRss').textContent = `${d.memory_rss_mb || 0} MB`;
+    }
+    if ($('sysDiskUsage') && d.disk) {
+      $('sysDiskUsage').textContent = `${d.disk.free_gb || 0} GB Free`;
+      if ($('sysDiskSub')) {
+        $('sysDiskSub').textContent = `${d.disk.used_gb || 0} / ${d.disk.total_gb || 0} GB (${d.disk.used_pct || 0}% used)`;
+      }
+    }
+    if ($('sysDbSize')) {
+      $('sysDbSize').textContent = `${d.db_size_mb || 0} MB`;
+    }
+    if ($('sysStatusBadge')) {
+      const isHealthy = (d.status === 'healthy');
+      $('sysStatusBadge').textContent = isHealthy ? 'HEALTHY' : 'CHECK REQ';
+      $('sysStatusBadge').style.background = isHealthy ? 'rgba(5,150,105,0.12)' : 'rgba(239,68,68,0.12)';
+      $('sysStatusBadge').style.color = isHealthy ? '#059669' : '#ef4444';
+    }
+    if (isManual && typeof showToast === 'function') {
+      showToast('System health metrics refreshed.');
+    }
+  } catch (e) {
+    console.error('Error loading system metrics:', e);
+  }
 }
 
 function escapeHtml(str) {
@@ -6256,15 +6330,16 @@ async function pollTaskStatus() {
     const savedMb = task.storage_saved_mb || 0;
     $('taskStorageStat').textContent = `${savedMb.toFixed(1)} MB saved (98.5% VPS offload)`;
 
-    // Live Auto-Sync Photo Library if task is running and user is viewing photos
-    if ((isRunning || status === 'running') && $('autoRefreshCheckbox')?.checked && !isRefreshingPhotos) {
+    const nowMs = Date.now();
+
+    // Rate-limited auto-sync photo library if task is running and user is viewing photos (at most once every 15s)
+    if ((isRunning || status === 'running') && $('autoRefreshCheckbox')?.checked && !isRefreshingPhotos && (nowMs - lastAutoPhotoRefreshTime > 15000)) {
       const curTab = localStorage.getItem('admin_active_tab');
       if (curTab === 'photos') {
+        lastAutoPhotoRefreshTime = nowMs;
         loadPhotos($('filterAlbumSelect')?.value || '', true);
       }
     }
-
-    const nowMs = Date.now();
 
     // Auto-update Upload Queue if upload panel is active or if tasks are running/queued (spaced cleanly)
     const uploadPanel = $('panel-upload');

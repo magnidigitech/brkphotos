@@ -108,14 +108,18 @@ def extract_photo_capture_date(file_path: Optional[Path] = None, rel_path: str =
 def get_db():
     conn = sqlite3.connect(str(DB_PATH), timeout=30.0)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode = WAL;")
     conn.execute("PRAGMA synchronous = NORMAL;")
     conn.execute("PRAGMA busy_timeout = 30000;")
     conn.execute("PRAGMA cache_size = -64000;")
+    conn.execute("PRAGMA temp_store = MEMORY;")
+    conn.execute("PRAGMA mmap_size = 268435456;")
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
 def init_db():
+    raw_conn = sqlite3.connect(str(DB_PATH), timeout=30.0)
+    raw_conn.execute("PRAGMA journal_mode = WAL;")
+    raw_conn.close()
     conn = get_db()
     with conn:
         conn.executescript("""
@@ -415,6 +419,18 @@ def init_db():
             conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_sha256 ON photos(sha256_hash);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_phash ON photos(phash);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_quality_grade ON photos(quality_grade);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_face_detections_photo ON face_detections(photo_id);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_face_detections_person ON face_detections(person_id);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_face_detections_event ON face_detections(event_id);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_person_profiles_event ON person_profiles(event_id);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_filename ON photos(filename);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_event_deleted ON photos(event_id, is_deleted);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_album_deleted ON photos(album_id, is_deleted);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_is_featured ON photos(is_featured);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_dup_primary_photo ON duplicate_groups(primary_photo_id);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_dup_duplicate_photo ON duplicate_groups(duplicate_photo_id);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_match_reviews_event ON match_reviews(event_slug);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_match_reviews_matched_photo ON match_reviews(matched_photo_id);")
             conn.commit()
         except Exception:
             pass
