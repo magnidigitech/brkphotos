@@ -31,7 +31,15 @@ from database import (
     clear_completed_queue_tasks, get_queue_stats, reset_stale_running_queue_tasks,
     create_automation, get_automations, get_automation_by_id, update_automation,
     delete_automation, toggle_automation, record_automation_history, get_automation_history,
-    get_due_automations, advance_automation_schedule, is_automation_task_pending, now_ist, extract_photo_capture_date
+    get_due_automations, advance_automation_schedule, is_automation_task_pending, now_ist, extract_photo_capture_date,
+    get_setting, set_setting, get_all_settings,
+    record_indexing_error, get_indexing_errors,
+    record_match_review, get_match_reviews, update_match_feedback,
+    record_duplicate_pair, get_duplicate_groups, resolve_duplicate_group
+)
+from ai_matching import (
+    compute_sha256, compute_dhash, assess_photo_quality,
+    classify_confidence, scan_and_record_duplicates
 )
 
 BASE = Path(__file__).resolve().parent
@@ -231,7 +239,7 @@ def run_indexing_task(event_slug="brk-sir", task_id=None):
         idx_env = os.environ.copy()
         idx_env["PYTHONUNBUFFERED"] = "1"
         proc = subprocess.Popen(
-            [sys.executable, "-u", str(BASE / "index_photos.py"), "--event", event_slug],
+            [sys.executable, "-u", str(BASE / "index_photos.py"), "--event", event_slug, "--task-id", task_id or ""],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -1198,14 +1206,41 @@ def query_matched_photos(embs, names, query_emb, event_slug="brk-sir", filter_da
             "date_summary": {"date_counts": {}, "other_albums": {}, "newest_date": None, "total_matched": 0}
         }
 
-    sims = embs @ query_emb
+    # Fetch calibrated thresholds from database settings or fallbacks
+    try:
+        min_thresh = float(get_setting("match_threshold_min", str(THRESHOLD)))
+        high_thresh = float(get_setting("match_threshold_high", "0.60"))
+        med_thresh = float(get_setting("match_threshold_medium", "0.48"))
+    except Exception:
+        min_thresh = THRESHOLD
+        high_thresh = 0.60
+        med_thresh = 0.48
+
     best_by_filename = {}
-    for idx in np.where(sims >= THRESHOLD)[0]:
-        n = names[idx]
-        fname = Path(n).name
-        score = float(sims[idx])
-        if fname not in best_by_filename or score > best_by_filename[fname]["score"]:
-            best_by_filename[fname] = {"rel_path": n, "score": score}
+    matched_faces_map = {}
+
+    # Support both single face embedding (512D) and multi-face list for group photo discovery
+    if isinstance(query_emb, (list, tuple)) and len(query_emb) > 0 and (isinstance(query_emb[0], (list, tuple, np.ndarray))):
+        for f_idx, q_single in enumerate(query_emb):
+            q_vec = np.array(q_single, dtype=np.float32)
+            sims = embs @ q_vec
+            for idx in np.where(sims >= min_thresh)[0]:
+                n = names[idx]
+                fname = Path(n).name
+                score = float(sims[idx])
+                if fname not in best_by_filename or score > best_by_filename[fname]["score"]:
+                    best_by_filename[fname] = {"rel_path": n, "score": score}
+                matched_faces_map.setdefault(fname, set()).add(f_idx)
+    else:
+        q_vec = np.array(query_emb, dtype=np.float32)
+        sims = embs @ q_vec
+        for idx in np.where(sims >= min_thresh)[0]:
+            n = names[idx]
+            fname = Path(n).name
+            score = float(sims[idx])
+            if fname not in best_by_filename or score > best_by_filename[fname]["score"]:
+                best_by_filename[fname] = {"rel_path": n, "score": score}
+            matched_faces_map.setdefault(fname, set()).add(0)
 
     ranked = sorted(best_by_filename.items(), key=lambda kv: -kv[1]["score"])
     reload_drive_map()
@@ -1236,14 +1271,19 @@ def query_matched_photos(embs, names, query_emb, event_slug="brk-sir", filter_da
     for fname, item in ranked:
         n = item["rel_path"]
         score = item["score"]
+        score_val = round(float(score), 3)
+        conf_info = classify_confidence(score_val, high_thresh, med_thresh, min_thresh)
         info = photo_info.get(fname) or photo_info.get(n) or {}
         cap_dt = info.get("captured_at") or info.get("created_at") or ""
         photos_data.append({
             "rel_path": n,
             "filename": fname,
             "drive_file_id": info.get("drive_file_id") or drive_map.get(n) or drive_map.get(fname),
-            "similarity": round(float(score), 3),
-            "confidence": round(float(score), 3),
+            "similarity": score_val,
+            "confidence": score_val,
+            "confidence_tier": conf_info["tier"],
+            "confidence_label": conf_info["label"],
+            "matched_faces": sorted(list(matched_faces_map.get(fname, [0]))),
             "is_featured": bool(info.get("is_featured", 0)),
             "captured_at": cap_dt,
             "created_at": info.get("created_at", ""),
@@ -1286,7 +1326,18 @@ def query_matched_photos(embs, names, query_emb, event_slug="brk-sir", filter_da
         "date_summary": date_summary
     }
 
-def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_index: Optional[int] = None, page: int = 1, page_size: int = 50, filter_date: Optional[str] = None, filter_album: Optional[str] = None, session_id: Optional[str] = None, visitor_id: Optional[str] = None, device_type: Optional[str] = None):
+def perform_face_search(
+    selfie: UploadFile,
+    event_slug: str = "brk-sir",
+    face_index: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 50,
+    filter_date: Optional[str] = None,
+    filter_album: Optional[str] = None,
+    session_id: Optional[str] = None,
+    visitor_id: Optional[str] = None,
+    device_type: Optional[str] = None
+):
     search_id = str(uuid.uuid4())[:12]
     search_start = time.time()
     analytics.record_search_started(search_id=search_id, session_id=session_id or "anon", visitor_id=visitor_id, device_type=device_type or "desktop", event_slug=event_slug)
@@ -1317,7 +1368,16 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
     # Sort faces left-to-right based on bounding box
     faces = sorted(faces, key=lambda f: f.bbox[0])
 
-    # If multiple people are detected in the uploaded photo and no specific face was chosen yet:
+    # Check for group search or individual selection
+    is_search_all_faces = (str(face_index).strip().lower() == "all") if face_index is not None else False
+    numeric_face_index = None
+    if face_index is not None and not is_search_all_faces:
+        try:
+            numeric_face_index = int(face_index)
+        except ValueError:
+            numeric_face_index = None
+
+    # If multiple people are detected in the uploaded photo and no choice was made yet:
     if len(faces) > 1 and face_index is None:
         detected_list = []
         for idx, f in enumerate(faces):
@@ -1333,22 +1393,56 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
             "faces": detected_list
         }
 
-    # Select the requested face (or default to the largest one)
-    if face_index is not None and 0 <= face_index < len(faces):
-        face = faces[face_index]
-        selected_idx = face_index
+    # Execute search based on selection
+    if is_search_all_faces:
+        query_embs = [f.normed_embedding for f in faces]
+        selected_face_thumb = crop_face_thumb(img, faces[0].bbox)
+        selected_idx = "all"
+        res = query_matched_photos(embs, names, query_embs, event_slug, filter_date, filter_album, page, page_size)
     else:
-        face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
-        selected_idx = faces.index(face)
-
-    selected_face_thumb = crop_face_thumb(img, face.bbox)
-    res = query_matched_photos(embs, names, face.normed_embedding, event_slug, filter_date, filter_album, page, page_size)
+        if numeric_face_index is not None and 0 <= numeric_face_index < len(faces):
+            face = faces[numeric_face_index]
+            selected_idx = numeric_face_index
+        else:
+            face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
+            selected_idx = faces.index(face)
+        selected_face_thumb = crop_face_thumb(img, face.bbox)
+        res = query_matched_photos(embs, names, face.normed_embedding, event_slug, filter_date, filter_album, page, page_size)
 
     duration_ms = round((time.time() - search_start) * 1000, 1)
     if res["total_count"] > 0:
         analytics.record_search_completed(search_id=search_id, session_id=session_id or "anon", matches_count=res["total_count"], duration_ms=duration_ms, visitor_id=visitor_id, event_slug=event_slug)
     else:
         analytics.record_search_no_results(search_id=search_id, session_id=session_id or "anon", duration_ms=duration_ms, visitor_id=visitor_id, event_slug=event_slug)
+
+    # Human-in-the-loop review recording for confidence diagnostics
+    try:
+        review_dir = DATA / "review_crops"
+        review_dir.mkdir(parents=True, exist_ok=True)
+        crop_fname = f"query_{search_id}.jpg"
+        crop_full_path = review_dir / crop_fname
+        if selected_face_thumb and selected_face_thumb.startswith("data:image"):
+            b64_data = selected_face_thumb.split(",", 1)[1]
+            crop_full_path.write_bytes(base64.b64decode(b64_data))
+
+            conn_rev = get_db()
+            c_rev = conn_rev.cursor()
+            for p in res["photos"][:3]:
+                c_rev.execute("SELECT id FROM photos WHERE rel_path = ? OR filename = ? LIMIT 1", (p["rel_path"], p["filename"]))
+                p_row = c_rev.fetchone()
+                p_id = p_row["id"] if p_row else None
+                record_match_review(
+                    search_id=search_id,
+                    event_slug=event_slug,
+                    query_crop_path=f"review_crops/{crop_fname}",
+                    matched_photo_id=p_id,
+                    matched_rel_path=p["rel_path"],
+                    similarity_score=p["similarity"],
+                    confidence_tier=p.get("confidence_tier", "medium")
+                )
+            conn_rev.close()
+    except Exception as e:
+        print(f"Match review recording notice: {e}")
 
     return {
         "multiple_faces": False,
@@ -1365,21 +1459,20 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
         "filter_date": filter_date,
         "filter_album": filter_album,
         "face_thumb": selected_face_thumb,
-        "embedding": face.normed_embedding.tolist() if (face is not None and hasattr(face, "normed_embedding") and face.normed_embedding is not None) else None,
         "total_faces_in_query": len(faces),
-        "selected_face_index": selected_idx
+        "selected_face_index": selected_idx,
+        "is_group_search": is_search_all_faces
     }
 
 @app.post("/api/search")
-def default_search(selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50), filter_date: Optional[str] = Form(None), filter_album: Optional[str] = Form(None), session_id: Optional[str] = Form(None), visitor_id: Optional[str] = Form(None), device_type: Optional[str] = Form(None)):
+def default_search(selfie: UploadFile = File(...), face_index: Optional[str] = Form(None), page: int = Form(1), page_size: int = Form(50), filter_date: Optional[str] = Form(None), filter_album: Optional[str] = Form(None), session_id: Optional[str] = Form(None), visitor_id: Optional[str] = Form(None), device_type: Optional[str] = Form(None)):
     """Search for matching photos using face recognition with server-side pagination and date summary."""
     return perform_face_search(selfie, "brk-sir", face_index=face_index, page=page, page_size=page_size, filter_date=filter_date, filter_album=filter_album, session_id=session_id, visitor_id=visitor_id, device_type=device_type)
 
 @app.post("/api/{slug}/search")
-def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50), filter_date: Optional[str] = Form(None), filter_album: Optional[str] = Form(None), session_id: Optional[str] = Form(None), visitor_id: Optional[str] = Form(None), device_type: Optional[str] = Form(None)):
+def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[str] = Form(None), page: int = Form(1), page_size: int = Form(50), filter_date: Optional[str] = Form(None), filter_album: Optional[str] = Form(None), session_id: Optional[str] = Form(None), visitor_id: Optional[str] = Form(None), device_type: Optional[str] = Form(None)):
     """Search for matching photos using face recognition with server-side pagination and date summary."""
     return perform_face_search(selfie, slug, face_index=face_index, page=page, page_size=page_size, filter_date=filter_date, filter_album=filter_album, session_id=session_id, visitor_id=visitor_id, device_type=device_type)
-    return perform_face_search(selfie, slug, face_index=face_index, page=page, page_size=page_size, filter_date=filter_date, filter_album=filter_album)
 
 @app.post("/api/events/{slug}/check-profile-matches")
 @app.post("/api/check-profile-matches")
@@ -1474,6 +1567,13 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
 @app.get("/thumb/{name:path}")
 def thumb(name: str):
     """Delivers 480px web thumbnail or cropped face avatar safely."""
+    # 0. Query review crops
+    if name.startswith("review_crops/"):
+        crop_name = Path(name).name
+        target = DATA / "review_crops" / crop_name
+        if target.exists():
+            return FileResponse(target)
+
     # 1. Face avatars
     if name.startswith("faces/"):
         face_name = Path(name).name
@@ -2397,28 +2497,37 @@ def admin_delete_album(slug: str, album_id: int, token: str = Depends(get_auth_t
     return {"status": "ok", "deleted_album": album_slug, "message": f"Folder '{album['name']}' moved to Trash."}
 
 @app.get("/api/admin/events/{slug}/photos")
-def admin_event_all_photos(slug: str, album_id: int = None, token: str = Depends(get_auth_token)):
+def admin_event_all_photos(slug: str, album_id: int = None, quality_filter: Optional[str] = None, token: str = Depends(get_auth_token)):
     sync_event_folders_and_photos(slug)
     conn = get_db()
     cursor = conn.cursor()
+    query = """
+        SELECT p.*, a.name as album_name, a.slug as album_slug
+        FROM photos p
+        JOIN events e ON p.event_id = e.id
+        LEFT JOIN albums a ON p.album_id = a.id
+        WHERE e.slug = ? AND (a.is_deleted = 0 OR a.is_deleted IS NULL) AND p.is_deleted = 0
+    """
+    params = [slug]
     if album_id:
-        cursor.execute("""
-            SELECT p.*, a.name as album_name, a.slug as album_slug
-            FROM photos p
-            JOIN events e ON p.event_id = e.id
-            LEFT JOIN albums a ON p.album_id = a.id
-            WHERE e.slug = ? AND p.album_id = ? AND (a.is_deleted = 0 OR a.is_deleted IS NULL) AND p.is_deleted = 0
-            ORDER BY p.is_featured DESC, COALESCE(p.captured_at, p.created_at) DESC, p.id DESC
-        """, (slug, album_id))
-    else:
-        cursor.execute("""
-            SELECT p.*, a.name as album_name, a.slug as album_slug
-            FROM photos p
-            JOIN events e ON p.event_id = e.id
-            LEFT JOIN albums a ON p.album_id = a.id
-            WHERE e.slug = ? AND (a.is_deleted = 0 OR a.is_deleted IS NULL) AND p.is_deleted = 0
-            ORDER BY p.is_featured DESC, COALESCE(p.captured_at, p.created_at) DESC, p.id DESC
-        """, (slug,))
+        query += " AND p.album_id = ?"
+        params.append(album_id)
+
+    if quality_filter:
+        qf = quality_filter.lower().strip()
+        if qf == "blurry":
+            query += " AND (p.quality_flags LIKE '%blurry%' OR (p.blur_score IS NOT NULL AND p.blur_score < 60.0))"
+        elif qf in ("underexposed", "dark"):
+            query += " AND (p.quality_flags LIKE '%underexposed%' OR (p.exposure_score IS NOT NULL AND p.exposure_score < 45.0))"
+        elif qf == "overexposed":
+            query += " AND (p.quality_flags LIKE '%overexposed%' OR (p.exposure_score IS NOT NULL AND p.exposure_score > 215.0))"
+        elif qf == "low_res_face":
+            query += " AND p.quality_flags LIKE '%low_res_face%'"
+        elif qf in ("issues", "flagged"):
+            query += " AND (p.quality_grade IN ('low', 'acceptable') OR (p.quality_flags IS NOT NULL AND p.quality_flags NOT IN ('', '[]')))"
+
+    query += " ORDER BY p.is_featured DESC, COALESCE(p.captured_at, p.created_at) DESC, p.id DESC"
+    cursor.execute(query, params)
     photos = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return {"photos": photos}
@@ -3395,6 +3504,124 @@ def admin_analytics_metrics(token: str = Depends(get_auth_token)):
         "indexed_photos": lib["indexed_photos"],
         "identified_people": lib["people_clusters"]
     }
+
+# ---------------------------------------------------------------------------
+# AI Duplicate Detection & Review Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/admin/events/{slug}/duplicates")
+@app.get("/api/admin/photos/duplicates")
+def admin_get_duplicates(slug: str = "brk-sir", status: str = "pending", token: str = Depends(get_auth_token)):
+    """Returns detected duplicate groups with dimensions, sizes, and recommended primary photo."""
+    groups = get_duplicate_groups(slug, status=status)
+    return {"status": "ok", "count": len(groups), "groups": groups}
+
+
+@app.post("/api/admin/events/{slug}/duplicates/resolve")
+@app.post("/api/admin/photos/duplicates/resolve")
+def admin_resolve_duplicates(slug: str = "brk-sir", payload: dict = None, token: str = Depends(get_auth_token)):
+    """Resolves duplicate group by deleting selected duplicates or ignoring."""
+    if not payload:
+        raise HTTPException(400, "Missing request body.")
+    group_id = payload.get("group_id")
+    action = payload.get("action", "delete_duplicates")
+    photo_ids = payload.get("photo_ids", [])
+    if not group_id:
+        raise HTTPException(400, "group_id is required.")
+    return resolve_duplicate_group(group_id, action, photo_ids)
+
+
+@app.post("/api/admin/events/{slug}/duplicates/scan")
+@app.post("/api/admin/photos/duplicates/scan")
+def admin_scan_duplicates(slug: str = "brk-sir", token: str = Depends(get_auth_token)):
+    """On-demand scan to detect and record duplicate photos without deleting anything."""
+    summary = scan_and_record_duplicates(slug)
+    return {"status": "ok", "summary": summary}
+
+
+# ---------------------------------------------------------------------------
+# Match Confidence Review & Human Feedback Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/admin/matching/reviews")
+def admin_get_match_reviews_endpoint(
+    event_slug: str = "brk-sir",
+    status: str = "all",
+    tier: str = "all",
+    limit: int = 100,
+    token: str = Depends(get_auth_token)
+):
+    """Returns query crop vs matched crop inspection pairs for confidence diagnostics."""
+    reviews = get_match_reviews(event_slug=event_slug, status=status, tier=tier, limit=limit)
+    return {"status": "ok", "count": len(reviews), "reviews": reviews}
+
+
+@app.post("/api/admin/matching/feedback")
+def admin_post_match_feedback_endpoint(
+    payload: dict,
+    request: Request,
+    token: str = Depends(get_auth_token)
+):
+    """Allows administrators to mark matches as correct or incorrect."""
+    review_id = payload.get("review_id")
+    feedback = payload.get("feedback")
+    notes = payload.get("notes")
+    if not review_id or feedback not in ("correct", "incorrect", "pending"):
+        raise HTTPException(400, "Valid review_id and feedback ('correct' | 'incorrect') required.")
+    client_ip = request.client.host if request.client else ""
+    success = update_match_feedback(int(review_id), feedback, notes=notes, reviewer_ip=client_ip)
+    return {"status": "ok", "updated": success}
+
+
+# ---------------------------------------------------------------------------
+# System Settings & AI Thresholds Configuration
+# ---------------------------------------------------------------------------
+
+@app.get("/api/admin/settings")
+def admin_get_settings_endpoint(token: str = Depends(get_auth_token)):
+    """Returns all system settings and configurable AI face-match thresholds."""
+    settings = get_all_settings()
+    return {"status": "ok", "settings": settings}
+
+
+@app.post("/api/admin/settings")
+def admin_update_settings_endpoint(payload: dict, token: str = Depends(get_auth_token)):
+    """Updates configurable face-match thresholds and system settings."""
+    allowed_keys = {
+        "match_threshold_high",
+        "match_threshold_medium",
+        "match_threshold_min",
+        "default_event_slug",
+        "dedup_dhash_threshold"
+    }
+    updated = {}
+    for k, v in payload.items():
+        if k in allowed_keys:
+            set_setting(k, str(v))
+            updated[k] = str(v)
+            if k == "match_threshold_min":
+                global THRESHOLD
+                try:
+                    THRESHOLD = float(v)
+                except Exception:
+                    pass
+    return {"status": "ok", "updated": updated}
+
+
+# ---------------------------------------------------------------------------
+# Indexing Errors & Diagnostics
+# ---------------------------------------------------------------------------
+
+@app.get("/api/admin/indexing/errors")
+def admin_get_indexing_errors_endpoint(
+    event_slug: str = "brk-sir",
+    limit: int = 100,
+    token: str = Depends(get_auth_token)
+):
+    """Returns indexing error logs and corrupt photo diagnostics."""
+    errors = get_indexing_errors(event_slug=event_slug, limit=limit)
+    return {"status": "ok", "errors": errors}
+
 
 # --- Static & Dynamic HTML Page Handlers ---
 

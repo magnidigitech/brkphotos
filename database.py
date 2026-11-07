@@ -308,6 +308,55 @@ def init_db():
             completed_at TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS system_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS duplicate_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id TEXT NOT NULL,
+            match_type TEXT NOT NULL DEFAULT 'exact',
+            similarity_score REAL DEFAULT 1.0,
+            primary_photo_id INTEGER NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+            duplicate_photo_id INTEGER NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+            status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(primary_photo_id, duplicate_photo_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS match_reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            search_id TEXT,
+            event_slug TEXT DEFAULT 'brk-sir',
+            query_crop_path TEXT,
+            matched_photo_id INTEGER REFERENCES photos(id) ON DELETE CASCADE,
+            matched_rel_path TEXT,
+            similarity_score REAL,
+            confidence_tier TEXT,
+            feedback TEXT DEFAULT 'pending',
+            notes TEXT,
+            reviewer_ip TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS indexing_errors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id TEXT,
+            event_slug TEXT,
+            photo_rel_path TEXT,
+            error_stage TEXT,
+            error_message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_dup_group_id ON duplicate_groups(group_id);
+        CREATE INDEX IF NOT EXISTS idx_dup_status ON duplicate_groups(status);
+        CREATE INDEX IF NOT EXISTS idx_match_reviews_feedback ON match_reviews(feedback);
+        CREATE INDEX IF NOT EXISTS idx_match_reviews_tier ON match_reviews(confidence_tier);
+        CREATE INDEX IF NOT EXISTS idx_indexing_errors_task ON indexing_errors(task_id);
+
         CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events(created_at);
         CREATE INDEX IF NOT EXISTS idx_analytics_type_created ON analytics_events(event_type, created_at);
         CREATE INDEX IF NOT EXISTS idx_analytics_session ON analytics_events(session_id);
@@ -346,6 +395,44 @@ def init_db():
             conn.commit()
         except Exception:
             pass
+
+        # AI Matching & Photo Quality migrations
+        for col_def in [
+            "sha256_hash TEXT",
+            "phash TEXT",
+            "blur_score REAL",
+            "exposure_score REAL",
+            "quality_flags TEXT",
+            "quality_grade TEXT"
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE photos ADD COLUMN {col_def};")
+                conn.commit()
+            except Exception:
+                pass
+
+        try:
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_sha256 ON photos(sha256_hash);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_phash ON photos(phash);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_quality_grade ON photos(quality_grade);")
+            conn.commit()
+        except Exception:
+            pass
+
+        # Default system settings
+        default_settings = [
+            ("match_threshold_high", "0.60"),
+            ("match_threshold_medium", "0.48"),
+            ("match_threshold_min", "0.40"),
+            ("default_event_slug", "brk-sir"),
+            ("dedup_dhash_threshold", "4")
+        ]
+        for k, v in default_settings:
+            try:
+                conn.execute("INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)", (k, v))
+            except Exception:
+                pass
+        conn.commit()
     conn.close()
     backfill_photo_dates()
 
@@ -1038,9 +1125,12 @@ def cluster_and_sync_people(event_slug="brk-sir", threshold=0.48, cancel_check=N
             VALUES (?, ?, ?, ?, ?)
         """, face_detections_batch)
 
-    # Clean up excess unassigned profiles if cluster count decreased
+    # Clean up excess unassigned default profiles if cluster count decreased (preserve named profiles)
     if len(existing_profiles) > len(clusters):
-        excess_ids = [p["id"] for p in existing_profiles[len(clusters):]]
+        excess_ids = [
+            p["id"] for p in existing_profiles[len(clusters):]
+            if not p["name"] or p["name"].startswith("Person #") or p["name"] == "Unnamed Guest"
+        ]
         if excess_ids:
             cursor.execute(f"DELETE FROM person_profiles WHERE id IN ({','.join('?' for _ in excess_ids)})", excess_ids)
 
@@ -1327,6 +1417,266 @@ def advance_automation_schedule(auto_id: int, task_id: str, status: str = "queue
         )
     except Exception as e:
         print(f"Error auto-recording history: {e}")
+
+# ---------------------------------------------------------------------------
+# System Settings & AI Matching Configuration
+# ---------------------------------------------------------------------------
+
+def get_setting(key: str, default: str = None):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT value FROM system_settings WHERE key = ?", (key,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return row["value"]
+    return default
+
+def set_setting(key: str, value: str, description: str = None):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO system_settings (key, value, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+    """, (key, str(value)))
+    conn.commit()
+    conn.close()
+
+def get_all_settings() -> dict:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT key, value FROM system_settings")
+    rows = c.fetchall()
+    conn.close()
+    return {r["key"]: r["value"] for r in rows}
+
+# ---------------------------------------------------------------------------
+# Indexing Errors & Diagnostics
+# ---------------------------------------------------------------------------
+
+def record_indexing_error(task_id: str, event_slug: str, photo_rel_path: str, error_stage: str, error_message: str):
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            INSERT INTO indexing_errors (task_id, event_slug, photo_rel_path, error_stage, error_message)
+            VALUES (?, ?, ?, ?, ?)
+        """, (task_id or "", event_slug or "brk-sir", photo_rel_path, error_stage, str(error_message)[:500]))
+        conn.commit()
+    except Exception as e:
+        print(f"Error logging indexing error: {e}")
+    finally:
+        conn.close()
+
+def get_indexing_errors(event_slug: str = None, limit: int = 100) -> list:
+    conn = get_db()
+    c = conn.cursor()
+    if event_slug:
+        c.execute("""
+            SELECT id, task_id, event_slug, photo_rel_path, error_stage, error_message, created_at
+            FROM indexing_errors
+            WHERE event_slug = ?
+            ORDER BY id DESC LIMIT ?
+        """, (event_slug, limit))
+    else:
+        c.execute("""
+            SELECT id, task_id, event_slug, photo_rel_path, error_stage, error_message, created_at
+            FROM indexing_errors
+            ORDER BY id DESC LIMIT ?
+        """, (limit,))
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+# ---------------------------------------------------------------------------
+# Match Review & Human Feedback
+# ---------------------------------------------------------------------------
+
+def record_match_review(
+    search_id: str,
+    event_slug: str,
+    query_crop_path: str,
+    matched_photo_id: int,
+    matched_rel_path: str,
+    similarity_score: float,
+    confidence_tier: str
+):
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            INSERT INTO match_reviews (
+                search_id, event_slug, query_crop_path, matched_photo_id,
+                matched_rel_path, similarity_score, confidence_tier, feedback
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+        """, (search_id, event_slug, query_crop_path, matched_photo_id, matched_rel_path, round(float(similarity_score), 4), confidence_tier))
+        conn.commit()
+    except Exception as e:
+        print(f"Error recording match review: {e}")
+    finally:
+        conn.close()
+
+def get_match_reviews(event_slug: str = "brk-sir", status: str = None, tier: str = None, limit: int = 100) -> list:
+    conn = get_db()
+    c = conn.cursor()
+    query = """
+        SELECT mr.*, p.filename, p.width, p.height, p.file_size_bytes, a.name as album_name
+        FROM match_reviews mr
+        LEFT JOIN photos p ON mr.matched_photo_id = p.id
+        LEFT JOIN albums a ON p.album_id = a.id
+        WHERE (mr.event_slug = ? OR ? = '' OR mr.event_slug IS NULL)
+    """
+    params = [event_slug, event_slug]
+    if status and status != "all":
+        query += " AND mr.feedback = ?"
+        params.append(status)
+    if tier and tier != "all":
+        query += " AND mr.confidence_tier = ?"
+        params.append(tier)
+    query += " ORDER BY mr.id DESC LIMIT ?"
+    params.append(limit)
+
+    c.execute(query, params)
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+def update_match_feedback(review_id: int, feedback: str, notes: str = None, reviewer_ip: str = None) -> bool:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE match_reviews
+        SET feedback = ?, notes = COALESCE(?, notes), reviewer_ip = COALESCE(?, reviewer_ip)
+        WHERE id = ?
+    """, (feedback, notes, reviewer_ip, review_id))
+    rows_affected = c.rowcount
+    conn.commit()
+    conn.close()
+    return rows_affected > 0
+
+# ---------------------------------------------------------------------------
+# Duplicate Photo Management
+# ---------------------------------------------------------------------------
+
+def record_duplicate_pair(group_id: str, match_type: str, similarity_score: float, primary_photo_id: int, duplicate_photo_id: int):
+    conn = get_db()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            INSERT OR REPLACE INTO duplicate_groups (
+                group_id, match_type, similarity_score, primary_photo_id, duplicate_photo_id, status
+            ) VALUES (?, ?, ?, ?, ?, 'pending')
+        """, (group_id, match_type, round(float(similarity_score), 4), primary_photo_id, duplicate_photo_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Error recording duplicate pair: {e}")
+    finally:
+        conn.close()
+
+def get_duplicate_groups(event_slug: str = "brk-sir", status: str = "pending") -> list:
+    conn = get_db()
+    c = conn.cursor()
+    status_filter = "AND dg.status = ?" if status != "all" else ""
+    params = [event_slug, event_slug]
+    if status != "all":
+        params.append(status)
+
+    c.execute(f"""
+        SELECT DISTINCT dg.group_id, dg.match_type, dg.similarity_score, dg.status, dg.created_at
+        FROM duplicate_groups dg
+        JOIN photos p1 ON dg.primary_photo_id = p1.id
+        JOIN events e ON p1.event_id = e.id
+        WHERE (e.slug = ? OR ? = '') {status_filter}
+        ORDER BY dg.id DESC
+    """, params)
+    group_rows = c.fetchall()
+
+    result = []
+    for gr in group_rows:
+        gid = gr["group_id"]
+        c.execute("""
+            SELECT primary_photo_id, duplicate_photo_id, similarity_score, match_type
+            FROM duplicate_groups
+            WHERE group_id = ?
+        """, (gid,))
+        pairs = c.fetchall()
+        photo_ids = set()
+        for p in pairs:
+            photo_ids.add(p["primary_photo_id"])
+            photo_ids.add(p["duplicate_photo_id"])
+
+        if not photo_ids:
+            continue
+
+        placeholders = ",".join("?" for _ in photo_ids)
+        c.execute(f"""
+            SELECT p.id, p.filename, p.rel_path, p.width, p.height, p.file_size_bytes,
+                   p.blur_score, p.exposure_score, p.quality_grade, p.quality_flags,
+                   p.captured_at, p.created_at, p.is_deleted,
+                   a.name as album_name, a.slug as album_slug
+            FROM photos p
+            LEFT JOIN albums a ON p.album_id = a.id
+            WHERE p.id IN ({placeholders}) AND p.is_deleted = 0
+        """, list(photo_ids))
+        photos = [dict(pr) for pr in c.fetchall()]
+        if len(photos) < 2:
+            continue
+
+        def quality_rank(item):
+            w = item.get("width") or 0
+            h = item.get("height") or 0
+            sz = item.get("file_size_bytes") or 0
+            grade_weight = 0 if item.get("quality_grade") == "good" else (1 if item.get("quality_grade") == "acceptable" else 2)
+            return (-(w * h), -sz, grade_weight)
+
+        photos.sort(key=quality_rank)
+        rec_id = photos[0]["id"]
+        for p in photos:
+            p["is_recommended"] = (p["id"] == rec_id)
+            p["recommended_original"] = (p["id"] == rec_id)
+
+        result.append({
+            "group_id": gid,
+            "match_type": gr["match_type"],
+            "similarity_score": round(float(gr["similarity_score"]), 3),
+            "status": gr["status"],
+            "created_at": gr["created_at"],
+            "recommended_photo_id": rec_id,
+            "photos": photos
+        })
+
+    conn.close()
+    return result
+
+def resolve_duplicate_group(group_id: str, action: str, photo_ids: list = None) -> dict:
+    conn = get_db()
+    c = conn.cursor()
+    if action == "ignore":
+        c.execute("UPDATE duplicate_groups SET status = 'ignored' WHERE group_id = ?", (group_id,))
+        conn.commit()
+        conn.close()
+        return {"status": "ok", "message": "Duplicate group ignored."}
+
+    if action in ("delete_duplicates", "delete_selected"):
+        if not photo_ids:
+            c.execute("SELECT duplicate_photo_id FROM duplicate_groups WHERE group_id = ?", (group_id,))
+            photo_ids = [r["duplicate_photo_id"] for r in c.fetchall()]
+
+        if photo_ids:
+            placeholders = ",".join("?" for _ in photo_ids)
+            c.execute(f"""
+                UPDATE photos
+                SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP
+                WHERE id IN ({placeholders})
+            """, photo_ids)
+        c.execute("UPDATE duplicate_groups SET status = 'resolved' WHERE group_id = ?", (group_id,))
+        conn.commit()
+        conn.close()
+        return {"status": "ok", "deleted_count": len(photo_ids or []), "message": f"{len(photo_ids or [])} duplicate(s) moved to Trash."}
+
+    conn.close()
+    return {"status": "error", "message": "Unknown action."}
 
 if __name__ == "__main__":
     init_db()

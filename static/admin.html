@@ -1696,6 +1696,178 @@
   .warn-warning { background: #fef3c7; color: #d97706; }
   .warn-info { background: #e0f2fe; color: #0284c7; }
 
+  /* AI Matching & Duplicate Review Styles */
+  .segmented-control {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .segmented-btn {
+    border: none;
+    background: transparent;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .segmented-btn.active {
+    background: #ffffff;
+    color: var(--ink);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .segmented-badge {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 99px;
+    background: #e2e8f0;
+    color: #475569;
+  }
+  .segmented-btn.active .segmented-badge {
+    background: #0f5c4d;
+    color: #ffffff;
+  }
+
+  /* Duplicate Review Cards */
+  .dup-group-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .dup-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .dup-photos-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+  .dup-photo-item {
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: #fafafa;
+    transition: border-color 0.15s ease;
+  }
+  .dup-photo-item.is-primary {
+    border-color: #10b981;
+    background: #f0fdf4;
+  }
+  .dup-rec-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #10b981;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    z-index: 2;
+  }
+  .dup-thumb-img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    background: #e2e8f0;
+  }
+  .dup-meta-line {
+    font-size: 0.76rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+    display: flex;
+    justify-content: space-between;
+  }
+  .dup-meta-line strong {
+    color: var(--ink);
+  }
+
+  /* Confidence Review Pairs */
+  .review-pair-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .review-crop-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .review-crop-img {
+    width: 90px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid var(--line);
+    background: #e2e8f0;
+  }
+  .review-meta-box {
+    flex: 1;
+    min-width: 220px;
+  }
+  .tier-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .tier-high { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+  .tier-medium { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+  .tier-low { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+  .photo-quality-badge {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 2;
+  }
+  .photo-quality-low {
+    background: rgba(220, 38, 38, 0.9);
+    color: #fff;
+  }
+  .photo-quality-acceptable {
+    background: rgba(217, 119, 6, 0.9);
+    color: #fff;
+  }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -2028,12 +2200,19 @@
       <!-- PANEL 4: PHOTO LIBRARY -->
       <section id="panel-photos" hidden>
         <div class="views-bar">
-          <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
             <button class="btn-outline" onclick="switchTab('albums')" title="Back to Albums & Folders" style="padding:0.45rem 0.75rem;">
               <svg class="icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
               <span>Back to Albums</span>
             </button>
             <div class="views-bar-title" id="photosPanelTitle">Photo Library</div>
+            <div class="segmented-control" style="margin-left:0.5rem;">
+              <button type="button" class="segmented-btn active" id="btnSubPhotosGrid" onclick="switchPhotoSubView('grid')">Photo Grid</button>
+              <button type="button" class="segmented-btn" id="btnSubDuplicates" onclick="switchPhotoSubView('duplicates')">
+                <span>Duplicate Groups</span>
+                <span class="segmented-badge" id="dupBadgeCount">0</span>
+              </button>
+            </div>
           </div>
           <button class="btn-outline" onclick="switchTab('upload')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -2041,10 +2220,19 @@
           </button>
         </div>
 
-        <div class="photo-toolbar">
+        <div class="photo-toolbar" id="photoGridToolbar">
           <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-            <label style="font-size:0.82rem;font-weight:600;">Filter Folder:</label>
+            <label style="font-size:0.82rem;font-weight:600;">Folder:</label>
             <select id="filterAlbumSelect" style="width:auto;padding:0.35rem 0.6rem;font-size:0.85rem;"></select>
+            <label style="font-size:0.82rem;font-weight:600;margin-left:0.25rem;">Quality:</label>
+            <select id="filterQualitySelect" onchange="loadPhotos(currentAlbumId)" style="width:auto;padding:0.35rem 0.6rem;font-size:0.85rem;">
+              <option value="all">All Qualities</option>
+              <option value="blurry">⚠️ Blurry Only</option>
+              <option value="dark">🌙 Dark / Underexposed</option>
+              <option value="overexposed">☀️ Overexposed</option>
+              <option value="low_res_face">👤 Low-Res Faces (&lt;50px)</option>
+              <option value="issues">🚨 Flagged Issues</option>
+            </select>
             <button id="selectAllBtn" class="btn-outline" style="padding:0.35rem 0.65rem;font-size:0.8rem;">Select All</button>
             <button id="clearSelectBtn" class="btn-outline" style="padding:0.35rem 0.65rem;font-size:0.8rem;" hidden>Clear</button>
             <span id="selectedCountBadge" style="font-size:0.85rem;font-weight:600;color:var(--primary);" hidden>0 selected</span>
@@ -2072,6 +2260,25 @@
           <div style="color:var(--muted);grid-column:1/-1;">Loading photos...</div>
         </div>
 
+        <!-- Duplicate Photo Review Section -->
+        <div id="duplicateReviewSection" hidden style="margin-top:0.5rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;background:#f8fafc;padding:0.85rem 1rem;border-radius:10px;border:1px solid var(--line);">
+            <div>
+              <h3 style="font-size:1.05rem;font-weight:700;margin:0;">Duplicate Photo Review</h3>
+              <p style="font-size:0.82rem;color:var(--muted);margin:0.2rem 0 0 0;">
+                Exact matches (SHA-256) and perceptual duplicates (dHash). Highest-quality originals are highlighted to preserve.
+              </p>
+            </div>
+            <button class="btn-primary" onclick="triggerDuplicateScan()" style="padding:0.45rem 0.9rem;font-size:0.82rem;display:inline-flex;align-items:center;gap:0.4rem;">
+              <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span>Scan Library for Duplicates</span>
+            </button>
+          </div>
+          <div id="duplicateGroupsList">
+            <div style="color:var(--muted);padding:1rem;">Loading duplicate analysis...</div>
+          </div>
+        </div>
+
         <!-- Floating Bulk Selection Pill Bar (Apple / Glassmorphism Style) -->
         <div id="floatingBulkPill" class="floating-bulk-pill" hidden>
           <span class="pill-count-badge" id="floatingCountBadge">0 selected</span>
@@ -2088,14 +2295,57 @@
       <!-- PANEL 5: PEOPLE DIRECTORY -->
       <section id="panel-people" hidden>
         <div class="views-bar">
-          <div class="views-bar-title">People & Face Search</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <div class="views-bar-title">People & Face Search</div>
+            <div class="segmented-control">
+              <button type="button" class="segmented-btn active" id="btnSubPeopleGrid" onclick="switchPeopleSubView('grid')">Identified People</button>
+              <button type="button" class="segmented-btn" id="btnSubReviews" onclick="switchPeopleSubView('reviews')">
+                <span>Confidence Review</span>
+                <span class="segmented-badge" id="reviewBadgeCount">0</span>
+              </button>
+            </div>
+          </div>
           <button class="btn-outline" id="reclusterPeopleBtn">
             <svg class="icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             <span>Re-Cluster Faces</span>
           </button>
         </div>
+
+        <!-- People Grid View -->
         <div class="people-grid" id="peopleGrid">
           <div style="color:var(--muted);grid-column:1/-1;">Loading profiles...</div>
+        </div>
+
+        <!-- Match Confidence Review Section -->
+        <div id="confidenceReviewSection" hidden style="margin-top:0.5rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;background:#f8fafc;padding:0.85rem 1rem;border-radius:10px;border:1px solid var(--line);">
+            <div>
+              <h3 style="font-size:1.05rem;font-weight:700;margin:0;">ArcFace Match Confidence Review</h3>
+              <p style="font-size:0.82rem;color:var(--muted);margin:0.2rem 0 0 0;">
+                Calibrated InsightFace cosine similarities. Inspect query vs matched faces and provide verification feedback.
+              </p>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+              <label style="font-size:0.8rem;font-weight:600;">Tier:</label>
+              <select id="reviewTierSelect" onchange="loadMatchReviews()" style="padding:0.35rem 0.6rem;font-size:0.82rem;border-radius:6px;border:1px solid var(--line);">
+                <option value="all">All Tiers</option>
+                <option value="high">High (≥ 0.60)</option>
+                <option value="medium">Medium (0.48 - 0.60)</option>
+                <option value="low">Low (0.40 - 0.48)</option>
+              </select>
+              <label style="font-size:0.8rem;font-weight:600;margin-left:0.25rem;">Status:</label>
+              <select id="reviewStatusSelect" onchange="loadMatchReviews()" style="padding:0.35rem 0.6rem;font-size:0.82rem;border-radius:6px;border:1px solid var(--line);">
+                <option value="all">All Statuses</option>
+                <option value="pending" selected>Pending Review</option>
+                <option value="correct">Marked Correct</option>
+                <option value="incorrect">Marked Incorrect</option>
+              </select>
+              <button class="btn-outline" onclick="loadMatchReviews()" style="padding:0.35rem 0.65rem;font-size:0.8rem;">Refresh</button>
+            </div>
+          </div>
+          <div id="matchReviewsList">
+            <div style="color:var(--muted);padding:1rem;">Loading confidence reviews...</div>
+          </div>
         </div>
       </section>
 
@@ -2866,6 +3116,32 @@
             <div class="console" id="logsConsole" style="min-height:160px;max-height:300px;overflow-y:auto;">Loading log stream...</div>
           </div>
         </div>
+
+        <!-- Indexing Diagnostics & Corrupted Files -->
+        <div class="card-block" id="indexingErrorsBlock" style="margin-top:1.5rem;">
+          <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <h3 style="font-size:1.05rem;font-weight:700;">AI Indexing Diagnostics & Corrupt Files</h3>
+              <p style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem;">Detailed log of skipped corrupted files and indexing exceptions.</p>
+            </div>
+            <button class="btn-outline" onclick="loadIndexingErrors()" style="padding:0.35rem 0.65rem;font-size:0.8rem;">Refresh Diagnostics</button>
+          </div>
+          <div class="card-block-body" style="padding:0;overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:left;">
+              <thead>
+                <tr style="background:#f9fafb;border-bottom:1px solid var(--line);color:var(--muted);font-weight:600;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em;">
+                  <th style="padding:0.75rem 1rem;">Time</th>
+                  <th style="padding:0.75rem 1rem;">Photo Path</th>
+                  <th style="padding:0.75rem 1rem;">Stage</th>
+                  <th style="padding:0.75rem 1rem;">Error Detail</th>
+                </tr>
+              </thead>
+              <tbody id="indexingErrorsTableBody">
+                <tr><td colspan="4" style="padding:1rem;text-align:center;color:var(--muted);">No indexing errors recorded. All library files processed successfully.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- PANEL 9: TRASH RECOVERY & PURGE -->
@@ -2892,28 +3168,65 @@
       <!-- PANEL 10: SETTINGS -->
       <section id="panel-settings" hidden>
         <div class="views-bar">
-          <div class="views-bar-title">Settings</div>
+          <div class="views-bar-title">Settings & AI Matching Configuration</div>
         </div>
 
         <div class="card-block">
-          <div class="card-block-body" style="max-width:580px;">
-            <div class="field">
-              <label>InsightFace Cosine Similarity Threshold</label>
-              <div style="display:flex;align-items:center;gap:1rem;">
-                <input type="range" id="thresholdRange" min="0.45" max="0.75" step="0.01" value="0.55" style="flex:1;">
-                <span id="thresholdVal" style="font-weight:700;font-family:monospace;width:40px;">0.55</span>
+          <div class="card-block-header">
+            <h3 style="font-size:1.05rem;font-weight:700;">InsightFace ArcFace Cosine Similarity Thresholds</h3>
+            <p style="font-size:0.82rem;color:var(--muted);margin-top:0.2rem;">Configure calibrated confidence categories for facial recognition search and clustering.</p>
+          </div>
+          <div class="card-block-body" style="max-width:640px;">
+            <div class="field" style="margin-bottom:1.4rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;">
+                <label style="font-weight:700;">High Confidence Threshold</label>
+                <span id="threshHighVal" style="font-family:monospace;font-weight:700;color:#0f5c4d;">0.60</span>
               </div>
-              <span style="font-size:0.8rem;color:var(--muted);display:block;margin-top:0.35rem;">
-                Lower thresholds (0.48-0.55) catch side angles and sunglasses. Higher thresholds (0.60+) enforce exact matches.
+              <input type="range" id="threshHighRange" min="0.50" max="0.80" step="0.01" value="0.60" style="width:100%;" oninput="$('threshHighVal').textContent = this.value;">
+              <span style="font-size:0.8rem;color:var(--muted);display:block;margin-top:0.25rem;">
+                Scores ≥ this value are classified as High Confidence (clean direct matches).
               </span>
             </div>
 
-            <div class="field" style="margin-top:1.5rem;">
-              <label>Default Primary Slug</label>
-              <input type="text" value="rahul-priya" id="defaultSlugInput">
+            <div class="field" style="margin-bottom:1.4rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;">
+                <label style="font-weight:700;">Medium Confidence Threshold</label>
+                <span id="threshMedVal" style="font-family:monospace;font-weight:700;color:#d97706;">0.48</span>
+              </div>
+              <input type="range" id="threshMedRange" min="0.40" max="0.65" step="0.01" value="0.48" style="width:100%;" oninput="$('threshMedVal').textContent = this.value;">
+              <span style="font-size:0.8rem;color:var(--muted);display:block;margin-top:0.25rem;">
+                Scores between Medium and High catch side-angles, sunglasses, or varying lighting.
+              </span>
             </div>
 
-            <button class="btn-primary" onclick="alert('Settings updated successfully.')">Save Settings</button>
+            <div class="field" style="margin-bottom:1.4rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;">
+                <label style="font-weight:700;">Minimum Match Cutoff Threshold</label>
+                <span id="threshMinVal" style="font-family:monospace;font-weight:700;color:#dc2626;">0.40</span>
+              </div>
+              <input type="range" id="threshMinRange" min="0.35" max="0.55" step="0.01" value="0.40" style="width:100%;" oninput="$('threshMinVal').textContent = this.value;">
+              <span style="font-size:0.8rem;color:var(--muted);display:block;margin-top:0.25rem;">
+                Absolute lowest similarity cutoff. Anything below this threshold is excluded.
+              </span>
+            </div>
+
+            <div class="field" style="margin-bottom:1.4rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;">
+                <label style="font-weight:700;">Perceptual Hash (dHash) Bit Tolerance</label>
+                <span id="threshDhashVal" style="font-family:monospace;font-weight:700;">4</span>
+              </div>
+              <input type="range" id="threshDhashRange" min="1" max="8" step="1" value="4" style="width:100%;" oninput="$('threshDhashVal').textContent = this.value;">
+              <span style="font-size:0.8rem;color:var(--muted);display:block;margin-top:0.25rem;">
+                Maximum bitwise Hamming distance (1-8 bits out of 64) for duplicate identification. Strict default of 4 preserves burst photos.
+              </span>
+            </div>
+
+            <div class="field" style="margin-bottom:1.5rem;">
+              <label style="font-weight:700;">Default Event Slug</label>
+              <input type="text" value="brk-sir" id="defaultSlugInput" style="padding:0.5rem 0.75rem;font-size:0.9rem;border-radius:6px;border:1px solid var(--line);width:100%;">
+            </div>
+
+            <button class="btn-primary" onclick="saveSystemSettings()" style="padding:0.6rem 1.4rem;">Save Settings</button>
           </div>
         </div>
       </section>
@@ -3292,13 +3605,20 @@ function switchTab(tabName) {
   if (tabName === 'dashboard') loadDashboard();
   if (tabName === 'events') loadEvents();
   if (tabName === 'albums') loadAlbums();
-  if (tabName === 'photos') loadPhotos(activeFilterAlbumId);
+  if (tabName === 'photos') {
+    loadPhotos(activeFilterAlbumId);
+    loadDuplicatesBadge();
+  }
   if (tabName === 'people') loadPeople();
   if (tabName === 'upload') setupUploadTab();
   if (tabName === 'storage') loadStorage();
   if (tabName === 'analytics') loadAnalytics();
-  if (tabName === 'logs') loadLogs();
+  if (tabName === 'logs') {
+    loadLogs();
+    loadIndexingErrors();
+  }
   if (tabName === 'trash') loadTrash();
+  if (tabName === 'settings') loadSystemSettings();
 }
 
 function openAllPhotos() {
@@ -6550,6 +6870,394 @@ function confirmEmptyTrash() {
     },
     'Empty Trash Forever'
   );
+}
+
+// ===========================================================================
+// SUB-VIEW SWITCHERS & AI MATCHING MODULES
+// ===========================================================================
+
+function switchPhotoSubView(view) {
+  const isGrid = view === 'grid';
+  const btnGrid = $('btnSubPhotosGrid');
+  const btnDups = $('btnSubDuplicates');
+  const toolbar = $('photoGridToolbar');
+  const grid = $('photoLibraryGrid');
+  const dupSec = $('duplicateReviewSection');
+
+  if (btnGrid) btnGrid.classList.toggle('active', isGrid);
+  if (btnDups) btnDups.classList.toggle('active', !isGrid);
+  if (toolbar) toolbar.hidden = !isGrid;
+  if (grid) grid.hidden = !isGrid;
+  if (dupSec) dupSec.hidden = isGrid;
+
+  if (!isGrid) {
+    loadDuplicates();
+  }
+}
+
+async function loadDuplicatesBadge() {
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}/duplicates?status=pending`);
+    if (!res.ok) return;
+    const j = await res.json();
+    const count = j.count || 0;
+    const badge = $('dupBadgeCount');
+    if (badge) badge.textContent = count;
+  } catch (e) {}
+}
+
+async function loadDuplicates() {
+  const list = $('duplicateGroupsList');
+  if (!list) return;
+  list.innerHTML = '<div style="color:var(--muted);padding:1rem;">Loading duplicate analysis...</div>';
+
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}/duplicates?status=pending`);
+    if (!res.ok) throw new Error('Failed to fetch duplicates');
+    const j = await res.json();
+    const groups = j.groups || [];
+
+    const badge = $('dupBadgeCount');
+    if (badge) badge.textContent = groups.length;
+
+    list.replaceChildren();
+
+    if (groups.length === 0) {
+      list.innerHTML = `
+        <div style="text-align:center;padding:2.5rem 1rem;background:#fff;border-radius:12px;border:1px solid var(--line);">
+          <div style="font-size:2rem;margin-bottom:0.5rem;">🎉</div>
+          <h4 style="font-size:1.1rem;font-weight:700;margin-bottom:0.35rem;">No Duplicate Photos Detected</h4>
+          <p style="color:var(--muted);font-size:0.85rem;max-width:440px;margin:0 auto 1.25rem;">
+            All indexed photographs are unique. You can trigger a fresh audit scan anytime.
+          </p>
+          <button class="btn-primary" onclick="triggerDuplicateScan()" style="padding:0.45rem 1rem;">Run Duplicate Scan Now</button>
+        </div>
+      `;
+      return;
+    }
+
+    groups.forEach((g, gIdx) => {
+      const card = document.createElement('div');
+      card.className = 'dup-group-card';
+      const isExact = g.match_type === 'exact';
+      const typeLabel = isExact ? 'Exact Match (SHA-256)' : `Visually Identical (dHash Match: ${(g.similarity_score * 100).toFixed(0)}%)`;
+      const typeBadgeClass = isExact ? 'badge-published' : 'badge-syncing';
+
+      card.innerHTML = `
+        <div class="dup-group-header">
+          <div>
+            <span class="badge ${typeBadgeClass}" style="margin-right:0.5rem;font-size:0.75rem;">${typeLabel}</span>
+            <span style="font-weight:700;font-size:0.92rem;">Group #${gIdx + 1} (${g.photos.length} photos)</span>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <button class="btn-outline" style="padding:0.35rem 0.65rem;font-size:0.78rem;" onclick="ignoreDuplicateGroup('${g.group_id}')">Keep Both / Ignore</button>
+            <button class="btn-primary" style="padding:0.35rem 0.75rem;font-size:0.78rem;background:var(--err);border-color:var(--err);" onclick="resolveSelectedDuplicates('${g.group_id}')">🗑 Move Selected to Trash</button>
+          </div>
+        </div>
+        <div class="dup-photos-row" id="dupRow_${g.group_id}"></div>
+      `;
+
+      const photosRow = card.querySelector(`#dupRow_${g.group_id}`);
+      g.photos.forEach(p => {
+        const pItem = document.createElement('div');
+        pItem.className = `dup-photo-item ${p.is_recommended ? 'is-primary' : ''}`;
+        const enc = p.rel_path.split('/').map(encodeURIComponent).join('/');
+        const fSizeMb = p.file_size_bytes ? (p.file_size_bytes / (1024 * 1024)).toFixed(2) + ' MB' : '--';
+        const resText = (p.width && p.height) ? `${p.width} × ${p.height} px` : '--';
+
+        pItem.innerHTML = `
+          ${p.is_recommended ? '<span class="dup-rec-badge">★ Recommended Original</span>' : ''}
+          <img src="/thumb/${enc}" class="dup-thumb-img" alt="${escapeHtml(p.filename)}" loading="lazy">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+            <span style="font-weight:700;font-size:0.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;" title="${escapeHtml(p.filename)}">${escapeHtml(p.filename)}</span>
+            ${!p.is_recommended ? `<label style="font-size:0.75rem;display:flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" class="dup-select-chk" data-group="${g.group_id}" data-id="${p.id}" checked> Delete</label>` : ''}
+          </div>
+          <div class="dup-meta-line"><span>Resolution:</span> <strong>${resText}</strong></div>
+          <div class="dup-meta-line"><span>File Size:</span> <strong>${fSizeMb}</strong></div>
+          <div class="dup-meta-line"><span>Folder:</span> <strong>${escapeHtml(p.album_name || 'Root')}</strong></div>
+          <div class="dup-meta-line"><span>Quality Grade:</span> <strong style="text-transform:capitalize;">${p.quality_grade || 'Good'}</strong></div>
+        `;
+        photosRow.appendChild(pItem);
+      });
+
+      list.appendChild(card);
+    });
+
+  } catch (err) {
+    list.innerHTML = `<div style="color:var(--err);padding:1rem;">Failed to load duplicates: ${err.message}</div>`;
+  }
+}
+
+async function triggerDuplicateScan() {
+  try {
+    const btn = document.activeElement;
+    if (btn) btn.disabled = true;
+    const res = await fetch(`/api/admin/events/${activeSlug}/duplicates/scan`, { method: 'POST' });
+    if (!res.ok) throw new Error('Scan request failed');
+    const j = await res.json();
+    const sum = j.summary || {};
+    alert(`Duplicate audit complete: ${sum.exact_groups || 0} exact groups and ${sum.perceptual_groups || 0} perceptual duplicate groups found.`);
+    await loadDuplicates();
+  } catch (e) {
+    alert('Duplicate scan failed: ' + e.message);
+  } finally {
+    const btn = document.activeElement;
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function ignoreDuplicateGroup(groupId) {
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}/duplicates/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ group_id: groupId, action: 'ignore' })
+    });
+    if (!res.ok) throw new Error('Failed to ignore group');
+    loadDuplicates();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function resolveSelectedDuplicates(groupId) {
+  const checkboxes = document.querySelectorAll(`input.dup-select-chk[data-group="${groupId}"]:checked`);
+  const photoIds = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-id'), 10));
+  if (photoIds.length === 0) {
+    alert('Please check at least one duplicate photo to delete.');
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to move ${photoIds.length} duplicate photo(s) to Trash? The recommended original will be preserved.`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/events/${activeSlug}/duplicates/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ group_id: groupId, action: 'delete_selected', photo_ids: photoIds })
+    });
+    if (!res.ok) throw new Error('Failed to resolve duplicates');
+    const j = await res.json();
+    loadDuplicates();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// ===========================================================================
+// CONFIDENCE REVIEW & HUMAN FEEDBACK
+// ===========================================================================
+
+function switchPeopleSubView(view) {
+  const isGrid = view === 'grid';
+  const btnGrid = $('btnSubPeopleGrid');
+  const btnRev = $('btnSubReviews');
+  const grid = $('peopleGrid');
+  const revSec = $('confidenceReviewSection');
+
+  if (btnGrid) btnGrid.classList.toggle('active', isGrid);
+  if (btnRev) btnRev.classList.toggle('active', !isGrid);
+  if (grid) grid.hidden = !isGrid;
+  if (revSec) revSec.hidden = isGrid;
+
+  if (!isGrid) {
+    loadMatchReviews();
+  }
+}
+
+async function loadMatchReviews() {
+  const list = $('matchReviewsList');
+  if (!list) return;
+  list.innerHTML = '<div style="color:var(--muted);padding:1rem;">Loading confidence reviews...</div>';
+
+  const tier = $('reviewTierSelect') ? $('reviewTierSelect').value : 'all';
+  const status = $('reviewStatusSelect') ? $('reviewStatusSelect').value : 'pending';
+
+  try {
+    const res = await fetch(`/api/admin/matching/reviews?event_slug=${activeSlug}&status=${status}&tier=${tier}`);
+    if (!res.ok) throw new Error('Failed to fetch reviews');
+    const j = await res.json();
+    const reviews = j.reviews || [];
+
+    const badge = $('reviewBadgeCount');
+    if (badge) badge.textContent = reviews.length;
+
+    list.replaceChildren();
+
+    if (reviews.length === 0) {
+      list.innerHTML = `
+        <div style="text-align:center;padding:2.5rem 1rem;background:#fff;border-radius:12px;border:1px solid var(--line);">
+          <div style="font-size:2rem;margin-bottom:0.5rem;">👍</div>
+          <h4 style="font-size:1.1rem;font-weight:700;margin-bottom:0.35rem;">No Pending Reviews in this Filter</h4>
+          <p style="color:var(--muted);font-size:0.85rem;">All searches have high confidence or have already been reviewed.</p>
+        </div>
+      `;
+      return;
+    }
+
+    reviews.forEach(mr => {
+      const card = document.createElement('div');
+      card.className = 'review-pair-card';
+
+      const tierBadge = mr.confidence_tier === 'high'
+        ? '<span class="tier-badge tier-high">High Confidence</span>'
+        : (mr.confidence_tier === 'medium'
+          ? '<span class="tier-badge tier-medium">Medium Confidence</span>'
+          : '<span class="tier-badge tier-low">Low Confidence</span>');
+
+      const statusBadge = mr.feedback === 'correct'
+        ? '<span class="badge badge-published">✓ Verified Correct</span>'
+        : (mr.feedback === 'incorrect'
+          ? '<span class="badge badge-trashed">✕ Marked Incorrect</span>'
+          : '<span class="badge" style="background:#f1f5f9;color:#64748b;">Pending Review</span>');
+
+      const encMatch = (mr.matched_rel_path || '').split('/').map(encodeURIComponent).join('/');
+      const queryCropUrl = `/thumb/${mr.query_crop_path}`;
+      const matchThumbUrl = `/thumb/${encMatch}`;
+
+      card.innerHTML = `
+        <div class="review-crop-box">
+          <img src="${queryCropUrl}" class="review-crop-img" alt="Query Face" onerror="this.src='/favicon.ico'">
+          <span style="font-size:0.7rem;font-weight:700;color:var(--muted);">Query Face</span>
+        </div>
+        <div style="font-size:1.4rem;color:var(--muted);font-weight:300;">⇄</div>
+        <div class="review-crop-box">
+          <img src="${matchThumbUrl}" class="review-crop-img" alt="Matched Library Photo" onerror="this.src='/favicon.ico'">
+          <span style="font-size:0.7rem;font-weight:700;color:var(--muted);">Matched Photo</span>
+        </div>
+        <div class="review-meta-box">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;flex-wrap:wrap;">
+            ${tierBadge}
+            ${statusBadge}
+          </div>
+          <div style="font-weight:700;font-size:0.92rem;margin-bottom:0.25rem;">
+            ArcFace Cosine Similarity: <code style="font-size:0.95rem;color:var(--ink);background:#f1f5f9;padding:1px 6px;border-radius:4px;">${mr.similarity_score.toFixed(4)}</code>
+          </div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.15rem;">
+            Matched File: <strong>${escapeHtml(mr.filename || mr.matched_rel_path)}</strong> (${escapeHtml(mr.album_name || 'Folder')})
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted);">
+            Search ID: <span style="font-family:monospace;">${escapeHtml(mr.search_id || '--')}</span> • ${mr.created_at || ''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.4rem;">
+          <button class="btn-primary" style="padding:0.4rem 0.85rem;font-size:0.8rem;background:#059669;border-color:#059669;" onclick="submitMatchFeedback(${mr.id}, 'correct')">✓ Correct Match</button>
+          <button class="btn-outline" style="padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--err);border-color:var(--err);" onclick="submitMatchFeedback(${mr.id}, 'incorrect')">✕ Incorrect Match</button>
+        </div>
+      `;
+
+      list.appendChild(card);
+    });
+
+  } catch (err) {
+    list.innerHTML = `<div style="color:var(--err);padding:1rem;">Failed to load reviews: ${err.message}</div>`;
+  }
+}
+
+async function submitMatchFeedback(reviewId, feedback) {
+  try {
+    const res = await fetch('/api/admin/matching/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ review_id: reviewId, feedback: feedback })
+    });
+    if (!res.ok) throw new Error('Feedback submission failed');
+    loadMatchReviews();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// ===========================================================================
+// SETTINGS & CONFIGURATION
+// ===========================================================================
+
+async function loadSystemSettings() {
+  try {
+    const res = await fetch('/api/admin/settings');
+    if (!res.ok) return;
+    const j = await res.json();
+    const s = j.settings || {};
+
+    if (s.match_threshold_high && $('threshHighRange')) {
+      $('threshHighRange').value = s.match_threshold_high;
+      $('threshHighVal').textContent = s.match_threshold_high;
+    }
+    if (s.match_threshold_medium && $('threshMedRange')) {
+      $('threshMedRange').value = s.match_threshold_medium;
+      $('threshMedVal').textContent = s.match_threshold_medium;
+    }
+    if (s.match_threshold_min && $('threshMinRange')) {
+      $('threshMinRange').value = s.match_threshold_min;
+      $('threshMinVal').textContent = s.match_threshold_min;
+    }
+    if (s.dedup_dhash_threshold && $('threshDhashRange')) {
+      $('threshDhashRange').value = s.dedup_dhash_threshold;
+      $('threshDhashVal').textContent = s.dedup_dhash_threshold;
+    }
+    if (s.default_event_slug && $('defaultSlugInput')) {
+      $('defaultSlugInput').value = s.default_event_slug;
+    }
+  } catch (e) {}
+}
+
+async function saveSystemSettings() {
+  const payload = {
+    match_threshold_high: $('threshHighRange') ? $('threshHighRange').value : '0.60',
+    match_threshold_medium: $('threshMedRange') ? $('threshMedRange').value : '0.48',
+    match_threshold_min: $('threshMinRange') ? $('threshMinRange').value : '0.40',
+    dedup_dhash_threshold: $('threshDhashRange') ? $('threshDhashRange').value : '4',
+    default_event_slug: $('defaultSlugInput') ? $('defaultSlugInput').value.trim() : 'brk-sir'
+  };
+
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to update settings');
+    alert('Settings and AI face-matching thresholds saved successfully.');
+  } catch (e) {
+    alert('Error saving settings: ' + e.message);
+  }
+}
+
+// ===========================================================================
+// INDEXING DIAGNOSTICS & ERROR LOGGING
+// ===========================================================================
+
+async function loadIndexingErrors() {
+  const tbody = $('indexingErrorsTableBody');
+  if (!tbody) return;
+
+  try {
+    const res = await fetch(`/api/admin/indexing/errors?event_slug=${activeSlug}`);
+    if (!res.ok) return;
+    const j = await res.json();
+    const errors = j.errors || [];
+
+    tbody.replaceChildren();
+
+    if (errors.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="padding:1rem;text-align:center;color:var(--muted);">No indexing errors recorded. All library files processed successfully.</td></tr>';
+      return;
+    }
+
+    errors.forEach(err => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--line)';
+      tr.innerHTML = `
+        <td style="padding:0.65rem 1rem;font-size:0.8rem;white-space:nowrap;color:var(--muted);">${escapeHtml(err.created_at || '')}</td>
+        <td style="padding:0.65rem 1rem;font-weight:600;font-size:0.82rem;">${escapeHtml(err.photo_rel_path)}</td>
+        <td style="padding:0.65rem 1rem;"><span class="badge" style="background:#fee2e2;color:#dc2626;">${escapeHtml(err.error_stage)}</span></td>
+        <td style="padding:0.65rem 1rem;font-size:0.8rem;color:var(--err);">${escapeHtml(err.error_message)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {}
 }
 
 checkAuth();
