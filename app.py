@@ -1185,6 +1185,106 @@ def aggregate_photo_dates(photos_list: list) -> dict:
         "total_matched": len(photos_list)
     }
 
+def query_matched_photos(embs, names, query_emb, event_slug="brk-sir", filter_date=None, filter_album=None, page=1, page_size=50):
+    if len(embs) == 0 or query_emb is None:
+        return {
+            "photos": [],
+            "all_photos": [],
+            "total_count": 0,
+            "unfiltered_total_count": 0,
+            "has_more": False,
+            "next_page": None,
+            "date_summary": {"date_counts": {}, "other_albums": {}, "newest_date": None, "total_matched": 0}
+        }
+
+    sims = embs @ query_emb
+    best_by_filename = {}
+    for idx in np.where(sims >= THRESHOLD)[0]:
+        n = names[idx]
+        fname = Path(n).name
+        score = float(sims[idx])
+        if fname not in best_by_filename or score > best_by_filename[fname]["score"]:
+            best_by_filename[fname] = {"rel_path": n, "score": score}
+
+    ranked = sorted(best_by_filename.items(), key=lambda kv: -kv[1]["score"])
+    reload_drive_map()
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT p.filename, p.rel_path, p.is_featured, p.drive_file_id, p.captured_at, p.created_at,
+               a.name as album_name, a.slug as album_slug, 
+               e.name as event_name, e.slug as event_slug
+        FROM photos p
+        JOIN events e ON p.event_id = e.id
+        LEFT JOIN albums a ON p.album_id = a.id
+        WHERE (e.slug = ? OR ? IN ('brk-sir', 'brksir', 'wedding', 'default', '')) AND p.is_deleted = 0
+    """, (event_slug, event_slug))
+    rows = cursor.fetchall()
+    conn.close()
+
+    photo_info = {}
+    for r in rows:
+        d = dict(r)
+        if d.get("filename"):
+            photo_info[d["filename"]] = d
+        if d.get("rel_path"):
+            photo_info[d["rel_path"]] = d
+
+    photos_data = []
+    for fname, item in ranked:
+        n = item["rel_path"]
+        score = item["score"]
+        info = photo_info.get(fname) or photo_info.get(n) or {}
+        cap_dt = info.get("captured_at") or info.get("created_at") or ""
+        photos_data.append({
+            "rel_path": n,
+            "filename": fname,
+            "drive_file_id": info.get("drive_file_id") or drive_map.get(n) or drive_map.get(fname),
+            "similarity": round(float(score), 3),
+            "confidence": round(float(score), 3),
+            "is_featured": bool(info.get("is_featured", 0)),
+            "captured_at": cap_dt,
+            "created_at": info.get("created_at", ""),
+            "album_name": info.get("album_name", ""),
+            "event_name": info.get("event_name", ""),
+            "event_slug": info.get("event_slug", event_slug)
+        })
+
+    date_summary = aggregate_photo_dates(photos_data)
+    unfiltered_total_count = len(photos_data)
+
+    if filter_date:
+        photos_data = [p for p in photos_data if parse_photo_date_info(p).get("date_key") == filter_date]
+    if filter_album:
+        photos_data = [p for p in photos_data if parse_photo_date_info(p).get("raw_album") == filter_album]
+
+    total_count = len(photos_data)
+
+    photos_data.sort(key=lambda p: p.get("captured_at") or p.get("created_at") or "", reverse=True)
+    photos_data.sort(key=lambda p: 0 if p.get("is_featured") else 1)
+
+    if page_size > 0:
+        start_idx = max(0, (page - 1) * page_size)
+        end_idx = start_idx + page_size
+        paged_photos = photos_data[start_idx:end_idx]
+        has_more = end_idx < total_count
+        next_page = page + 1 if has_more else None
+    else:
+        paged_photos = photos_data
+        has_more = False
+        next_page = None
+
+    return {
+        "photos": paged_photos,
+        "all_photos": photos_data,
+        "total_count": total_count,
+        "unfiltered_total_count": unfiltered_total_count,
+        "has_more": has_more,
+        "next_page": next_page,
+        "date_summary": date_summary
+    }
+
 def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_index: Optional[int] = None, page: int = 1, page_size: int = 50, filter_date: Optional[str] = None, filter_album: Optional[str] = None):
     embs, names, known = get_event_index(event_slug)
     if len(names) == 0:
@@ -1232,95 +1332,20 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
         selected_idx = faces.index(face)
 
     selected_face_thumb = crop_face_thumb(img, face.bbox)
-    sims = embs @ face.normed_embedding
-
-    # Deduplicate matching photos by unique filename, keeping the highest confidence match
-    best_by_filename = {}
-    for idx in np.where(sims >= THRESHOLD)[0]:
-        n = names[idx]
-        fname = Path(n).name
-        score = float(sims[idx])
-        if fname not in best_by_filename or score > best_by_filename[fname]["score"]:
-            best_by_filename[fname] = {"rel_path": n, "score": score}
-
-    total_count = len(best_by_filename)
-    ranked = sorted(best_by_filename.items(), key=lambda kv: -kv[1]["score"])
-    reload_drive_map()
-
-    # Query event & album names for grouping
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT p.filename, p.rel_path, p.is_featured, p.drive_file_id, p.captured_at, p.created_at,
-               a.name as album_name, a.slug as album_slug, 
-               e.name as event_name, e.slug as event_slug
-        FROM photos p
-        JOIN events e ON p.event_id = e.id
-        LEFT JOIN albums a ON p.album_id = a.id
-        WHERE e.slug = ? OR ? IN ('brk-sir', 'brksir', 'wedding', 'default', '')
-    """, (event_slug, event_slug))
-    photo_info = {r["filename"]: dict(r) for r in cursor.fetchall()}
-    conn.close()
-
-    photos_data = []
-    for fname, item in ranked:
-        n = item["rel_path"]
-        score = item["score"]
-        info = photo_info.get(fname, {})
-        cap_dt = info.get("captured_at") or info.get("created_at") or ""
-        photos_data.append({
-            "rel_path": n,
-            "filename": fname,
-            "drive_file_id": info.get("drive_file_id") or drive_map.get(n) or drive_map.get(fname),
-            "similarity": round(float(score), 3),
-            "confidence": round(float(score), 3),
-            "is_featured": bool(info.get("is_featured", 0)),
-            "captured_at": cap_dt,
-            "created_at": info.get("created_at", ""),
-            "album_name": info.get("album_name", ""),
-            "event_name": info.get("event_name", ""),
-            "event_slug": info.get("event_slug", event_slug)
-        })
-    # Compute date summary across the complete set of matched photos BEFORE filtering
-    date_summary = aggregate_photo_dates(photos_data)
-    unfiltered_total_count = len(photos_data)
-
-    # Optional server-side date / album filtering
-    if filter_date:
-        photos_data = [p for p in photos_data if parse_photo_date_info(p).get("date_key") == filter_date]
-    if filter_album:
-        photos_data = [p for p in photos_data if parse_photo_date_info(p).get("raw_album") == filter_album]
-
-    total_count = len(photos_data)
-
-    # Sort search results by latest date first (Newest to Oldest), featured photos first
-    photos_data.sort(key=lambda p: p.get("captured_at") or p.get("created_at") or "", reverse=True)
-    photos_data.sort(key=lambda p: 0 if p.get("is_featured") else 1)
-
-    # Server-side pagination
-    if page_size > 0:
-        start_idx = max(0, (page - 1) * page_size)
-        end_idx = start_idx + page_size
-        paged_photos = photos_data[start_idx:end_idx]
-        has_more = end_idx < total_count
-        next_page = page + 1 if has_more else None
-    else:
-        paged_photos = photos_data
-        has_more = False
-        next_page = None
+    res = query_matched_photos(embs, names, face.normed_embedding, event_slug, filter_date, filter_album, page, page_size)
 
     return {
         "multiple_faces": False,
-        "count": total_count,
-        "total_count": total_count,
-        "unfiltered_total_count": unfiltered_total_count,
+        "count": res["total_count"],
+        "total_count": res["total_count"],
+        "unfiltered_total_count": res["unfiltered_total_count"],
         "page": page,
-        "page_size": page_size if page_size > 0 else total_count,
-        "has_more": has_more,
-        "next_page": next_page,
-        "photos": paged_photos,
-        "legacy_photos": [p["rel_path"] for p in paged_photos],
-        "date_summary": date_summary,
+        "page_size": page_size if page_size > 0 else res["total_count"],
+        "has_more": res["has_more"],
+        "next_page": res["next_page"],
+        "photos": res["photos"],
+        "legacy_photos": [p["rel_path"] for p in res["photos"]],
+        "date_summary": res["date_summary"],
         "filter_date": filter_date,
         "filter_album": filter_album,
         "face_thumb": selected_face_thumb,
@@ -1393,91 +1418,24 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
     if query_emb is None:
         return {"status": "error", "message": "No face embedding available to query", "count": 0, "total_count": 0, "photos": [], "has_more": False, "has_new": False, "new_count": 0}
 
-    sims = embs @ query_emb
-    matches = np.where(sims >= THRESHOLD)[0]
-
-    seen = set()
-    photos_data = []
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT p.filename, p.rel_path, p.is_featured, p.is_hidden, p.drive_file_id,
-               p.captured_at, p.created_at,
-               a.name as album_name, e.name as event_name, e.slug as event_slug
-        FROM photos p
-        LEFT JOIN albums a ON p.album_id = a.id
-        JOIN events e ON p.event_id = e.id
-        WHERE (e.slug = ? OR ? IN ('brk-sir', 'brksir', 'wedding', 'default', '')) AND p.is_deleted = 0
-    """, (slug, slug))
-    photo_lookup = {r["rel_path"]: dict(r) for r in cursor.fetchall()}
-    conn.close()
-
-    for idx in matches:
-        rel = names[idx]
-        fname = Path(rel).name
-        if fname in seen:
-            continue
-        seen.add(fname)
-        info = photo_lookup.get(rel) or {"rel_path": rel, "filename": fname, "is_featured": 0, "is_hidden": 0}
-        if info.get("is_hidden"):
-            continue
-        cap_dt = info.get("captured_at") or info.get("created_at") or ""
-        photos_data.append({
-            "rel_path": rel,
-            "filename": fname,
-            "drive_file_id": info.get("drive_file_id") or drive_map.get(rel) or drive_map.get(fname),
-            "similarity": round(float(sims[idx]), 3),
-            "confidence": round(float(sims[idx]), 3),
-            "is_featured": bool(info.get("is_featured", 0)),
-            "captured_at": cap_dt,
-            "created_at": info.get("created_at", ""),
-            "album_name": info.get("album_name", ""),
-            "event_name": info.get("event_name", ""),
-            "event_slug": info.get("event_slug", slug)
-        })
-
     filter_date = body.get("filter_date")
     filter_album = body.get("filter_album")
-
-    # Calculate date summary across all matched photos before filtering
-    date_summary = aggregate_photo_dates(photos_data)
-    unfiltered_total_count = len(photos_data)
-
-    # Optional server-side filtering
-    if filter_date:
-        photos_data = [p for p in photos_data if parse_photo_date_info(p).get("date_key") == filter_date]
-    if filter_album:
-        photos_data = [p for p in photos_data if parse_photo_date_info(p).get("raw_album") == filter_album]
-
-    # Sort descending by capture date, with featured photos at top
-    photos_data.sort(key=lambda p: p.get("captured_at") or p.get("created_at") or "", reverse=True)
-    photos_data.sort(key=lambda p: 0 if p.get("is_featured") else 1)
-    total_count = len(photos_data)
+    res = query_matched_photos(embs, names, query_emb, slug, filter_date, filter_album, page, page_size)
+    total_count = res["total_count"]
     has_new = total_count > last_count if last_count > 0 else False
     new_count = max(0, total_count - last_count) if last_count > 0 else 0
-
-    if page_size > 0:
-        start_idx = max(0, (page - 1) * page_size)
-        end_idx = start_idx + page_size
-        paged_photos = photos_data[start_idx:end_idx]
-        has_more = end_idx < total_count
-        next_page = page + 1 if has_more else None
-    else:
-        paged_photos = photos_data
-        has_more = False
-        next_page = None
 
     return {
         "status": "ok",
         "count": total_count,
         "total_count": total_count,
-        "unfiltered_total_count": unfiltered_total_count,
+        "unfiltered_total_count": res["unfiltered_total_count"],
         "page": page,
         "page_size": page_size if page_size > 0 else total_count,
-        "has_more": has_more,
-        "next_page": next_page,
-        "photos": paged_photos,
-        "date_summary": date_summary,
+        "has_more": res["has_more"],
+        "next_page": res["next_page"],
+        "photos": res["photos"],
+        "date_summary": res["date_summary"],
         "embedding": query_emb.tolist() if (query_emb is not None and hasattr(query_emb, "tolist")) else None,
         "filter_date": filter_date,
         "filter_album": filter_album,

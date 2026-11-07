@@ -2768,6 +2768,23 @@
       display: block;
       pointer-events: none;
       background: #1e293b;
+      transition: opacity 0.2s ease;
+    }
+
+    .filmstrip-thumb.loading-placeholder {
+      background: linear-gradient(90deg, #182220 25%, #2a3c38 50%, #182220 75%);
+      background-size: 200% 100%;
+      animation: filmstripShimmer 1.5s infinite;
+      cursor: wait;
+    }
+
+    .filmstrip-thumb.loading-placeholder img {
+      opacity: 0;
+    }
+
+    @keyframes filmstripShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
 
     @media (max-width: 480px) {
@@ -4487,8 +4504,9 @@
       renderNextGridBatch();
       updateCalendarAndFilters();
       if (!$('photoLightboxModal').hidden) {
-        buildFilmstrip();
+        renderFilmstripWindow(currentPhotoIndex);
         updateLightboxHeader(currentPhotoIndex);
+        updateSlideSlots(currentPhotoIndex);
       }
     }
 
@@ -4896,24 +4914,60 @@
       return p.split('/').pop();
     }
 
-    function updateLightboxHeader(index) {
-      if (index < 0 || index >= currentPhotosList.length) return;
-      const item = currentPhotosList[index];
-      const enc = getPhotoEnc(item);
-      const filename = getPhotoFilename(item);
+    function getTotalPhotosCount() {
+      if (selectedCalendarDate) {
+        const c = (typeof datePhotoCounts !== 'undefined' && datePhotoCounts) ? datePhotoCounts.get(selectedCalendarDate) : null;
+        return (c && c > 0) ? Math.max(c, currentPhotosList.length) : currentPhotosList.length;
+      }
+      if (selectedOtherAlbum) {
+        const c = (typeof otherAlbumCounts !== 'undefined' && otherAlbumCounts) ? otherAlbumCounts.get(selectedOtherAlbum) : null;
+        return (c && c > 0) ? Math.max(c, currentPhotosList.length) : currentPhotosList.length;
+      }
+      if (typeof totalMatchingPhotosCount === 'number' && totalMatchingPhotosCount > 0) {
+        return Math.max(totalMatchingPhotosCount, currentPhotosList.length);
+      }
+      return currentPhotosList.length;
+    }
 
-      const totalCount = (totalMatchingPhotosCount > 0) ? totalMatchingPhotosCount : currentPhotosList.length;
-      $('lightboxCounter').textContent = `${index + 1} / ${totalCount}`;
+    function updateLightboxHeader(index) {
+      const total = getTotalPhotosCount();
+      if (total <= 0) return;
+      const normIndex = ((index % total) + total) % total;
+      const item = currentPhotosList[normIndex];
+      const filename = item ? getPhotoFilename(item) : `Photo ${normIndex + 1}`;
+      const enc = item ? getPhotoEnc(item) : '';
+
+      $('lightboxCounter').textContent = `${normIndex + 1} / ${total}`;
       $('lightboxFilename').textContent = filename;
       $('lightboxFilename').title = filename;
 
       const hdBtn = $('lightboxDownloadHdBtn');
-      hdBtn.href = `/download/hd/${enc}`;
-      hdBtn.setAttribute('download', `${filename.replace(/\.[^/.]+$/, "")}_HD.jpg`);
+      if (hdBtn) {
+        if (enc) {
+          hdBtn.href = `/download/hd/${enc}`;
+          hdBtn.setAttribute('download', `${filename.replace(/\.[^/.]+$/, "")}_HD.jpg`);
+          hdBtn.style.pointerEvents = '';
+          hdBtn.style.opacity = '1';
+        } else {
+          hdBtn.removeAttribute('href');
+          hdBtn.style.pointerEvents = 'none';
+          hdBtn.style.opacity = '0.5';
+        }
+      }
 
       const btn4k = $('lightboxDownload4kBtn');
-      btn4k.href = `/download/4k/${enc}`;
-      btn4k.setAttribute('download', filename);
+      if (btn4k) {
+        if (enc) {
+          btn4k.href = `/download/4k/${enc}`;
+          btn4k.setAttribute('download', filename);
+          btn4k.style.pointerEvents = '';
+          btn4k.style.opacity = '1';
+        } else {
+          btn4k.removeAttribute('href');
+          btn4k.style.pointerEvents = 'none';
+          btn4k.style.opacity = '0.5';
+        }
+      }
     }
 
     // --- 9-Thumbnail Circular Filmstrip Window ---
@@ -4923,13 +4977,13 @@
       const track = $('lightboxFilmstripTrack');
       if (!track) return;
 
-      const total = currentPhotosList.length;
+      const total = getTotalPhotosCount();
       if (total === 0) {
         track.replaceChildren();
         return;
       }
 
-      // Single source of truth: normalized 0-based circular index
+      // Single source of truth: normalized 0-based circular index based on total (e.g. 160)
       const normCenter = ((centerIndex % total) + total) % total;
 
       // When total >= 9: Display exactly 9 thumbnails with selected photo at 5th position (index 4).
@@ -4971,27 +5025,44 @@
         track.removeChild(track.lastChild);
       }
 
+      let needMorePhotos = false;
+
       // Update thumbnails in place smoothly without image reloads
       for (let pos = 0; pos < targetIndices.length; pos++) {
         const photoIdx = targetIndices[pos];
         const thumb = track.children[pos];
         const img = thumb.firstElementChild;
         const item = currentPhotosList[photoIdx];
-        if (!item) continue;
-
-        const p = typeof item === 'string' ? item : item.rel_path;
-        const enc = p.split('/').map(encodeURIComponent).join('/');
-        const thumbSrc = `/thumb/${enc}`;
 
         thumb.dataset.index = photoIdx;
-        const isActive = (photoIdx === currentPhotoIndex);
+        const isActive = (photoIdx === normCenter);
         thumb.classList.toggle('active', isActive);
         thumb.setAttribute('aria-label', `Photo ${photoIdx + 1}${isActive ? ' (current)' : ''}`);
 
-        if (img.dataset.src !== thumbSrc) {
-          img.dataset.src = thumbSrc;
-          img.src = thumbSrc;
-          img.alt = `Photo ${photoIdx + 1}`;
+        if (item) {
+          thumb.classList.remove('loading-placeholder');
+          const p = typeof item === 'string' ? item : item.rel_path;
+          const enc = p.split('/').map(encodeURIComponent).join('/');
+          const thumbSrc = `/thumb/${enc}`;
+
+          if (img.dataset.src !== thumbSrc) {
+            img.dataset.src = thumbSrc;
+            img.src = thumbSrc;
+            img.alt = `Photo ${photoIdx + 1}`;
+          }
+        } else {
+          // Photo is not yet loaded into memory - display skeleton placeholder and fetch
+          needMorePhotos = true;
+          thumb.classList.add('loading-placeholder');
+          img.removeAttribute('src');
+          img.dataset.src = '';
+          img.alt = `Photo ${photoIdx + 1} (loading...)`;
+        }
+      }
+
+      if (needMorePhotos || normCenter >= currentPhotosList.length - 15) {
+        if (currentSearchHasMore && !isLoadingNextPage) {
+          fetchNextSearchPage();
         }
       }
     }
@@ -5005,7 +5076,9 @@
     }
 
     function checkAndFetchMorePhotos(index) {
-      if (index >= currentPhotosList.length - 15 && currentSearchHasMore && !isLoadingNextPage) {
+      const total = getTotalPhotosCount();
+      const norm = ((index % total) + total) % total;
+      if ((norm >= currentPhotosList.length - 15 || currentPhotosList.length < total) && currentSearchHasMore && !isLoadingNextPage) {
         fetchNextSearchPage();
       }
     }
@@ -5033,26 +5106,52 @@
 
     function updateSlideSlots(targetIdx) {
       initLightboxSlider();
-      const total = currentPhotosList.length;
+      const total = getTotalPhotosCount();
       if (total === 0) return;
 
-      const currEnc = getPhotoEnc(currentPhotosList[targetIdx]);
-      setSlideImage(imgCurr, spinnerCurr, `/preview/${currEnc}`);
+      const normTarget = ((targetIdx % total) + total) % total;
+      const currItem = currentPhotosList[normTarget];
+      if (currItem) {
+        const currEnc = getPhotoEnc(currItem);
+        setSlideImage(imgCurr, spinnerCurr, `/preview/${currEnc}`);
+      } else {
+        setSlideImage(imgCurr, spinnerCurr, '');
+        if (spinnerCurr) spinnerCurr.classList.add('visible');
+        if (currentSearchHasMore && !isLoadingNextPage) {
+          fetchNextSearchPage();
+        }
+      }
 
       if (total > 1) {
-        const prevIdx = (targetIdx - 1 + total) % total;
-        const nextIdx = (targetIdx + 1) % total;
-        const prevEnc = getPhotoEnc(currentPhotosList[prevIdx]);
-        const nextEnc = getPhotoEnc(currentPhotosList[nextIdx]);
+        const prevIdx = ((normTarget - 1) % total + total) % total;
+        const nextIdx = (normTarget + 1) % total;
 
-        setSlideImage(imgPrev, spinnerPrev, `/preview/${prevEnc}`);
-        setSlideImage(imgNext, spinnerNext, `/preview/${nextEnc}`);
+        const prevItem = currentPhotosList[prevIdx];
+        const nextItem = currentPhotosList[nextIdx];
+
+        if (prevItem) {
+          const prevEnc = getPhotoEnc(prevItem);
+          setSlideImage(imgPrev, spinnerPrev, `/preview/${prevEnc}`);
+        } else {
+          setSlideImage(imgPrev, spinnerPrev, '');
+        }
+
+        if (nextItem) {
+          const nextEnc = getPhotoEnc(nextItem);
+          setSlideImage(imgNext, spinnerNext, `/preview/${nextEnc}`);
+        } else {
+          setSlideImage(imgNext, spinnerNext, '');
+        }
 
         // Preload adjacent ±2 photos in background
-        const prev2Idx = (targetIdx - 2 + total) % total;
-        const next2Idx = (targetIdx + 2) % total;
-        new Image().src = `/preview/${getPhotoEnc(currentPhotosList[prev2Idx])}`;
-        new Image().src = `/preview/${getPhotoEnc(currentPhotosList[next2Idx])}`;
+        const prev2Idx = ((normTarget - 2) % total + total) % total;
+        const next2Idx = (normTarget + 2) % total;
+        if (currentPhotosList[prev2Idx]) {
+          new Image().src = `/preview/${getPhotoEnc(currentPhotosList[prev2Idx])}`;
+        }
+        if (currentPhotosList[next2Idx]) {
+          new Image().src = `/preview/${getPhotoEnc(currentPhotosList[next2Idx])}`;
+        }
       } else {
         setSlideImage(imgPrev, spinnerPrev, '');
         setSlideImage(imgNext, spinnerNext, '');
@@ -5060,7 +5159,7 @@
     }
 
     function jumpToPhoto(targetIdx) {
-      const total = currentPhotosList.length;
+      const total = getTotalPhotosCount();
       if (total === 0) return;
       const normalizedIdx = ((targetIdx % total) + total) % total;
       initLightboxSlider();
@@ -5091,7 +5190,8 @@
     }
 
     function goToNextPhoto() {
-      if (isTransitioning || currentPhotosList.length <= 1) return;
+      const total = getTotalPhotosCount();
+      if (isTransitioning || total <= 1) return;
       initLightboxSlider();
       isTransitioning = true;
       resetZoom();
@@ -5108,7 +5208,8 @@
     }
 
     function goToPrevPhoto() {
-      if (isTransitioning || currentPhotosList.length <= 1) return;
+      const total = getTotalPhotosCount();
+      if (isTransitioning || total <= 1) return;
       initLightboxSlider();
       isTransitioning = true;
       resetZoom();
@@ -5126,7 +5227,7 @@
 
     function finishSlideTransition(direction) {
       initLightboxSlider();
-      const total = currentPhotosList.length;
+      const total = getTotalPhotosCount();
       if (total <= 0) {
         isTransitioning = false;
         return;
@@ -5160,8 +5261,8 @@
     }
 
     function openPhotoLightbox(index) {
-      if (currentPhotosList.length === 0) return;
-      const total = currentPhotosList.length;
+      const total = getTotalPhotosCount();
+      if (total === 0) return;
       currentPhotoIndex = ((index % total) + total) % total;
       resetZoom();
 
@@ -5191,11 +5292,11 @@
         });
 
         try {
-          history.pushState({ brkLightboxOpen: true, photoIndex: index }, '');
+          history.pushState({ brkLightboxOpen: true, photoIndex: currentPhotoIndex }, '');
         } catch (e) {}
       } else {
         try {
-          history.replaceState({ brkLightboxOpen: true, photoIndex: index }, '');
+          history.replaceState({ brkLightboxOpen: true, photoIndex: currentPhotoIndex }, '');
         } catch (e) {}
       }
     }
@@ -5419,7 +5520,7 @@
           if (Math.abs(diffX) > Math.abs(diffY)) {
             e.preventDefault();
             if (sliderTrack) {
-              const resistance = (currentPhotosList.length <= 1) ? 0.25 : 1;
+              const resistance = (getTotalPhotosCount() <= 1) ? 0.25 : 1;
               sliderTrack.style.transform = `translate3d(calc(-100% + ${diffX * resistance}px), 0, 0)`;
             }
           }
@@ -5467,7 +5568,7 @@
           const isQuickSwipe = elapsed < 260 && Math.abs(diffX) > 35;
           const isThresholdPassed = Math.abs(diffX) > 60;
 
-          if ((isThresholdPassed || isQuickSwipe) && currentPhotosList.length > 1 && !isTransitioning) {
+          if ((isThresholdPassed || isQuickSwipe) && getTotalPhotosCount() > 1 && !isTransitioning) {
             if (diffX < 0) {
               goToNextPhoto();
             } else {
@@ -5527,7 +5628,7 @@
         updateImgTransform();
       } else if (zoomScale <= 1.05) {
         if (sliderTrack) {
-          const resistance = (currentPhotosList.length <= 1) ? 0.25 : 1;
+          const resistance = (getTotalPhotosCount() <= 1) ? 0.25 : 1;
           sliderTrack.style.transform = `translate3d(calc(-100% + ${diffX * resistance}px), 0, 0)`;
         }
       }
@@ -5559,7 +5660,7 @@
         const isQuickSwipe = elapsed < 260 && Math.abs(diffX) > 35;
         const isThresholdPassed = Math.abs(diffX) > 60;
 
-        if ((isThresholdPassed || isQuickSwipe) && currentPhotosList.length > 1) {
+        if ((isThresholdPassed || isQuickSwipe) && getTotalPhotosCount() > 1) {
           if (diffX < 0) {
             goToNextPhoto();
           } else {
@@ -6319,8 +6420,8 @@
     $('lightboxShareBtn')?.addEventListener('click', () => {
       const curItem = currentPhotosList[currentPhotoIndex];
       if (!curItem) return;
-      const p = typeof curItem === 'string' ? curItem : curItem.rel_path;
-      const downloadUrl = `${window.location.origin}/download/hd/${p}`;
+      const enc = getPhotoEnc(curItem);
+      const downloadUrl = `${window.location.origin}/download/hd/${enc}`;
       if (navigator.share) {
         navigator.share({
           title: 'Photo with BRK Sir',
