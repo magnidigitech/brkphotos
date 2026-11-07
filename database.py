@@ -11,7 +11,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Union
 
 BASE = Path(__file__).resolve().parent
 if str(BASE) not in sys.path:
@@ -369,6 +369,77 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_analytics_status ON analytics_events(status);
         CREATE INDEX IF NOT EXISTS idx_download_jobs_started ON download_jobs(started_at);
         CREATE INDEX IF NOT EXISTS idx_download_jobs_status ON download_jobs(status);
+
+        -- Security, 2FA, Passkeys & Session Layer
+        CREATE TABLE IF NOT EXISTS admin_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL DEFAULT 'admin',
+            password_hash TEXT NOT NULL,
+            totp_secret_enc TEXT,
+            totp_enabled BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS admin_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            token_hash TEXT UNIQUE NOT NULL,
+            user_id INTEGER NOT NULL DEFAULT 1 REFERENCES admin_users(id) ON DELETE CASCADE,
+            ip_address TEXT,
+            user_agent TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP NOT NULL,
+            last_active_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS admin_recovery_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL DEFAULT 1 REFERENCES admin_users(id) ON DELETE CASCADE,
+            code_hash TEXT NOT NULL,
+            is_used BOOLEAN DEFAULT 0,
+            used_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS admin_passkeys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL DEFAULT 1 REFERENCES admin_users(id) ON DELETE CASCADE,
+            credential_id TEXT UNIQUE NOT NULL,
+            public_key TEXT NOT NULL,
+            sign_count INTEGER DEFAULT 0,
+            device_name TEXT NOT NULL,
+            transports TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_used_at TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS auth_challenges (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            challenge_type TEXT NOT NULL,
+            challenge_id TEXT UNIQUE NOT NULL,
+            user_id INTEGER DEFAULT 1,
+            data_json TEXT,
+            expires_at REAL NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS security_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            ip_address TEXT,
+            user_agent TEXT,
+            status TEXT NOT NULL,
+            details TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sessions_token ON admin_sessions(token_hash);
+        CREATE INDEX IF NOT EXISTS idx_sessions_expires ON admin_sessions(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_rec_codes_user ON admin_recovery_codes(user_id, is_used);
+        CREATE INDEX IF NOT EXISTS idx_passkeys_cred ON admin_passkeys(credential_id);
+        CREATE INDEX IF NOT EXISTS idx_challenges_id ON auth_challenges(challenge_id);
+        CREATE INDEX IF NOT EXISTS idx_sec_logs_created ON security_logs(created_at);
+        CREATE INDEX IF NOT EXISTS idx_sec_logs_type ON security_logs(event_type, status);
         """)
 
         # One-time schema migrations
@@ -448,6 +519,22 @@ def init_db():
                 conn.execute("INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)", (k, v))
             except Exception:
                 pass
+        # Seed default admin user with PBKDF2 hash if not exists
+        try:
+            from auth_security import hash_password
+            c = conn.cursor()
+            c.execute("SELECT id FROM admin_users LIMIT 1")
+            if not c.fetchone():
+                admin_pass = os.environ.get("ADMIN_KEY") or os.environ.get("ADMIN_PASSWORD", "Magni@3939")
+                hashed_pw = hash_password(admin_pass)
+                c.execute("""
+                    INSERT INTO admin_users (id, username, password_hash, totp_enabled)
+                    VALUES (1, 'admin', ?, 0)
+                """, (hashed_pw,))
+                conn.commit()
+        except Exception as e:
+            print(f"Admin seeding note: {e}")
+
         conn.commit()
     conn.close()
     backfill_photo_dates()
@@ -1693,6 +1780,373 @@ def resolve_duplicate_group(group_id: str, action: str, photo_ids: list = None) 
 
     conn.close()
     return {"status": "error", "message": "Unknown action."}
+
+# ---------------------------------------------------------------------------
+# Admin Security, 2FA, Passkeys & Session Management
+# ---------------------------------------------------------------------------
+
+def get_admin_user(identifier = 1) -> Optional[dict]:
+    conn = get_db()
+    c = conn.cursor()
+    if isinstance(identifier, int) or (isinstance(identifier, str) and identifier.isdigit()):
+        c.execute("SELECT * FROM admin_users WHERE id = ?", (int(identifier),))
+    else:
+        c.execute("SELECT * FROM admin_users WHERE username = ?", (str(identifier),))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    if "totp_secret_enc" in d and "totp_secret" not in d:
+        d["totp_secret"] = d["totp_secret_enc"]
+    return d
+
+def update_admin_password(user_id: int, new_password_or_hash: str) -> bool:
+    import auth_security
+    if not new_password_or_hash.startswith("pbkdf2_sha256$"):
+        pwd_hash = auth_security.hash_password(new_password_or_hash)
+    else:
+        pwd_hash = new_password_or_hash
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE admin_users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (pwd_hash, user_id))
+    conn.commit()
+    conn.close()
+    return True
+
+def set_totp_state(user_id: int, enabled: bool, secret_enc: Optional[str] = None) -> bool:
+    conn = get_db()
+    c = conn.cursor()
+    if secret_enc is not None:
+        c.execute("""
+            UPDATE admin_users
+            SET totp_enabled = ?, totp_secret_enc = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (1 if enabled else 0, secret_enc, user_id))
+    else:
+        c.execute("""
+            UPDATE admin_users
+            SET totp_enabled = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (1 if enabled else 0, user_id))
+    conn.commit()
+    conn.close()
+    return True
+
+def save_recovery_codes(user_id: int, codes: List[str]) -> bool:
+    import auth_security
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM admin_recovery_codes WHERE user_id = ?", (user_id,))
+    for code in codes:
+        if len(code) == 64 and all(c in "0123456789abcdefABCDEF" for c in code):
+            h = code.lower()
+        else:
+            h = auth_security.hash_recovery_code(code)
+        c.execute("INSERT INTO admin_recovery_codes (user_id, code_hash, is_used) VALUES (?, ?, 0)", (user_id, h))
+    conn.commit()
+    conn.close()
+    return True
+    return True
+
+def verify_and_burn_recovery_code(user_id: int, code: str) -> bool:
+    import auth_security
+    code_hash = auth_security.hash_recovery_code(code)
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id FROM admin_recovery_codes
+        WHERE user_id = ? AND code_hash = ? AND is_used = 0
+        LIMIT 1
+    """, (user_id, code_hash))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return False
+    rec_id = row["id"]
+    c.execute("UPDATE admin_recovery_codes SET is_used = 1, used_at = CURRENT_TIMESTAMP WHERE id = ?", (rec_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+def get_recovery_codes_status(user_id: int = 1) -> dict:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(id) as total, SUM(CASE WHEN is_used = 0 THEN 1 ELSE 0 END) as unused FROM admin_recovery_codes WHERE user_id = ?", (user_id,))
+    row = c.fetchone()
+    conn.close()
+    total = row["total"] or 0
+    unused = row["unused"] or 0
+    return {
+        "total": total,
+        "unused": unused,
+        "total_count": total,
+        "unused_count": unused,
+        "used": total - unused
+    }
+
+def save_passkey(user_id: int, credential_id: str, public_key: str, device_name: str, transports: str = "") -> bool:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        INSERT OR REPLACE INTO admin_passkeys (user_id, credential_id, public_key, device_name, transports, created_at)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    """, (user_id, credential_id, public_key, device_name, transports))
+    conn.commit()
+    conn.close()
+    return True
+
+def get_user_passkeys(user_id: int = 1) -> List[dict]:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, credential_id, device_name, transports, sign_count, created_at, last_used_at
+        FROM admin_passkeys
+        WHERE user_id = ?
+        ORDER BY id DESC
+    """, (user_id,))
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+def get_passkey_by_credential_id(credential_id: str) -> Optional[dict]:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM admin_passkeys WHERE credential_id = ? LIMIT 1", (credential_id,))
+    row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def update_passkey_last_used(identifier: Union[int, str], sign_count: int = 0) -> bool:
+    conn = get_db()
+    c = conn.cursor()
+    if isinstance(identifier, int) or (isinstance(identifier, str) and str(identifier).isdigit()):
+        c.execute("UPDATE admin_passkeys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?", (int(identifier),))
+    else:
+        c.execute("UPDATE admin_passkeys SET last_used_at = CURRENT_TIMESTAMP WHERE credential_id = ?", (str(identifier),))
+    conn.commit()
+    conn.close()
+    return True
+
+def delete_passkey(arg1: int, arg2: int) -> bool:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM admin_passkeys WHERE (id = ? AND user_id = ?) OR (id = ? AND user_id = ?)", (arg1, arg2, arg2, arg1))
+    rows = c.rowcount
+    conn.commit()
+    conn.close()
+    return rows > 0
+
+def rename_passkey(arg1: int, arg2: Union[int, str], arg3: Optional[str] = None) -> bool:
+    if isinstance(arg2, str):
+        passkey_id = int(arg1)
+        new_name = arg2
+    else:
+        passkey_id = int(arg1) if isinstance(arg3, str) else int(arg2)
+        new_name = str(arg3 or "")
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE admin_passkeys SET device_name = ? WHERE id = ?", (new_name[:64], passkey_id))
+    rows = c.rowcount
+    conn.commit()
+    conn.close()
+    return rows > 0
+
+def save_auth_challenge(arg1, arg2=None, arg3=None, user_id: int = 1, data: dict = None, ttl_seconds: int = 300, expires_in_seconds: int = 300) -> bool:
+    conn = get_db()
+    c = conn.cursor()
+    now = time.time()
+    c.execute("DELETE FROM auth_challenges WHERE expires_at < ?", (now,))
+    ttl = expires_in_seconds if expires_in_seconds != 300 else ttl_seconds
+    expires_at = now + ttl
+
+    if arg2 in ("2fa_login", "passkey_login", "passkey_register"):
+        challenge_id = str(arg1)
+        challenge_type = str(arg2)
+        challenge_val = str(arg3) if arg3 else ""
+    elif arg1 in ("2fa_login", "passkey_login", "passkey_register"):
+        challenge_type = str(arg1)
+        challenge_id = str(arg2)
+        challenge_val = str(arg3) if arg3 else ""
+    else:
+        challenge_id = str(arg1)
+        challenge_type = str(arg2 or "generic")
+        challenge_val = str(arg3) if arg3 else ""
+
+    data_payload = data if isinstance(data, dict) else {}
+    if challenge_val:
+        data_payload["challenge"] = challenge_val
+
+    data_str = json.dumps(data_payload)
+    c.execute("""
+        INSERT INTO auth_challenges (challenge_type, challenge_id, user_id, data_json, expires_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (challenge_type, challenge_id, user_id, data_str, expires_at))
+    conn.commit()
+    conn.close()
+    return True
+
+def consume_auth_challenge(challenge_id: str, expected_type: Optional[str] = None) -> Optional[dict]:
+    conn = get_db()
+    c = conn.cursor()
+    now = time.time()
+    c.execute("""
+        SELECT * FROM auth_challenges
+        WHERE challenge_id = ? AND expires_at >= ?
+        LIMIT 1
+    """, (challenge_id, now))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return None
+    d = dict(row)
+    if expected_type and d.get("challenge_type") and d["challenge_type"] != expected_type:
+        conn.close()
+        return None
+    c.execute("DELETE FROM auth_challenges WHERE challenge_id = ?", (challenge_id,))
+    conn.commit()
+    conn.close()
+    if d.get("data_json"):
+        try:
+            extra = json.loads(d["data_json"])
+            if isinstance(extra, dict):
+                d.update(extra)
+        except Exception:
+            pass
+    return d
+
+def create_admin_session(token_or_hash: str, user_id: int = 1, ip: str = "", ip_address: str = "", ua: str = "", user_agent: str = "", duration_days: int = 7, expires_days: int = 7) -> bool:
+    import hashlib
+    if len(token_or_hash) == 64 and all(c in "0123456789abcdefABCDEF" for c in token_or_hash):
+        t_hash = token_or_hash.lower()
+    else:
+        t_hash = hashlib.sha256(token_or_hash.encode("utf-8")).hexdigest()
+
+    client_ip = ip_address or ip
+    client_ua = user_agent or ua
+    days = expires_days if expires_days != 7 else duration_days
+
+    conn = get_db()
+    c = conn.cursor()
+    import datetime
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=days)
+    expires_str = expires_at.strftime("%Y-%m-%d %H:%M:%S")
+    c.execute("""
+        INSERT INTO admin_sessions (token_hash, user_id, ip_address, user_agent, expires_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (t_hash, user_id, client_ip, client_ua[:250], expires_str))
+    conn.commit()
+    conn.close()
+    return True
+
+def validate_admin_session(token_or_hash: str) -> Optional[dict]:
+    import hashlib
+    if len(token_or_hash) == 64 and all(c in "0123456789abcdefABCDEF" for c in token_or_hash):
+        t_hash = token_or_hash.lower()
+    else:
+        t_hash = hashlib.sha256(token_or_hash.encode("utf-8")).hexdigest()
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT s.*, u.username, u.totp_enabled
+        FROM admin_sessions s
+        JOIN admin_users u ON s.user_id = u.id
+        WHERE s.token_hash = ? AND s.expires_at > CURRENT_TIMESTAMP
+        LIMIT 1
+    """, (t_hash,))
+    row = c.fetchone()
+    if row:
+        c.execute("UPDATE admin_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE id = ?", (row["id"],))
+        conn.commit()
+    conn.close()
+    return dict(row) if row else None
+
+def revoke_admin_session(token_or_hash: str) -> bool:
+    import hashlib
+    if len(token_or_hash) == 64 and all(c in "0123456789abcdefABCDEF" for c in token_or_hash):
+        t_hash = token_or_hash.lower()
+    else:
+        t_hash = hashlib.sha256(token_or_hash.encode("utf-8")).hexdigest()
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM admin_sessions WHERE token_hash = ?", (t_hash,))
+    conn.commit()
+    conn.close()
+    return True
+
+def revoke_all_admin_sessions(user_id: int = 1, keep_token_hash: Optional[str] = None) -> int:
+    conn = get_db()
+    c = conn.cursor()
+    if keep_token_hash:
+        c.execute("DELETE FROM admin_sessions WHERE user_id = ? AND token_hash != ?", (user_id, keep_token_hash))
+    else:
+        c.execute("DELETE FROM admin_sessions WHERE user_id = ?", (user_id,))
+    count = c.rowcount
+    conn.commit()
+    conn.close()
+    return count
+
+def get_active_admin_sessions(user_id: int = 1) -> List[dict]:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, token_hash, ip_address, user_agent, created_at, expires_at, last_active_at
+        FROM admin_sessions
+        WHERE user_id = ? AND expires_at > CURRENT_TIMESTAMP
+        ORDER BY last_active_at DESC
+    """, (user_id,))
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+def record_security_event(event_type: str, details_or_ip: str = "", ua: str = "", status: str = "success", details: str = "", ip: str = "", user_agent: str = ""):
+    conn = get_db()
+    c = conn.cursor()
+    if ip:
+        client_ip = ip
+        event_details = details or details_or_ip
+    else:
+        client_ip = details_or_ip
+        event_details = details
+    client_ua = user_agent or ua
+    try:
+        c.execute("""
+            INSERT INTO security_logs (event_type, ip_address, user_agent, status, details)
+            VALUES (?, ?, ?, ?, ?)
+        """, (event_type, client_ip, client_ua[:250], status, str(event_details)[:500]))
+        conn.commit()
+    except Exception as e:
+        print(f"Error logging security event: {e}")
+    finally:
+        conn.close()
+
+def get_security_events(limit: int = 50) -> List[dict]:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, event_type, ip_address, status, details, created_at
+        FROM security_logs
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,))
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+def count_recent_failed_logins(ip: str, minutes: int = 5) -> int:
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT COUNT(id)
+        FROM security_logs
+        WHERE event_type = 'login_failed' AND ip_address = ?
+          AND created_at >= datetime('now', '-' || ? || ' minutes')
+    """, (ip, minutes))
+    count = c.fetchone()[0] or 0
+    conn.close()
+    return count
 
 if __name__ == "__main__":
     init_db()

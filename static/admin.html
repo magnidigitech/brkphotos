@@ -1875,21 +1875,82 @@
 
 <!-- Login Authentication Screen -->
 <div id="authView" class="auth-wrap">
-  <div class="login-card">
-    <div style="width:40px;height:40px;border-radius:10px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
-      <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    </div>
-    <h1 style="font-size:1.35rem;font-weight:700;margin-bottom:0.35rem;">BRK Photos Admin</h1>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;">Enter your administrative security key to access the multi-event console.</p>
-    
-    <form id="loginForm" onsubmit="handleAdminLogin(); return false;">
-      <div class="field">
-        <label for="adminKey">Security Passkey</label>
-        <input type="password" id="adminKey" required placeholder="••••••••••••" autocomplete="current-password">
+  <div class="login-card" style="max-width:420px;width:100%;">
+    <!-- Step 1: Primary Login (Password / Passkey) -->
+    <div id="stepPasswordWrap">
+      <div style="width:40px;height:40px;border-radius:10px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
+        <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </div>
-      <button type="submit" id="loginBtn" class="btn-primary" style="width:100%;justify-content:center;padding:0.75rem;">Authenticate</button>
-      <div id="loginAlert" style="margin-top:0.8rem;color:var(--err);font-size:0.82rem;" hidden></div>
-    </form>
+      <h1 style="font-size:1.35rem;font-weight:700;margin-bottom:0.35rem;">BRK Photos Admin</h1>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Sign in with your master credentials, passkey, or two-step verification.</p>
+
+      <!-- Passkey Quick Login Button -->
+      <button type="button" id="passkeyLoginBtn" class="btn-outline" onclick="handlePasskeyLogin()" style="width:100%;justify-content:center;padding:0.7rem;margin-bottom:1rem;gap:0.5rem;font-weight:600;display:flex;align-items:center;border-color:var(--line);">
+        <svg class="icon" style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3z"/><circle cx="12" cy="16" r="1"/></svg>
+        Sign in with Passkey / Face ID
+      </button>
+
+      <div style="display:flex;align-items:center;margin:1rem 0;color:var(--muted);font-size:0.8rem;">
+        <div style="flex:1;height:1px;background:var(--line);"></div>
+        <span style="padding:0 0.75rem;">or enter password</span>
+        <div style="flex:1;height:1px;background:var(--line);"></div>
+      </div>
+      
+      <form id="loginForm" onsubmit="handleAdminLogin(); return false;">
+        <div class="field" style="margin-bottom:1rem;">
+          <label for="adminKey" style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">Admin Password</label>
+          <input type="password" id="adminKey" required placeholder="••••••••••••" autocomplete="current-password" style="width:100%;padding:0.65rem;border-radius:8px;border:1px solid var(--line);">
+        </div>
+        <button type="submit" id="loginBtn" class="btn-primary" style="width:100%;justify-content:center;padding:0.75rem;font-weight:600;">Sign In</button>
+        <div id="loginAlert" style="margin-top:0.8rem;color:var(--err);font-size:0.82rem;padding:0.5rem;background:#fef2f2;border-radius:6px;border:1px solid #fee2e2;" hidden></div>
+      </form>
+    </div>
+
+    <!-- Step 2: Two-Factor Authenticator (TOTP) -->
+    <div id="step2faWrap" hidden>
+      <div style="width:40px;height:40px;border-radius:10px;background:#0f5c4d;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <h1 style="font-size:1.35rem;font-weight:700;margin-bottom:0.35rem;">Two-Step Verification</h1>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Enter the 6-digit verification code from Google Authenticator, Microsoft Authenticator, or Apple Passwords.</p>
+
+      <form id="step2faForm" onsubmit="handle2faVerify(); return false;">
+        <div class="field" style="margin-bottom:1.25rem;">
+          <label for="totpCodeInput" style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">6-Digit Authenticator Code</label>
+          <input type="text" id="totpCodeInput" required placeholder="000000" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" style="width:100%;padding:0.75rem;font-size:1.35rem;letter-spacing:0.35em;text-align:center;font-family:monospace;font-weight:700;border-radius:8px;border:1.5px solid var(--line);">
+        </div>
+        <button type="submit" id="step2faBtn" class="btn-primary" style="width:100%;justify-content:center;padding:0.75rem;font-weight:600;">Verify & Sign In</button>
+        <div id="step2faAlert" style="margin-top:0.8rem;color:var(--err);font-size:0.82rem;padding:0.5rem;background:#fef2f2;border-radius:6px;border:1px solid #fee2e2;" hidden></div>
+      </form>
+
+      <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:0.6rem;font-size:0.82rem;text-align:center;">
+        <a href="#" onclick="showRecoveryCodeStep(); return false;" style="color:#0f5c4d;font-weight:600;text-decoration:none;">Lost phone? Use an emergency recovery code</a>
+        <a href="#" onclick="resetLoginSteps(); return false;" style="color:var(--muted);text-decoration:none;">← Back to password login</a>
+      </div>
+    </div>
+
+    <!-- Step 3: Emergency Recovery Code -->
+    <div id="stepRecoveryWrap" hidden>
+      <div style="width:40px;height:40px;border-radius:10px;background:#b45309;color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <h1 style="font-size:1.35rem;font-weight:700;margin-bottom:0.35rem;">Emergency Recovery Code</h1>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Enter one of your 10-character emergency recovery codes. Each code can only be used once.</p>
+
+      <form id="stepRecoveryForm" onsubmit="handleRecoveryCodeVerify(); return false;">
+        <div class="field" style="margin-bottom:1.25rem;">
+          <label for="recoveryCodeInput" style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">Recovery Code</label>
+          <input type="text" id="recoveryCodeInput" required placeholder="XXXXX-XXXXX" autocomplete="off" style="width:100%;padding:0.75rem;font-size:1.1rem;letter-spacing:0.15em;text-align:center;font-family:monospace;font-weight:700;border-radius:8px;border:1.5px solid var(--line);text-transform:uppercase;">
+        </div>
+        <button type="submit" id="stepRecoveryBtn" class="btn-primary" style="width:100%;justify-content:center;padding:0.75rem;font-weight:600;background:#b45309;border-color:#b45309;">Authenticate with Recovery Code</button>
+        <div id="stepRecoveryAlert" style="margin-top:0.8rem;color:var(--err);font-size:0.82rem;padding:0.5rem;background:#fef2f2;border-radius:6px;border:1px solid #fee2e2;" hidden></div>
+      </form>
+
+      <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:0.6rem;font-size:0.82rem;text-align:center;">
+        <a href="#" onclick="show2faStep(); return false;" style="color:#0f5c4d;font-weight:600;text-decoration:none;">← Back to Authenticator app code</a>
+        <a href="#" onclick="resetLoginSteps(); return false;" style="color:var(--muted);text-decoration:none;">Back to password login</a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3266,10 +3327,241 @@
             <button class="btn-primary" onclick="saveSystemSettings()" style="padding:0.6rem 1.4rem;">Save Settings</button>
           </div>
         </div>
+
+        <!-- Administrator Security & Multi-Factor Authentication Card -->
+        <div class="card-block" style="margin-top:1.5rem;">
+          <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+            <div>
+              <h3 style="font-size:1.05rem;font-weight:700;">Administrator Security & Multi-Factor Authentication</h3>
+              <p style="font-size:0.82rem;color:var(--muted);margin-top:0.2rem;">Manage your master credentials, authenticator app (2FA), passkeys, active sessions, and security logs.</p>
+            </div>
+            <button class="btn-outline" onclick="loadSecuritySettings(); loadSecurityLogs();" style="font-size:0.82rem;padding:0.4rem 0.8rem;gap:0.35rem;display:flex;align-items:center;">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Refresh Security
+            </button>
+          </div>
+
+          <div class="card-block-body">
+            
+            <!-- SECTION 1: MASTER PASSWORD -->
+            <div style="padding-bottom:1.5rem;margin-bottom:1.5rem;border-bottom:1px solid var(--line);">
+              <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:0.35rem;">Master Admin Password</h4>
+              <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">Update your master administrative password. Passwords are saved with PBKDF2-HMAC-SHA256 (600,000 iterations).</p>
+              
+              <form id="changePasswordForm" onsubmit="handleAdminChangePassword(); return false;" style="max-width:540px;display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="field" style="grid-column:1 / -1;">
+                  <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:0.3rem;">Current Admin Password</label>
+                  <input type="password" id="currentPwdInput" required placeholder="••••••••••••" style="width:100%;padding:0.5rem 0.75rem;border-radius:6px;border:1px solid var(--line);">
+                </div>
+                <div class="field">
+                  <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:0.3rem;">New Password (min 8 chars)</label>
+                  <input type="password" id="newPwdInput" required minlength="8" placeholder="••••••••••••" style="width:100%;padding:0.5rem 0.75rem;border-radius:6px;border:1px solid var(--line);">
+                </div>
+                <div class="field">
+                  <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:0.3rem;">Confirm New Password</label>
+                  <input type="password" id="confirmPwdInput" required minlength="8" placeholder="••••••••••••" style="width:100%;padding:0.5rem 0.75rem;border-radius:6px;border:1px solid var(--line);">
+                </div>
+                <div style="grid-column:1 / -1;display:flex;align-items:center;gap:1rem;">
+                  <button type="submit" id="savePwdBtn" class="btn-primary" style="padding:0.55rem 1.25rem;">Update Password</button>
+                  <span id="pwdStatusMsg" style="font-size:0.82rem;font-weight:600;" hidden></span>
+                </div>
+              </form>
+            </div>
+
+            <!-- SECTION 2: TWO-STEP VERIFICATION (TOTP) -->
+            <div style="padding-bottom:1.5rem;margin-bottom:1.5rem;border-bottom:1px solid var(--line);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:0.75rem;">
+                <div>
+                  <div style="display:flex;align-items:center;gap:0.6rem;">
+                    <h4 style="font-size:0.95rem;font-weight:700;">Two-Step Verification (Authenticator App)</h4>
+                    <span id="totpStatusBadge" style="padding:0.2rem 0.6rem;font-size:0.75rem;font-weight:700;border-radius:999px;background:#f3f4f6;color:var(--muted);">Checking...</span>
+                  </div>
+                  <p style="font-size:0.82rem;color:var(--muted);margin-top:0.25rem;">Protect your account with Google Authenticator, Microsoft Authenticator, Apple Passwords, or 1Password (RFC 6238 TOTP).</p>
+                </div>
+                <div id="totpActionBtns">
+                  <button id="enable2faBtn" class="btn-primary" onclick="openTotpSetupModal()" style="padding:0.5rem 1rem;font-size:0.85rem;">Enable Authenticator (2FA)</button>
+                  <button id="disable2faBtn" class="btn-outline" onclick="openDisableTotpModal()" style="padding:0.5rem 1rem;font-size:0.85rem;color:var(--err);border-color:var(--err);" hidden>Disable 2FA</button>
+                </div>
+              </div>
+
+              <!-- Recovery Codes Status -->
+              <div id="recoveryCodesSection" style="background:#f9fafb;padding:1rem;border-radius:8px;border:1px solid var(--line);margin-top:1rem;" hidden>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+                  <div>
+                    <span style="font-weight:700;font-size:0.85rem;">Emergency Single-Use Recovery Codes:</span>
+                    <span id="recoveryCodesCount" style="margin-left:0.5rem;font-weight:700;color:#0f5c4d;">10 of 10 available</span>
+                    <p style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem;">Single-use backup codes allow account access if you lose your phone or authenticator app.</p>
+                  </div>
+                  <button class="btn-outline" onclick="openRegenerateRecoveryModal()" style="font-size:0.82rem;padding:0.4rem 0.8rem;">Regenerate New Codes</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 3: PASSKEYS & BIOMETRIC LOGIN -->
+            <div style="padding-bottom:1.5rem;margin-bottom:1.5rem;border-bottom:1px solid var(--line);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:0.75rem;">
+                <div>
+                  <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:0.25rem;">Passkeys & Biometric Authentication</h4>
+                  <p style="font-size:0.82rem;color:var(--muted);">Sign in instantly without entering passwords using Apple Face ID, Touch ID, Windows Hello, or FIDO2 YubiKeys.</p>
+                </div>
+                <button class="btn-primary" onclick="registerNewPasskey()" style="padding:0.5rem 1rem;font-size:0.85rem;gap:0.4rem;display:flex;align-items:center;">
+                  <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Register New Passkey
+                </button>
+              </div>
+
+              <!-- Passkeys List Container -->
+              <div id="passkeysListContainer" style="margin-top:1rem;">
+                <div style="color:var(--muted);font-size:0.85rem;">No passkeys registered on this device yet.</div>
+              </div>
+            </div>
+
+            <!-- SECTION 4: ACTIVE SESSIONS -->
+            <div style="padding-bottom:1.5rem;margin-bottom:1.5rem;border-bottom:1px solid var(--line);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:0.75rem;">
+                <div>
+                  <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:0.25rem;">Active Admin Sessions</h4>
+                  <p style="font-size:0.82rem;color:var(--muted);">Review all browser sessions currently authorized to manage BRK Photos.</p>
+                </div>
+                <button class="btn-outline" onclick="revokeOtherSessions()" style="font-size:0.82rem;padding:0.4rem 0.8rem;color:var(--err);border-color:var(--err);">
+                  Revoke All Other Sessions
+                </button>
+              </div>
+
+              <!-- Sessions Table -->
+              <div id="sessionsListContainer" style="overflow-x:auto;margin-top:1rem;">
+                <table style="width:100%;font-size:0.82rem;border-collapse:collapse;">
+                  <thead>
+                    <tr style="text-align:left;border-bottom:1.5px solid var(--line);color:var(--muted);">
+                      <th style="padding:0.5rem 0.75rem;">Device / Browser</th>
+                      <th style="padding:0.5rem 0.75rem;">IP Address</th>
+                      <th style="padding:0.5rem 0.75rem;">Created</th>
+                      <th style="padding:0.5rem 0.75rem;">Last Active</th>
+                      <th style="padding:0.5rem 0.75rem;text-align:right;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sessionsTableBody">
+                    <tr><td colspan="5" style="padding:1rem;text-align:center;color:var(--muted);">Loading sessions...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- SECTION 5: SECURITY ACTIVITY AUDIT LOG -->
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                <div>
+                  <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:0.25rem;">Recent Security Activity</h4>
+                  <p style="font-size:0.82rem;color:var(--muted);">Audit trail of logins, password updates, 2FA verifications, and failed authentication attempts.</p>
+                </div>
+                <button class="btn-outline" onclick="loadSecurityLogs()" style="font-size:0.82rem;padding:0.4rem 0.8rem;">Refresh Logs</button>
+              </div>
+
+              <div id="securityLogsContainer" style="overflow-x:auto;max-height:300px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;">
+                <table style="width:100%;font-size:0.8rem;border-collapse:collapse;">
+                  <thead style="position:sticky;top:0;background:#f9fafb;z-index:2;">
+                    <tr style="text-align:left;border-bottom:1.5px solid var(--line);color:var(--muted);">
+                      <th style="padding:0.5rem 0.75rem;">Timestamp (IST)</th>
+                      <th style="padding:0.5rem 0.75rem;">Event Type</th>
+                      <th style="padding:0.5rem 0.75rem;">Details</th>
+                      <th style="padding:0.5rem 0.75rem;">IP Address</th>
+                      <th style="padding:0.5rem 0.75rem;">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="securityLogsTableBody">
+                    <tr><td colspan="5" style="padding:1rem;text-align:center;color:var(--muted);">Loading security audit log...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </section>
 
     </div>
   </main>
+</div>
+
+<!-- TOTP Setup Modal -->
+<div id="totpSetupModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width:540px;">
+    <button class="modal-close" onclick="closeModal('totpSetupModal')">&times;</button>
+    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Set Up Two-Factor Authentication</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Scan this QR code with Google Authenticator, Microsoft Authenticator, Apple Passwords, or 1Password.</p>
+    
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:1.25rem;">
+      <div id="totpQrCodeImg" style="background:#fff;padding:12px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:0.75rem;min-height:160px;display:flex;align-items:center;justify-content:center;"></div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.25rem;">Can't scan? Enter secret key manually:</div>
+      <code id="totpSecretText" style="font-family:monospace;font-weight:700;font-size:0.95rem;background:#f3f4f6;padding:0.35rem 0.75rem;border-radius:6px;letter-spacing:0.1em;user-select:all;cursor:pointer;" onclick="navigator.clipboard.writeText(this.textContent); alert('Secret key copied to clipboard!');" title="Click to copy"></code>
+    </div>
+
+    <!-- Recovery Codes Banner in Modal -->
+    <div style="background:#fefce8;border:1px solid #fef08a;border-radius:8px;padding:0.85rem;margin-bottom:1.25rem;">
+      <div style="font-weight:700;font-size:0.82rem;color:#854d0e;margin-bottom:0.35rem;">⚠️ Save your Emergency Recovery Codes:</div>
+      <p style="font-size:0.78rem;color:#713f12;margin-bottom:0.5rem;">If you lose your device, these single-use codes are the only way to recover account access.</p>
+      <div id="totpModalRecoveryCodes" style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;font-family:monospace;font-size:0.8rem;background:#fff;padding:0.5rem;border-radius:6px;border:1px solid #fef08a;"></div>
+      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+        <button type="button" class="btn-outline" onclick="copyRecoveryCodesFromModal()" style="font-size:0.75rem;padding:0.25rem 0.6rem;">Copy Codes</button>
+        <button type="button" class="btn-outline" onclick="downloadRecoveryCodesFromModal()" style="font-size:0.75rem;padding:0.25rem 0.6rem;">Download .TXT</button>
+      </div>
+    </div>
+
+    <!-- Verification Step -->
+    <form id="verifyTotpSetupForm" onsubmit="handleConfirmTotpSetup(); return false;">
+      <div class="field" style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.35rem;">Enter 6-digit code shown in app to confirm pairing:</label>
+        <input type="text" id="confirmTotpCodeInput" required placeholder="000000" inputmode="numeric" maxlength="6" style="width:100%;padding:0.65rem;text-align:center;font-size:1.25rem;font-family:monospace;letter-spacing:0.25em;border-radius:6px;border:1.5px solid var(--line);">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem;">
+        <button type="button" class="btn-outline" onclick="closeModal('totpSetupModal')">Cancel</button>
+        <button type="submit" id="confirmTotpBtn" class="btn-primary" style="padding:0.6rem 1.4rem;">Verify & Activate 2FA</button>
+      </div>
+      <div id="confirmTotpAlert" style="margin-top:0.75rem;color:var(--err);font-size:0.82rem;" hidden></div>
+    </form>
+  </div>
+</div>
+
+<!-- Disable TOTP Modal -->
+<div id="disableTotpModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('disableTotpModal')">&times;</button>
+    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;color:var(--err);">Disable Two-Step Verification?</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Disabling two-step verification lowers account security. Please confirm your master admin password to proceed.</p>
+    
+    <form id="disableTotpForm" onsubmit="handleConfirmDisableTotp(); return false;">
+      <div class="field" style="margin-bottom:1.25rem;">
+        <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.35rem;">Master Admin Password</label>
+        <input type="password" id="disableTotpPwdInput" required placeholder="••••••••••••" style="width:100%;padding:0.65rem;border-radius:6px;border:1px solid var(--line);">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem;">
+        <button type="button" class="btn-outline" onclick="closeModal('disableTotpModal')">Cancel</button>
+        <button type="submit" id="confirmDisableTotpBtn" class="btn-primary" style="background:var(--err);border-color:var(--err);">Disable 2FA</button>
+      </div>
+      <div id="disableTotpAlert" style="margin-top:0.75rem;color:var(--err);font-size:0.82rem;" hidden></div>
+    </form>
+  </div>
+</div>
+
+<!-- Regenerate Recovery Codes Modal -->
+<div id="regenRecoveryModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('regenRecoveryModal')">&times;</button>
+    <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.35rem;">Regenerate Recovery Codes</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">This will invalidate all previously generated recovery codes and create 10 new single-use codes.</p>
+    
+    <form id="regenRecoveryForm" onsubmit="handleConfirmRegenRecovery(); return false;">
+      <div class="field" style="margin-bottom:1.25rem;">
+        <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.35rem;">Confirm Master Admin Password</label>
+        <input type="password" id="regenRecoveryPwdInput" required placeholder="••••••••••••" style="width:100%;padding:0.65rem;border-radius:6px;border:1px solid var(--line);">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem;">
+        <button type="button" class="btn-outline" onclick="closeModal('regenRecoveryModal')">Cancel</button>
+        <button type="submit" id="confirmRegenRecoveryBtn" class="btn-primary">Generate New Codes</button>
+      </div>
+      <div id="regenRecoveryAlert" style="margin-top:0.75rem;color:var(--err);font-size:0.82rem;" hidden></div>
+    </form>
+  </div>
 </div>
 
 <!-- Create Album Modal -->
@@ -3848,6 +4140,55 @@ async function checkAuth() {
   }
 }
 
+let currentChallengeId = null;
+
+function bufferToBase64url(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let str = '';
+  for (const b of bytes) str += String.fromCharCode(b);
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function base64urlToBuffer(base64url) {
+  let str = (base64url || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4 !== 0) str += '=';
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function resetLoginSteps() {
+  currentChallengeId = null;
+  if ($('stepPasswordWrap')) $('stepPasswordWrap').hidden = false;
+  if ($('step2faWrap')) $('step2faWrap').hidden = true;
+  if ($('stepRecoveryWrap')) $('stepRecoveryWrap').hidden = true;
+  if ($('loginAlert')) $('loginAlert').hidden = true;
+  if ($('step2faAlert')) $('step2faAlert').hidden = true;
+  if ($('stepRecoveryAlert')) $('stepRecoveryAlert').hidden = true;
+  if ($('adminKey')) $('adminKey').focus();
+}
+
+function show2faStep() {
+  if ($('stepPasswordWrap')) $('stepPasswordWrap').hidden = true;
+  if ($('step2faWrap')) $('step2faWrap').hidden = false;
+  if ($('stepRecoveryWrap')) $('stepRecoveryWrap').hidden = true;
+  if ($('totpCodeInput')) {
+    $('totpCodeInput').value = '';
+    $('totpCodeInput').focus();
+  }
+}
+
+function showRecoveryCodeStep() {
+  if ($('stepPasswordWrap')) $('stepPasswordWrap').hidden = true;
+  if ($('step2faWrap')) $('step2faWrap').hidden = true;
+  if ($('stepRecoveryWrap')) $('stepRecoveryWrap').hidden = false;
+  if ($('recoveryCodeInput')) {
+    $('recoveryCodeInput').value = '';
+    $('recoveryCodeInput').focus();
+  }
+}
+
 async function handleAdminLogin() {
   const keyInput = $('adminKey');
   if (!keyInput) return;
@@ -3867,6 +4208,14 @@ async function handleAdminLogin() {
       body: JSON.stringify({ key })
     });
     const j = await res.json();
+    
+    // Check if 2FA is required
+    if (res.ok && j.status === '2fa_required') {
+      currentChallengeId = j.challenge_id;
+      show2faStep();
+      return;
+    }
+
     if (res.ok && j.token) {
       localStorage.setItem('admin_token', j.token);
       localStorage.setItem('admin_active_tab', 'dashboard');
@@ -3876,7 +4225,7 @@ async function handleAdminLogin() {
       switchTab('dashboard');
     } else {
       if (alertEl) {
-        alertEl.textContent = j.detail || 'Invalid security passkey.';
+        alertEl.textContent = j.detail || 'Incorrect security passkey or password.';
         alertEl.hidden = false;
       }
     }
@@ -3888,7 +4237,196 @@ async function handleAdminLogin() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Authenticate';
+      btn.textContent = 'Sign In';
+    }
+  }
+}
+
+async function handle2faVerify() {
+  const codeInput = $('totpCodeInput');
+  if (!codeInput || !currentChallengeId) return;
+  const code = codeInput.value.trim();
+  if (!code) return;
+
+  const btn = $('step2faBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+  }
+  const alertEl = $('step2faAlert');
+  if (alertEl) alertEl.hidden = true;
+
+  try {
+    const res = await fetch('/api/admin/auth/2fa/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ challenge_id: currentChallengeId, code: code })
+    });
+    const j = await res.json();
+    if (res.ok && j.token) {
+      localStorage.setItem('admin_token', j.token);
+      localStorage.setItem('admin_active_tab', 'dashboard');
+      $('authView').hidden = true;
+      $('appShell').hidden = false;
+      resetLoginSteps();
+      await checkAuth();
+      switchTab('dashboard');
+    } else {
+      if (alertEl) {
+        alertEl.textContent = j.detail || 'Invalid 6-digit authenticator code.';
+        alertEl.hidden = false;
+      }
+    }
+  } catch (err) {
+    if (alertEl) {
+      alertEl.textContent = 'Connection error: ' + (err.message || 'Verification failed.');
+      alertEl.hidden = false;
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Verify & Sign In';
+    }
+  }
+}
+
+async function handleRecoveryCodeVerify() {
+  const codeInput = $('recoveryCodeInput');
+  if (!codeInput || !currentChallengeId) return;
+  const code = codeInput.value.trim();
+  if (!code) return;
+
+  const btn = $('stepRecoveryBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+  }
+  const alertEl = $('stepRecoveryAlert');
+  if (alertEl) alertEl.hidden = true;
+
+  try {
+    const res = await fetch('/api/admin/auth/recovery-code/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ challenge_id: currentChallengeId, recovery_code: code })
+    });
+    const j = await res.json();
+    if (res.ok && j.token) {
+      localStorage.setItem('admin_token', j.token);
+      localStorage.setItem('admin_active_tab', 'dashboard');
+      if (j.warning) {
+        alert(j.warning);
+      }
+      $('authView').hidden = true;
+      $('appShell').hidden = false;
+      resetLoginSteps();
+      await checkAuth();
+      switchTab('dashboard');
+    } else {
+      if (alertEl) {
+        alertEl.textContent = j.detail || 'Invalid or already-consumed recovery code.';
+        alertEl.hidden = false;
+      }
+    }
+  } catch (err) {
+    if (alertEl) {
+      alertEl.textContent = 'Connection error: ' + (err.message || 'Recovery failed.');
+      alertEl.hidden = false;
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Authenticate with Recovery Code';
+    }
+  }
+}
+
+async function handlePasskeyLogin() {
+  const alertEl = $('loginAlert');
+  if (alertEl) alertEl.hidden = true;
+
+  if (!window.PublicKeyCredential) {
+    if (alertEl) {
+      alertEl.textContent = 'Passkeys are not supported by this browser. Please use password login.';
+      alertEl.hidden = false;
+    }
+    return;
+  }
+
+  const btn = $('passkeyLoginBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Connecting Passkey...';
+  }
+
+  try {
+    // 1. Fetch challenge from backend
+    const chalRes = await fetch('/api/admin/auth/passkey/generate-challenge', { method: 'POST' });
+    const chalData = await chalRes.json();
+    if (!chalRes.ok) {
+      throw new Error(chalData.detail || 'Could not initialize passkey login.');
+    }
+
+    // 2. Format options for WebAuthn get
+    const publicKeyOptions = {
+      challenge: base64urlToBuffer(chalData.challenge),
+      rpId: chalData.rpId,
+      allowCredentials: (chalData.allowCredentials || []).map(c => ({
+        type: c.type,
+        id: base64urlToBuffer(c.id),
+        transports: c.transports
+      })),
+      userVerification: chalData.userVerification || 'preferred',
+      timeout: chalData.timeout || 60000
+    };
+
+    // 3. Request credential from browser / authenticator
+    const credential = await navigator.credentials.get({ publicKey: publicKeyOptions });
+    if (!credential) throw new Error('Passkey verification was cancelled.');
+
+    // 4. Send assertion to server
+    const clientDataJSON = bufferToBase64url(credential.response.clientDataJSON);
+    const authenticatorData = bufferToBase64url(credential.response.authenticatorData);
+    const signature = bufferToBase64url(credential.response.signature);
+    const credentialId = credential.id;
+
+    const verifyRes = await fetch('/api/admin/auth/passkey/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        challenge_id: chalData.challenge_id,
+        credential_id: credentialId,
+        client_data_json: clientDataJSON,
+        authenticator_data: authenticatorData,
+        signature: signature
+      })
+    });
+    const verifyData = await verifyRes.json();
+    if (!verifyRes.ok) {
+      throw new Error(verifyData.detail || 'Passkey verification failed on server.');
+    }
+
+    // 5. Store token & enter admin console
+    localStorage.setItem('admin_token', verifyData.token);
+    localStorage.setItem('admin_active_tab', 'dashboard');
+    $('authView').hidden = true;
+    $('appShell').hidden = false;
+    await checkAuth();
+    switchTab('dashboard');
+  } catch (err) {
+    if (err.name !== 'NotAllowedError') {
+      if (alertEl) {
+        alertEl.textContent = 'Passkey authentication failed: ' + (err.message || 'Cancelled');
+        alertEl.hidden = false;
+      }
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg class="icon" style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3z"/><circle cx="12" cy="16" r="1"/></svg>
+        Sign in with Passkey / Face ID
+      `;
     }
   }
 }
@@ -7276,6 +7814,10 @@ async function loadSystemSettings() {
       $('defaultSlugInput').value = s.default_event_slug;
     }
   } catch (e) {}
+
+  // Also load Security & Multi-Factor settings and audit logs
+  loadSecuritySettings();
+  loadSecurityLogs();
 }
 
 async function saveSystemSettings() {
@@ -7297,6 +7839,584 @@ async function saveSystemSettings() {
     alert('Settings and AI face-matching thresholds saved successfully.');
   } catch (e) {
     alert('Error saving settings: ' + e.message);
+  }
+}
+
+// ===========================================================================
+// ADMIN SECURITY & MULTI-FACTOR AUTHENTICATION CONTROLLER
+// ===========================================================================
+
+let cachedTotpSetupData = null;
+
+async function loadSecuritySettings() {
+  try {
+    const res = await fetch('/api/admin/security/status');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // 1. Two-Step Verification (TOTP)
+    const badge = $('totpStatusBadge');
+    const enableBtn = $('enable2faBtn');
+    const disableBtn = $('disable2faBtn');
+    const recoverySec = $('recoveryCodesSection');
+    const recoveryCount = $('recoveryCodesCount');
+
+    if (badge) {
+      if (data.totp_enabled) {
+        badge.textContent = 'Active (2FA Protected)';
+        badge.style.background = '#dcfce7';
+        badge.style.color = '#15803d';
+        if (enableBtn) enableBtn.hidden = true;
+        if (disableBtn) disableBtn.hidden = false;
+        if (recoverySec) recoverySec.hidden = false;
+      } else {
+        badge.textContent = 'Disabled (Password Only)';
+        badge.style.background = '#fef9c3';
+        badge.style.color = '#854d0e';
+        if (enableBtn) enableBtn.hidden = false;
+        if (disableBtn) disableBtn.hidden = true;
+        if (recoverySec) recoverySec.hidden = true;
+      }
+    }
+
+    if (recoveryCount && data.recovery_codes) {
+      const unused = data.recovery_codes.unused_count || 0;
+      const total = data.recovery_codes.total_count || 0;
+      recoveryCount.textContent = `${unused} of ${total} available`;
+      recoveryCount.style.color = unused > 2 ? '#0f5c4d' : '#dc2626';
+    }
+
+    // 2. Passkeys List
+    renderPasskeysList(data.passkeys || []);
+
+    // 3. Active Sessions List
+    renderSessionsList(data.active_sessions || []);
+
+  } catch (err) {
+    console.error('Failed to load security settings:', err);
+  }
+}
+
+function renderPasskeysList(passkeys) {
+  const container = $('passkeysListContainer');
+  if (!container) return;
+
+  if (passkeys.length === 0) {
+    container.innerHTML = `
+      <div style="padding:1rem;background:#f9fafb;border-radius:8px;border:1px dashed var(--line);text-align:center;color:var(--muted);font-size:0.85rem;">
+        No passkeys registered yet. Click <strong>"Register New Passkey"</strong> to enable instant biometric login with Face ID, Touch ID, or Windows Hello.
+      </div>
+    `;
+    return;
+  }
+
+  let html = `
+    <div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;">
+      <table style="width:100%;font-size:0.82rem;border-collapse:collapse;">
+        <thead>
+          <tr style="text-align:left;background:#f9fafb;border-bottom:1px solid var(--line);color:var(--muted);">
+            <th style="padding:0.6rem 0.75rem;">Device Name</th>
+            <th style="padding:0.6rem 0.75rem;">Registered On</th>
+            <th style="padding:0.6rem 0.75rem;">Last Used</th>
+            <th style="padding:0.6rem 0.75rem;text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  passkeys.forEach(p => {
+    html += `
+      <tr style="border-bottom:1px solid var(--line);">
+        <td style="padding:0.65rem 0.75rem;font-weight:600;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <svg class="icon" style="width:16px;height:16px;color:#0f5c4d;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            ${escapeHtml(p.device_name || 'Passkey Device')}
+          </div>
+        </td>
+        <td style="padding:0.65rem 0.75rem;color:var(--muted);">${escapeHtml(p.created_at || 'Recently')}</td>
+        <td style="padding:0.65rem 0.75rem;color:var(--muted);">${escapeHtml(p.last_used_at || 'Never')}</td>
+        <td style="padding:0.65rem 0.75rem;text-align:right;">
+          <button class="btn-outline" onclick="renamePasskey(${p.id}, '${escapeHtml(p.device_name)}')" style="font-size:0.75rem;padding:0.25rem 0.5rem;margin-right:0.35rem;">Rename</button>
+          <button class="btn-outline" onclick="deletePasskey(${p.id}, '${escapeHtml(p.device_name)}')" style="font-size:0.75rem;padding:0.25rem 0.5rem;color:var(--err);border-color:var(--err);">Revoke</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+function renderSessionsList(sessions) {
+  const tbody = $('sessionsTableBody');
+  if (!tbody) return;
+
+  if (sessions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:1rem;text-align:center;color:var(--muted);">No active sessions found.</td></tr>';
+    return;
+  }
+
+  tbody.replaceChildren();
+  sessions.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--line)';
+
+    const currentBadge = s.is_current ? `<span class="badge" style="background:#dcfce7;color:#15803d;font-size:0.7rem;padding:0.15rem 0.45rem;border-radius:4px;margin-left:0.4rem;">Current Session</span>` : '';
+    const deviceStr = escapeHtml(s.user_agent ? (s.user_agent.length > 50 ? s.user_agent.substring(0, 50) + '...' : s.user_agent) : 'Browser');
+
+    tr.innerHTML = `
+      <td style="padding:0.65rem 0.75rem;font-weight:600;">
+        ${deviceStr}${currentBadge}
+      </td>
+      <td style="padding:0.65rem 0.75rem;font-family:monospace;font-size:0.8rem;">${escapeHtml(s.ip_address || 'Unknown')}</td>
+      <td style="padding:0.65rem 0.75rem;color:var(--muted);">${escapeHtml(s.created_at || '')}</td>
+      <td style="padding:0.65rem 0.75rem;color:var(--muted);">${escapeHtml(s.last_active_at || '')}</td>
+      <td style="padding:0.65rem 0.75rem;text-align:right;">
+        ${s.is_current ? '<span style="color:var(--muted);font-size:0.75rem;">Active Now</span>' : `<button class="btn-outline" onclick="revokeSession(${s.id})" style="font-size:0.75rem;padding:0.25rem 0.5rem;color:var(--err);border-color:var(--err);">Revoke</button>`}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function handleAdminChangePassword() {
+  const currentPwd = $('currentPwdInput')?.value;
+  const newPwd = $('newPwdInput')?.value;
+  const confirmPwd = $('confirmPwdInput')?.value;
+  const statusMsg = $('pwdStatusMsg');
+  const btn = $('savePwdBtn');
+
+  if (!currentPwd || !newPwd) return;
+  if (newPwd !== confirmPwd) {
+    if (statusMsg) {
+      statusMsg.textContent = 'New passwords do not match.';
+      statusMsg.style.color = 'var(--err)';
+      statusMsg.hidden = false;
+    }
+    return;
+  }
+  if (newPwd.length < 8) {
+    if (statusMsg) {
+      statusMsg.textContent = 'Password must be at least 8 characters long.';
+      statusMsg.style.color = 'var(--err)';
+      statusMsg.hidden = false;
+    }
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  if (statusMsg) statusMsg.hidden = true;
+
+  try {
+    const res = await fetch('/api/admin/security/password/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: currentPwd, new_password: newPwd })
+    });
+    const j = await res.json();
+    if (res.ok) {
+      if (statusMsg) {
+        statusMsg.textContent = 'Password updated successfully!';
+        statusMsg.style.color = '#15803d';
+        statusMsg.hidden = false;
+      }
+      $('changePasswordForm')?.reset();
+      loadSecurityLogs();
+    } else {
+      if (statusMsg) {
+        statusMsg.textContent = j.detail || 'Password update failed.';
+        statusMsg.style.color = 'var(--err)';
+        statusMsg.hidden = false;
+      }
+    }
+  } catch (err) {
+    if (statusMsg) {
+      statusMsg.textContent = 'Error: ' + err.message;
+      statusMsg.style.color = 'var(--err)';
+      statusMsg.hidden = false;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function openTotpSetupModal() {
+  try {
+    const res = await fetch('/api/admin/security/totp/setup', { method: 'POST' });
+    const j = await res.json();
+    if (!res.ok) {
+      alert(j.detail || 'Failed to start 2FA setup.');
+      return;
+    }
+
+    cachedTotpSetupData = j;
+    if ($('totpQrCodeImg')) {
+      $('totpQrCodeImg').innerHTML = `<img src="${j.qr_svg}" alt="2FA QR Code" style="width:160px;height:160px;display:block;">`;
+    }
+    if ($('totpSecretText')) {
+      $('totpSecretText').textContent = j.secret;
+    }
+
+    const codesContainer = $('totpModalRecoveryCodes');
+    if (codesContainer && j.recovery_codes) {
+      codesContainer.innerHTML = j.recovery_codes.map(c => `<div>${escapeHtml(c)}</div>`).join('');
+    }
+
+    if ($('confirmTotpCodeInput')) $('confirmTotpCodeInput').value = '';
+    if ($('confirmTotpAlert')) $('confirmTotpAlert').hidden = true;
+
+    openModal('totpSetupModal');
+  } catch (err) {
+    alert('Error setting up 2FA: ' + err.message);
+  }
+}
+
+function copyRecoveryCodesFromModal() {
+  if (!cachedTotpSetupData || !cachedTotpSetupData.recovery_codes) return;
+  const text = "BRK Photos Admin - Emergency Recovery Codes\n" +
+    "Generated on: " + new Date().toISOString() + "\n\n" +
+    cachedTotpSetupData.recovery_codes.join('\n') +
+    "\n\nEach code can only be used once for emergency account access.";
+  navigator.clipboard.writeText(text);
+  alert('Recovery codes copied to clipboard! Save them in a secure password manager.');
+}
+
+function downloadRecoveryCodesFromModal() {
+  if (!cachedTotpSetupData || !cachedTotpSetupData.recovery_codes) return;
+  const text = "BRK Photos Admin - Emergency Recovery Codes\n" +
+    "Generated on: " + new Date().toISOString() + "\n\n" +
+    cachedTotpSetupData.recovery_codes.join('\n') +
+    "\n\nKeep these codes safe. Each code can only be used once.";
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `brk_recovery_codes_${new Date().toISOString().slice(0, 10)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+async function handleConfirmTotpSetup() {
+  const code = $('confirmTotpCodeInput')?.value.trim();
+  const alertEl = $('confirmTotpAlert');
+  const btn = $('confirmTotpBtn');
+
+  if (!code || !cachedTotpSetupData) return;
+  if (btn) btn.disabled = true;
+  if (alertEl) alertEl.hidden = true;
+
+  try {
+    const res = await fetch('/api/admin/security/totp/enable', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: cachedTotpSetupData.secret,
+        code: code,
+        recovery_codes: cachedTotpSetupData.recovery_codes
+      })
+    });
+    const j = await res.json();
+    if (res.ok) {
+      closeModal('totpSetupModal');
+      alert('Two-step verification has been activated successfully! Your account is now protected with 2FA.');
+      loadSecuritySettings();
+      loadSecurityLogs();
+    } else {
+      if (alertEl) {
+        alertEl.textContent = j.detail || 'Verification code incorrect. Please verify device clock and try again.';
+        alertEl.hidden = false;
+      }
+    }
+  } catch (err) {
+    if (alertEl) {
+      alertEl.textContent = 'Connection error: ' + err.message;
+      alertEl.hidden = false;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function openDisableTotpModal() {
+  if ($('disableTotpPwdInput')) $('disableTotpPwdInput').value = '';
+  if ($('disableTotpAlert')) $('disableTotpAlert').hidden = true;
+  openModal('disableTotpModal');
+}
+
+async function handleConfirmDisableTotp() {
+  const pwd = $('disableTotpPwdInput')?.value;
+  const alertEl = $('disableTotpAlert');
+  const btn = $('confirmDisableTotpBtn');
+
+  if (!pwd) return;
+  if (btn) btn.disabled = true;
+  if (alertEl) alertEl.hidden = true;
+
+  try {
+    const res = await fetch('/api/admin/security/totp/disable', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwd })
+    });
+    const j = await res.json();
+    if (res.ok) {
+      closeModal('disableTotpModal');
+      alert('Two-step verification has been disabled.');
+      loadSecuritySettings();
+      loadSecurityLogs();
+    } else {
+      if (alertEl) {
+        alertEl.textContent = j.detail || 'Incorrect password.';
+        alertEl.hidden = false;
+      }
+    }
+  } catch (err) {
+    if (alertEl) {
+      alertEl.textContent = 'Error: ' + err.message;
+      alertEl.hidden = false;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function openRegenerateRecoveryModal() {
+  if ($('regenRecoveryPwdInput')) $('regenRecoveryPwdInput').value = '';
+  if ($('regenRecoveryAlert')) $('regenRecoveryAlert').hidden = true;
+  openModal('regenRecoveryModal');
+}
+
+async function handleConfirmRegenRecovery() {
+  const pwd = $('regenRecoveryPwdInput')?.value;
+  const alertEl = $('regenRecoveryAlert');
+  const btn = $('confirmRegenRecoveryBtn');
+
+  if (!pwd) return;
+  if (btn) btn.disabled = true;
+  if (alertEl) alertEl.hidden = true;
+
+  try {
+    const res = await fetch('/api/admin/security/recovery-codes/regenerate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwd })
+    });
+    const j = await res.json();
+    if (res.ok) {
+      closeModal('regenRecoveryModal');
+      const codes = j.recovery_codes || [];
+      const text = "BRK Photos Admin - Newly Regenerated Emergency Recovery Codes\n" +
+        "Generated on: " + new Date().toISOString() + "\n\n" +
+        codes.join('\n') +
+        "\n\nPrevious recovery codes are now invalid. Keep these safe.";
+      navigator.clipboard.writeText(text);
+      alert('10 new recovery codes generated and copied to clipboard! Save them safely.');
+      loadSecuritySettings();
+      loadSecurityLogs();
+    } else {
+      if (alertEl) {
+        alertEl.textContent = j.detail || 'Incorrect password.';
+        alertEl.hidden = false;
+      }
+    }
+  } catch (err) {
+    if (alertEl) {
+      alertEl.textContent = 'Error: ' + err.message;
+      alertEl.hidden = false;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function registerNewPasskey() {
+  if (!window.PublicKeyCredential) {
+    alert('WebAuthn Passkeys are not supported on this browser or platform.');
+    return;
+  }
+
+  const deviceName = prompt('Enter a friendly name for this passkey device:', (navigator.platform || 'My Device') + ' Passkey');
+  if (!deviceName) return;
+
+  try {
+    // 1. Request registration options from server
+    const chalRes = await fetch('/api/admin/security/passkey/register-challenge', { method: 'POST' });
+    const chalData = await chalRes.json();
+    if (!chalRes.ok) {
+      alert(chalData.detail || 'Failed to start passkey registration.');
+      return;
+    }
+
+    // 2. Prepare options
+    const publicKeyOptions = {
+      challenge: base64urlToBuffer(chalData.challenge),
+      rp: chalData.rp,
+      user: {
+        id: base64urlToBuffer(chalData.user.id),
+        name: chalData.user.name,
+        displayName: chalData.user.displayName
+      },
+      pubKeyCredParams: chalData.pubKeyCredParams,
+      authenticatorSelection: chalData.authenticatorSelection,
+      timeout: chalData.timeout || 60000,
+      excludeCredentials: (chalData.excludeCredentials || []).map(c => ({
+        type: c.type,
+        id: base64urlToBuffer(c.id)
+      }))
+    };
+
+    // 3. Create credential via browser WebAuthn API
+    const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
+    if (!credential) return;
+
+    // 4. Verify on server
+    const clientDataJSON = bufferToBase64url(credential.response.clientDataJSON);
+    const attestationObject = bufferToBase64url(credential.response.attestationObject);
+    const credentialId = credential.id;
+
+    const verifyRes = await fetch('/api/admin/security/passkey/register-verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        challenge_id: chalData.challenge_id,
+        credential_id: credentialId,
+        public_key: attestationObject,
+        device_name: deviceName,
+        client_data_json: clientDataJSON
+      })
+    });
+    const verifyData = await verifyRes.json();
+    if (verifyRes.ok) {
+      alert(`Passkey '${deviceName}' registered successfully! You can now use Face ID / Touch ID to sign in.`);
+      loadSecuritySettings();
+      loadSecurityLogs();
+    } else {
+      alert(verifyData.detail || 'Failed to verify passkey with server.');
+    }
+  } catch (err) {
+    if (err.name !== 'NotAllowedError') {
+      alert('Passkey registration error: ' + err.message);
+    }
+  }
+}
+
+async function renamePasskey(passkeyId, currentName) {
+  const newName = prompt('Enter new device name for this passkey:', currentName);
+  if (!newName || newName === currentName) return;
+
+  try {
+    const res = await fetch(`/api/admin/security/passkeys/${passkeyId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_name: newName })
+    });
+    if (res.ok) {
+      loadSecuritySettings();
+    } else {
+      alert('Failed to rename passkey.');
+    }
+  } catch (err) {
+    alert('Error renaming passkey: ' + err.message);
+  }
+}
+
+async function deletePasskey(passkeyId, deviceName) {
+  if (!confirm(`Are you sure you want to revoke passkey '${deviceName}'? It will no longer be able to log into this system.`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/security/passkeys/${passkeyId}`, { method: 'DELETE' });
+    if (res.ok) {
+      loadSecuritySettings();
+      loadSecurityLogs();
+    } else {
+      alert('Failed to revoke passkey.');
+    }
+  } catch (err) {
+    alert('Error revoking passkey: ' + err.message);
+  }
+}
+
+async function revokeSession(sessionId) {
+  if (!confirm('Revoke this session? The device will be signed out immediately.')) return;
+  try {
+    const res = await fetch('/api/admin/security/sessions/revoke', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId })
+    });
+    if (res.ok) {
+      loadSecuritySettings();
+      loadSecurityLogs();
+    }
+  } catch (e) {
+    alert('Error revoking session: ' + e.message);
+  }
+}
+
+async function revokeOtherSessions() {
+  if (!confirm('Revoke all other active sessions across other devices and browsers?')) return;
+  try {
+    const res = await fetch('/api/admin/security/sessions/revoke', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ revoke_all_others: true })
+    });
+    if (res.ok) {
+      alert('All other sessions have been revoked.');
+      loadSecuritySettings();
+      loadSecurityLogs();
+    }
+  } catch (e) {
+    alert('Error revoking sessions: ' + e.message);
+  }
+}
+
+async function loadSecurityLogs() {
+  const tbody = $('securityLogsTableBody');
+  if (!tbody) return;
+
+  try {
+    const res = await fetch('/api/admin/security/logs?limit=50');
+    if (!res.ok) return;
+    const j = await res.json();
+    const logs = j.events || [];
+
+    tbody.replaceChildren();
+    if (logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:1rem;text-align:center;color:var(--muted);">No security events recorded yet.</td></tr>';
+      return;
+    }
+
+    logs.forEach(log => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--line)';
+
+      let badgeColor = '#6b7280';
+      let badgeBg = '#f3f4f6';
+      if (log.status === 'success') {
+        badgeColor = '#15803d';
+        badgeBg = '#dcfce7';
+      } else if (log.status === 'failed' || log.status === 'blocked') {
+        badgeColor = '#dc2626';
+        badgeBg = '#fee2e2';
+      }
+
+      tr.innerHTML = `
+        <td style="padding:0.6rem 0.75rem;white-space:nowrap;color:var(--muted);">${escapeHtml(log.created_at || '')}</td>
+        <td style="padding:0.6rem 0.75rem;font-weight:600;">${escapeHtml(log.event_type || '')}</td>
+        <td style="padding:0.6rem 0.75rem;color:var(--text);">${escapeHtml(log.details || '')}</td>
+        <td style="padding:0.6rem 0.75rem;font-family:monospace;font-size:0.78rem;">${escapeHtml(log.ip_address || '—')}</td>
+        <td style="padding:0.6rem 0.75rem;">
+          <span style="background:${badgeBg};color:${badgeColor};font-size:0.72rem;font-weight:700;padding:0.15rem 0.45rem;border-radius:4px;">
+            ${escapeHtml(log.status || 'info')}
+          </span>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error('Failed to load security logs:', err);
   }
 }
 
