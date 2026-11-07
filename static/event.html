@@ -2693,68 +2693,70 @@
       to { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
-    /* Persistent Bottom Thumbnail Filmstrip */
+    /* Persistent Bottom Thumbnail Filmstrip - 9-Thumbnail Window */
     .lightbox-filmstrip-bar {
       position: relative;
       z-index: 2200;
       width: 100%;
-      height: clamp(60px, 9.5vh, 76px);
+      height: clamp(62px, 10vh, 76px);
       background: rgba(8, 14, 12, 0.94);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-top: 1px solid rgba(255, 255, 255, 0.14);
       display: flex;
       align-items: center;
+      justify-content: center;
       flex-shrink: 0;
       box-sizing: border-box;
       user-select: none;
       -webkit-user-select: none;
+      padding: 0 6px;
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
     .lightbox-filmstrip-track {
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
+      gap: 5px;
       height: 100%;
       width: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding: 6px 12px;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 6px 2px;
       box-sizing: border-box;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-      scroll-behavior: smooth;
-    }
-
-    .lightbox-filmstrip-track::-webkit-scrollbar {
-      display: none;
+      overflow: hidden;
     }
 
     .filmstrip-thumb {
-      height: 100%;
+      flex: 1 1 0;
+      min-width: 0;
+      max-width: 54px;
+      height: calc(100% - 6px);
       aspect-ratio: 3 / 4;
       border-radius: 6px;
       overflow: hidden;
-      flex-shrink: 0;
       cursor: pointer;
       position: relative;
       background: #182220;
       border: 2px solid transparent;
-      transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease, opacity 0.18s ease;
-      opacity: 0.55;
+      transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.16s ease, opacity 0.16s ease, box-shadow 0.16s ease;
+      opacity: 0.5;
       box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .filmstrip-thumb:hover {
-      opacity: 0.9;
+      opacity: 0.85;
       transform: scale(1.05);
     }
 
     .filmstrip-thumb.active {
       opacity: 1;
       border-color: #ffffff;
-      box-shadow: 0 0 14px rgba(255, 255, 255, 0.5);
+      box-shadow: 0 0 14px rgba(255, 255, 255, 0.55);
       transform: scale(1.08);
       z-index: 2;
     }
@@ -2771,13 +2773,15 @@
     @media (max-width: 480px) {
       .lightbox-filmstrip-bar {
         height: 58px;
+        padding: 0 4px;
       }
       .lightbox-filmstrip-track {
-        gap: 5px;
-        padding: 4px 8px;
+        gap: 4px;
+        padding: 4px 1px;
       }
       .filmstrip-thumb {
         border-radius: 5px;
+        max-width: 46px;
       }
     }
 
@@ -4912,85 +4916,92 @@
       btn4k.setAttribute('download', filename);
     }
 
-    // --- Bottom Filmstrip & Sync ---
-    let filmstripBuiltForCount = 0;
-    let isProgrammaticFilmstripScroll = false;
-    let filmstripScrollTimeout = null;
+    // --- 9-Thumbnail Circular Filmstrip Window ---
+    const FILMSTRIP_WINDOW_SIZE = 9;
 
-    function buildFilmstrip() {
+    function renderFilmstripWindow(centerIndex = currentPhotoIndex) {
       const track = $('lightboxFilmstripTrack');
       if (!track) return;
 
       const total = currentPhotosList.length;
-      if (filmstripBuiltForCount === total && track.children.length === total) {
+      if (total === 0) {
+        track.replaceChildren();
         return;
       }
 
-      const existingCount = track.children.length;
-      if (existingCount > 0 && existingCount < total && filmstripBuiltForCount === existingCount) {
-        const fragment = document.createDocumentFragment();
-        for (let i = existingCount; i < total; i++) {
-          fragment.appendChild(createFilmstripThumbElement(i));
+      // Single source of truth: normalized 0-based circular index
+      const normCenter = ((centerIndex % total) + total) % total;
+
+      // When total >= 9: Display exactly 9 thumbnails with selected photo at 5th position (index 4).
+      // When total < 9: Display all photos (0..total-1) in order without duplicating.
+      const windowSize = Math.min(FILMSTRIP_WINDOW_SIZE, total);
+      const half = Math.floor(windowSize / 2); // 4 when windowSize is 9
+
+      const targetIndices = [];
+      if (total >= FILMSTRIP_WINDOW_SIZE) {
+        for (let offset = -half; offset <= half; offset++) {
+          const idx = ((normCenter + offset) % total + total) % total;
+          targetIndices.push(idx);
         }
-        track.appendChild(fragment);
-        filmstripBuiltForCount = total;
-        return;
+      } else {
+        for (let i = 0; i < total; i++) {
+          targetIndices.push(i);
+        }
       }
 
-      track.replaceChildren();
-      const fragment = document.createDocumentFragment();
-      for (let i = 0; i < total; i++) {
-        fragment.appendChild(createFilmstripThumbElement(i));
+      // Keep exact number of DOM nodes in track
+      while (track.children.length < targetIndices.length) {
+        const thumb = document.createElement('div');
+        thumb.className = 'filmstrip-thumb';
+        const img = document.createElement('img');
+        img.loading = 'eager';
+        img.decoding = 'async';
+        thumb.appendChild(img);
+
+        thumb.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const target = parseInt(thumb.dataset.index, 10);
+          if (!isNaN(target) && target !== currentPhotoIndex) {
+            jumpToPhoto(target);
+          }
+        });
+        track.appendChild(thumb);
       }
-      track.appendChild(fragment);
-      filmstripBuiltForCount = total;
+      while (track.children.length > targetIndices.length) {
+        track.removeChild(track.lastChild);
+      }
+
+      // Update thumbnails in place smoothly without image reloads
+      for (let pos = 0; pos < targetIndices.length; pos++) {
+        const photoIdx = targetIndices[pos];
+        const thumb = track.children[pos];
+        const img = thumb.firstElementChild;
+        const item = currentPhotosList[photoIdx];
+        if (!item) continue;
+
+        const p = typeof item === 'string' ? item : item.rel_path;
+        const enc = p.split('/').map(encodeURIComponent).join('/');
+        const thumbSrc = `/thumb/${enc}`;
+
+        thumb.dataset.index = photoIdx;
+        const isActive = (photoIdx === currentPhotoIndex);
+        thumb.classList.toggle('active', isActive);
+        thumb.setAttribute('aria-label', `Photo ${photoIdx + 1}${isActive ? ' (current)' : ''}`);
+
+        if (img.dataset.src !== thumbSrc) {
+          img.dataset.src = thumbSrc;
+          img.src = thumbSrc;
+          img.alt = `Photo ${photoIdx + 1}`;
+        }
+      }
     }
 
-    function createFilmstripThumbElement(i) {
-      const item = currentPhotosList[i];
-      const p = typeof item === 'string' ? item : item.rel_path;
-      const enc = p.split('/').map(encodeURIComponent).join('/');
-
-      const thumb = document.createElement('div');
-      thumb.className = 'filmstrip-thumb' + (i === currentPhotoIndex ? ' active' : '');
-      thumb.dataset.index = i;
-
-      const img = document.createElement('img');
-      img.alt = `Photo ${i + 1}`;
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      img.src = `/thumb/${enc}`;
-
-      thumb.appendChild(img);
-
-      thumb.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (i !== currentPhotoIndex) {
-          jumpToPhoto(i);
-        }
-      });
-
-      return thumb;
+    function buildFilmstrip() {
+      renderFilmstripWindow(currentPhotoIndex);
     }
 
     function updateFilmstripActive(index, autoCenter = true) {
-      const track = $('lightboxFilmstripTrack');
-      if (!track || track.children.length === 0) return;
-
-      const prevActive = track.querySelector('.filmstrip-thumb.active');
-      if (prevActive) prevActive.classList.remove('active');
-
-      const currentThumb = track.children[index];
-      if (currentThumb) {
-        currentThumb.classList.add('active');
-        if (autoCenter) {
-          isProgrammaticFilmstripScroll = true;
-          currentThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-          setTimeout(() => {
-            isProgrammaticFilmstripScroll = false;
-          }, 350);
-        }
-      }
+      renderFilmstripWindow(index);
     }
 
     function checkAndFetchMorePhotos(index) {
@@ -5049,9 +5060,11 @@
     }
 
     function jumpToPhoto(targetIdx) {
-      if (targetIdx < 0 || targetIdx >= currentPhotosList.length) return;
+      const total = currentPhotosList.length;
+      if (total === 0) return;
+      const normalizedIdx = ((targetIdx % total) + total) % total;
       initLightboxSlider();
-      currentPhotoIndex = targetIdx;
+      currentPhotoIndex = normalizedIdx;
       resetZoom();
 
       if (sliderTrack) {
@@ -5059,21 +5072,21 @@
         sliderTrack.style.transform = 'translate3d(-100%, 0, 0)';
       }
 
-      updateLightboxHeader(targetIdx);
-      updateFilmstripActive(targetIdx, true);
-      checkAndFetchMorePhotos(targetIdx);
+      updateLightboxHeader(normalizedIdx);
+      renderFilmstripWindow(normalizedIdx);
+      checkAndFetchMorePhotos(normalizedIdx);
 
       if (imgCurr) {
         imgCurr.style.transition = 'opacity 0.15s ease';
         imgCurr.style.opacity = '0.4';
       }
-      updateSlideSlots(targetIdx);
+      updateSlideSlots(normalizedIdx);
       setTimeout(() => {
         if (imgCurr) imgCurr.style.opacity = '1';
       }, 60);
 
       try {
-        history.replaceState({ brkLightboxOpen: true, photoIndex: targetIdx }, '');
+        history.replaceState({ brkLightboxOpen: true, photoIndex: normalizedIdx }, '');
       } catch (e) {}
     }
 
@@ -5114,14 +5127,19 @@
     function finishSlideTransition(direction) {
       initLightboxSlider();
       const total = currentPhotosList.length;
+      if (total <= 0) {
+        isTransitioning = false;
+        return;
+      }
+
       if (direction === 1) {
         currentPhotoIndex = (currentPhotoIndex + 1) % total;
       } else if (direction === -1) {
-        currentPhotoIndex = (currentPhotoIndex - 1 + total) % total;
+        currentPhotoIndex = ((currentPhotoIndex - 1) % total + total) % total;
       }
 
       updateLightboxHeader(currentPhotoIndex);
-      updateFilmstripActive(currentPhotoIndex, true);
+      renderFilmstripWindow(currentPhotoIndex);
       checkAndFetchMorePhotos(currentPhotoIndex);
 
       updateSlideSlots(currentPhotoIndex);
@@ -5143,9 +5161,8 @@
 
     function openPhotoLightbox(index) {
       if (currentPhotosList.length === 0) return;
-      if (index < 0) index = 0;
-      if (index >= currentPhotosList.length) index = currentPhotosList.length - 1;
-      currentPhotoIndex = index;
+      const total = currentPhotosList.length;
+      currentPhotoIndex = ((index % total) + total) % total;
       resetZoom();
 
       // Remember scroll position in gallery so we return to the exact same spot
@@ -5160,12 +5177,11 @@
         sliderTrack.style.transform = 'translate3d(-100%, 0, 0)';
       }
 
-      updateLightboxHeader(index);
-      buildFilmstrip();
-      updateFilmstripActive(index, true);
-      checkAndFetchMorePhotos(index);
+      updateLightboxHeader(currentPhotoIndex);
+      renderFilmstripWindow(currentPhotoIndex);
+      checkAndFetchMorePhotos(currentPhotoIndex);
 
-      updateSlideSlots(index);
+      updateSlideSlots(currentPhotoIndex);
 
       const modal = $('photoLightboxModal');
       if (modal.hidden) {
@@ -5282,50 +5298,40 @@
       }
     });
 
-    // Lightbox Filmstrip Touch Isolation & Center Detection on Scroll
+    // Lightbox Filmstrip Touch Isolation & Horizontal Swipe Handling
     const filmstripBar = $('lightboxFilmstripBar');
-    const filmstripTrack = $('lightboxFilmstripTrack');
-    if (filmstripBar) {
-      filmstripBar.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
-      filmstripBar.addEventListener('touchmove', e => e.stopPropagation(), { passive: true });
-      filmstripBar.addEventListener('touchend', e => e.stopPropagation(), { passive: true });
-    }
+    let fsTouchStartX = 0;
+    let fsTouchStartY = 0;
+    let fsTouchStartTime = 0;
 
-    if (filmstripTrack) {
-      filmstripTrack.addEventListener('scroll', () => {
-        // Trigger infinite scroll when filmstrip approaches end
-        if (filmstripTrack.scrollLeft + filmstripTrack.clientWidth >= filmstripTrack.scrollWidth - 350) {
-          if (currentSearchHasMore && !isLoadingNextPage) {
-            fetchNextSearchPage();
+    if (filmstripBar) {
+      filmstripBar.addEventListener('touchstart', e => {
+        e.stopPropagation();
+        if (e.touches.length === 1) {
+          fsTouchStartX = e.touches[0].clientX;
+          fsTouchStartY = e.touches[0].clientY;
+          fsTouchStartTime = Date.now();
+        }
+      }, { passive: true });
+
+      filmstripBar.addEventListener('touchmove', e => {
+        e.stopPropagation();
+      }, { passive: true });
+
+      filmstripBar.addEventListener('touchend', e => {
+        e.stopPropagation();
+        if (e.changedTouches.length === 1) {
+          const diffX = e.changedTouches[0].clientX - fsTouchStartX;
+          const diffY = e.changedTouches[0].clientY - fsTouchStartY;
+          const elapsed = Date.now() - fsTouchStartTime;
+          if (Math.abs(diffX) > 28 && Math.abs(diffX) > Math.abs(diffY) && elapsed < 450) {
+            if (diffX < 0) {
+              goToNextPhoto();
+            } else {
+              goToPrevPhoto();
+            }
           }
         }
-
-        if (isProgrammaticFilmstripScroll) return;
-
-        if (filmstripScrollTimeout) clearTimeout(filmstripScrollTimeout);
-        filmstripScrollTimeout = setTimeout(() => {
-          if (isProgrammaticFilmstripScroll) return;
-          const trackRect = filmstripTrack.getBoundingClientRect();
-          const trackCenter = trackRect.left + trackRect.width / 2;
-          let closestThumb = null;
-          let closestDist = Infinity;
-          const thumbs = filmstripTrack.children;
-          for (let i = 0; i < thumbs.length; i++) {
-            const rect = thumbs[i].getBoundingClientRect();
-            const thumbCenter = rect.left + rect.width / 2;
-            const dist = Math.abs(thumbCenter - trackCenter);
-            if (dist < closestDist) {
-              closestDist = dist;
-              closestThumb = thumbs[i];
-            }
-          }
-          if (closestThumb) {
-            const newIdx = parseInt(closestThumb.dataset.index, 10);
-            if (!isNaN(newIdx) && newIdx !== currentPhotoIndex && newIdx >= 0 && newIdx < currentPhotosList.length) {
-              jumpToPhoto(newIdx);
-            }
-          }
-        }, 75);
       }, { passive: true });
     }
 
