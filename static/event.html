@@ -4486,6 +4486,7 @@
 
     let currentSearchFaceThumb = null;
     let currentSearchEmbedding = null;
+    let currentSearchId = null;
     let currentSelectedFaceIndex = null;
     let currentSearchPage = 1;
     let currentSearchHasMore = false;
@@ -4493,17 +4494,18 @@
 
     async function fetchNextSearchPage() {
       if (isLoadingNextPage || !currentSearchHasMore) return;
-      if (!currentSearchFaceThumb && !currentSearchEmbedding && !currentSearchFile) return;
+      if (!currentSearchFaceThumb && !currentSearchEmbedding && !currentSearchFile && !currentSearchId) return;
       isLoadingNextPage = true;
 
       try {
         const payload = {
+          search_id: currentSearchId,
+          session_id: getSessionId(),
+          visitor_id: getVisitorId(),
           embedding: currentSearchEmbedding,
           face_thumb: currentSearchFaceThumb,
           page: currentSearchPage + 1,
-          page_size: 50,
-          session_id: getSessionId(),
-          visitor_id: getVisitorId()
+          page_size: 50
         };
         let res = await fetch('/api/check-profile-matches', {
           method: 'POST',
@@ -4550,6 +4552,7 @@
         }
 
         if (data && data.photos && data.photos.length > 0) {
+          if (data.search_id) currentSearchId = data.search_id;
           if (data.embedding && !currentSearchEmbedding) {
             currentSearchEmbedding = data.embedding;
             try { localStorage.setItem('brk_saved_embedding', JSON.stringify(data.embedding)); } catch (e) {}
@@ -6235,6 +6238,7 @@
       localStorage.removeItem('brk_saved_time');
       currentSearchFaceThumb = null;
       currentSearchEmbedding = null;
+      currentSearchId = null;
       currentSelectedFaceIndex = null;
       currentSearchHasMore = false;
       totalMatchingPhotosCount = 0;
@@ -6355,6 +6359,7 @@
 
           currentSearchFaceThumb = j.face_thumb || null;
           currentSearchEmbedding = j.embedding || null;
+          currentSearchId = j.search_id || null;
           currentSelectedFaceIndex = faceIndex;
           currentSearchPage = j.page || 1;
           currentSearchHasMore = !!j.has_more;

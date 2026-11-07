@@ -4719,8 +4719,9 @@ function openAlbumPhotos(albumId, albumName) {
 
 function selectUploadTargetAlbum(slug, name) {
   activeUploadAlbumSlug = slug;
-  $('uploadTargetAlbumSelect').value = slug;
-  $('activeUploadFolderLabel').textContent = `Destination: ${name} (slug: ${slug})`;
+  if ($('uploadTargetAlbumSelect')) $('uploadTargetAlbumSelect').value = slug;
+  if ($('gdriveTargetAlbumSelect')) $('gdriveTargetAlbumSelect').value = slug;
+  if ($('activeUploadFolderLabel')) $('activeUploadFolderLabel').textContent = `Destination: ${name} (slug: ${slug})`;
   
   // Highlight active chip
   document.querySelectorAll('.folder-chip').forEach(c => {

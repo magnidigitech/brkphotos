@@ -1017,99 +1017,101 @@ def execute_queued_job(job: dict):
             # direct_upload / zip_upload
             conn = get_db()
             cursor = conn.cursor()
-            cursor.execute("SELECT id FROM events WHERE slug = ?", (event_slug,))
-            event = cursor.fetchone()
-            if not event:
-                cursor.execute("SELECT id FROM events WHERE slug = 'brk-sir' OR slug = 'wedding' LIMIT 1")
+            try:
+                cursor.execute("SELECT id FROM events WHERE slug = ?", (event_slug,))
                 event = cursor.fetchone()
-            eid = event["id"] if event else 1
+                if not event:
+                    cursor.execute("SELECT id FROM events WHERE slug = 'brk-sir' OR slug = 'wedding' LIMIT 1")
+                    event = cursor.fetchone()
+                eid = event["id"] if event else 1
 
-            cursor.execute("SELECT id FROM albums WHERE event_id = ? AND slug = ?", (eid, target_album_slug))
-            arow = cursor.fetchone()
-            album_id = arow["id"] if arow else None
+                cursor.execute("SELECT id FROM albums WHERE event_id = ? AND slug = ?", (eid, target_album_slug))
+                arow = cursor.fetchone()
+                album_id = arow["id"] if arow else None
 
-            safe_album = "".join(c for c in target_album_slug.strip() if c.isalnum() or c in "-_") or "highlights"
-            if event_slug in {"default", "wedding", "brk-sir", "brksir"}:
-                dest_dir = PHOTOS / safe_album
-                rel_prefix = safe_album
-            else:
-                dest_dir = PHOTOS / "events" / event_slug / safe_album
-                rel_prefix = f"events/{event_slug}/{safe_album}"
-            dest_dir.mkdir(parents=True, exist_ok=True)
+                safe_album = "".join(c for c in target_album_slug.strip() if c.isalnum() or c in "-_") or "highlights"
+                if event_slug in {"default", "wedding", "brk-sir", "brksir"}:
+                    dest_dir = PHOTOS / safe_album
+                    rel_prefix = safe_album
+                else:
+                    dest_dir = PHOTOS / "events" / event_slug / safe_album
+                    rel_prefix = f"events/{event_slug}/{safe_album}"
+                dest_dir.mkdir(parents=True, exist_ok=True)
 
-            valid_exts = {".jpg", ".jpeg", ".png", ".webp"}
-            saved_count = 0
+                valid_exts = {".jpg", ".jpeg", ".png", ".webp"}
+                saved_count = 0
 
-            staged_files = []
-            if staged_dir and staged_dir.exists():
-                for p in staged_dir.iterdir():
-                    if p.is_file():
-                        staged_files.append(p)
+                staged_files = []
+                if staged_dir and staged_dir.exists():
+                    for p in staged_dir.iterdir():
+                        if p.is_file():
+                            staged_files.append(p)
 
-            total_staged = len(staged_files)
-            update_queue_task(task_id, file_count=total_staged, progress_pct=15,
-                              current_step=f"Processing {total_staged} staged files...",
-                              log_line=f"Found {total_staged} files in staging area.")
-            append_log(f"[{now_ist().strftime('%H:%M:%S')}] Task #{task_id}: Processing {total_staged} staged files into '{safe_album}'")
+                total_staged = len(staged_files)
+                update_queue_task(task_id, file_count=total_staged, progress_pct=15,
+                                  current_step=f"Processing {total_staged} staged files...",
+                                  log_line=f"Found {total_staged} files in staging area.")
+                append_log(f"[{now_ist().strftime('%H:%M:%S')}] Task #{task_id}: Processing {total_staged} staged files into '{safe_album}'")
 
-            for idx, fpath in enumerate(staged_files, 1):
-                if task_cancel_event.is_set():
-                    update_queue_task(task_id, status="cancelled", current_step="Cancelled by administrator",
-                                      log_line="Upload task cancelled during file ingestion.")
-                    return
+                for idx, fpath in enumerate(staged_files, 1):
+                    if task_cancel_event.is_set():
+                        update_queue_task(task_id, status="cancelled", current_step="Cancelled by administrator",
+                                          log_line="Upload task cancelled during file ingestion.")
+                        return
 
-                ext = fpath.suffix.lower()
-                if ext == ".zip":
-                    try:
-                        with zipfile.ZipFile(fpath) as z:
-                            infolist = [info for info in z.infolist() if not info.is_dir() and Path(info.filename).suffix.lower() in valid_exts]
-                            for z_idx, info in enumerate(infolist, 1):
-                                if task_cancel_event.is_set():
-                                    break
-                                sub_name = Path(info.filename).name
-                                dest_path = dest_dir / sub_name
-                                with z.open(info) as src, open(dest_path, "wb") as dst:
-                                    shutil.copyfileobj(src, dst)
-                                optimize_photo_inplace(dest_path)
-                                rel_p = f"{rel_prefix}/{sub_name}"
-                                cursor.execute("""
-                                    INSERT INTO photos (event_id, album_id, filename, rel_path, file_size_bytes, is_deleted)
-                                    VALUES (?, ?, ?, ?, ?, 0)
-                                    ON CONFLICT(rel_path) DO UPDATE SET
-                                        event_id = excluded.event_id,
-                                        album_id = excluded.album_id,
-                                        file_size_bytes = excluded.file_size_bytes,
-                                        is_deleted = 0
-                                """, (eid, album_id, sub_name, rel_p, dest_path.stat().st_size))
-                                saved_count += 1
-                                if z_idx % 10 == 0 or z_idx == len(infolist):
-                                    pct = int(15 + (z_idx / max(len(infolist), 1)) * 40)
-                                    update_queue_task(task_id, processed_count=saved_count, progress_pct=pct,
-                                                      current_step=f"Extracted {saved_count} photos from ZIP...")
-                    except Exception as ze:
-                        append_log(f"[{now_ist().strftime('%H:%M:%S')}] Task #{task_id} ZIP error: {ze}")
-                elif ext in valid_exts:
-                    dest_path = dest_dir / fpath.name
-                    shutil.copy2(fpath, dest_path)
-                    optimize_photo_inplace(dest_path)
-                    rel_p = f"{rel_prefix}/{fpath.name}"
-                    cursor.execute("""
-                        INSERT INTO photos (event_id, album_id, filename, rel_path, file_size_bytes, is_deleted)
-                        VALUES (?, ?, ?, ?, ?, 0)
-                        ON CONFLICT(rel_path) DO UPDATE SET
-                            event_id = excluded.event_id,
-                            album_id = excluded.album_id,
-                            file_size_bytes = excluded.file_size_bytes,
-                            is_deleted = 0
-                    """, (eid, album_id, fpath.name, rel_p, dest_path.stat().st_size))
-                    saved_count += 1
-                    if idx % 10 == 0 or idx == total_staged:
-                        pct = int(15 + (idx / max(total_staged, 1)) * 45)
-                        update_queue_task(task_id, processed_count=saved_count, progress_pct=pct,
-                                          current_step=f"Optimized {saved_count}/{total_staged} photos...")
+                    ext = fpath.suffix.lower()
+                    if ext == ".zip":
+                        try:
+                            with zipfile.ZipFile(fpath) as z:
+                                infolist = [info for info in z.infolist() if not info.is_dir() and Path(info.filename).suffix.lower() in valid_exts]
+                                for z_idx, info in enumerate(infolist, 1):
+                                    if task_cancel_event.is_set():
+                                        break
+                                    sub_name = Path(info.filename).name
+                                    dest_path = dest_dir / sub_name
+                                    with z.open(info) as src, open(dest_path, "wb") as dst:
+                                        shutil.copyfileobj(src, dst)
+                                    optimize_photo_inplace(dest_path)
+                                    rel_p = f"{rel_prefix}/{sub_name}"
+                                    cursor.execute("""
+                                        INSERT INTO photos (event_id, album_id, filename, rel_path, file_size_bytes, is_deleted)
+                                        VALUES (?, ?, ?, ?, ?, 0)
+                                        ON CONFLICT(rel_path) DO UPDATE SET
+                                            event_id = excluded.event_id,
+                                            album_id = excluded.album_id,
+                                            file_size_bytes = excluded.file_size_bytes,
+                                            is_deleted = 0
+                                    """, (eid, album_id, sub_name, rel_p, dest_path.stat().st_size))
+                                    saved_count += 1
+                                    if z_idx % 10 == 0 or z_idx == len(infolist):
+                                        pct = int(15 + (z_idx / max(len(infolist), 1)) * 40)
+                                        update_queue_task(task_id, processed_count=saved_count, progress_pct=pct,
+                                                          current_step=f"Extracted {saved_count} photos from ZIP...")
+                        except Exception as ze:
+                            append_log(f"[{now_ist().strftime('%H:%M:%S')}] Task #{task_id} ZIP error: {ze}")
+                    elif ext in valid_exts:
+                        dest_path = dest_dir / fpath.name
+                        shutil.copy2(fpath, dest_path)
+                        optimize_photo_inplace(dest_path)
+                        rel_p = f"{rel_prefix}/{fpath.name}"
+                        cursor.execute("""
+                            INSERT INTO photos (event_id, album_id, filename, rel_path, file_size_bytes, is_deleted)
+                            VALUES (?, ?, ?, ?, ?, 0)
+                            ON CONFLICT(rel_path) DO UPDATE SET
+                                event_id = excluded.event_id,
+                                album_id = excluded.album_id,
+                                file_size_bytes = excluded.file_size_bytes,
+                                is_deleted = 0
+                        """, (eid, album_id, fpath.name, rel_p, dest_path.stat().st_size))
+                        saved_count += 1
+                        if idx % 10 == 0 or idx == total_staged:
+                            pct = int(15 + (idx / max(total_staged, 1)) * 45)
+                            update_queue_task(task_id, processed_count=saved_count, progress_pct=pct,
+                                              current_step=f"Optimized {saved_count}/{total_staged} photos...")
 
-            conn.commit()
-            conn.close()
+                conn.commit()
+            finally:
+                conn.close()
 
             update_queue_task(task_id, processed_count=saved_count, file_count=saved_count, progress_pct=60,
                               current_step="Starting AI face indexing...",
@@ -1176,6 +1178,35 @@ def crop_face_thumb(img, bbox, target_size=(240, 240)):
     crop_resized = cv2.resize(crop, target_size, interpolation=cv2.INTER_AREA)
     _, buf = cv2.imencode(".jpg", crop_resized, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
     return "data:image/jpeg;base64," + base64.b64encode(buf).decode("utf-8")
+
+# --- Ephemeral In-Memory Search Session Cache for Zero-Biometric Leakage Pagination ---
+_search_session_cache = {}
+_search_session_lock = threading.Lock()
+SEARCH_SESSION_TTL = 10800  # 3 hours TTL
+
+def store_search_session(session_key: str, query_emb):
+    if not session_key or query_emb is None:
+        return
+    now = time.time()
+    with _search_session_lock:
+        if len(_search_session_cache) > 2000:
+            stale_keys = [k for k, (_, ts) in _search_session_cache.items() if now - ts > SEARCH_SESSION_TTL]
+            for k in stale_keys:
+                _search_session_cache.pop(k, None)
+        _search_session_cache[session_key] = (query_emb, now)
+
+def get_search_session(session_key: str):
+    if not session_key:
+        return None
+    with _search_session_lock:
+        item = _search_session_cache.get(session_key)
+        if item:
+            emb, ts = item
+            if time.time() - ts < SEARCH_SESSION_TTL:
+                return emb
+            else:
+                _search_session_cache.pop(session_key, None)
+    return None
 
 MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -1303,8 +1334,8 @@ def query_matched_photos(embs, names, query_emb, event_slug="brk-sir", filter_da
     if ranked:
         conn = get_db()
         cursor = conn.cursor()
-        # Query only matched items in batches of 400 to respect SQLite parameter limits
-        chunk_size = 400
+        # Query only matched items in batches of 200 to respect SQLite parameter limits
+        chunk_size = 200
         for i in range(0, len(ranked), chunk_size):
             chunk = ranked[i:i + chunk_size]
             chunk_fnames = [fname for fname, _ in chunk]
@@ -1461,6 +1492,7 @@ def perform_face_search(
         query_embs = [f.normed_embedding for f in faces]
         selected_face_thumb = crop_face_thumb(img, faces[0].bbox)
         selected_idx = "all"
+        active_query_emb = query_embs
         res = query_matched_photos(embs, names, query_embs, event_slug, filter_date, filter_album, page, page_size)
     else:
         if numeric_face_index is not None and 0 <= numeric_face_index < len(faces):
@@ -1470,7 +1502,15 @@ def perform_face_search(
             face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
             selected_idx = faces.index(face)
         selected_face_thumb = crop_face_thumb(img, face.bbox)
+        active_query_emb = face.normed_embedding
         res = query_matched_photos(embs, names, face.normed_embedding, event_slug, filter_date, filter_album, page, page_size)
+
+    # Cache query embedding for zero-biometric leakage pagination
+    if session_id:
+        store_search_session(session_id, active_query_emb)
+    if visitor_id:
+        store_search_session(visitor_id, active_query_emb)
+    store_search_session(search_id, active_query_emb)
 
     duration_ms = round((time.time() - search_start) * 1000, 1)
     if res["total_count"] > 0:
@@ -1508,6 +1548,7 @@ def perform_face_search(
         print(f"Match review recording notice: {e}")
 
     return {
+        "search_id": search_id,
         "multiple_faces": False,
         "count": res["total_count"],
         "total_count": res["total_count"],
@@ -1559,34 +1600,46 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
     if len(embs) == 0:
         return {"status": "ok", "count": 0, "total_count": 0, "page": page, "photos": [], "has_more": False, "has_new": False, "new_count": 0}
 
-    query_emb = None
-    if embedding and isinstance(embedding, list) and len(embedding) == 512:
-        query_emb = np.array(embedding, dtype=np.float32)
-        norm = np.linalg.norm(query_emb)
-        if norm > 0:
-            query_emb = query_emb / norm
-    elif face_thumb and isinstance(face_thumb, str) and face_thumb.startswith("data:image"):
-        try:
-            head, b64 = face_thumb.split(",", 1)
-            raw_bytes = base64.b64decode(b64)
-            nparr = np.frombuffer(raw_bytes, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            with lock:
-                faces = face_app.get(img)
-            if faces:
-                target_f = max(faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
-                query_emb = target_f.normed_embedding
-            elif img is not None and img.size > 0:
-                h_c, w_c = img.shape[:2]
-                scale = max(640.0 / max(h_c, w_c), 2.5)
-                upscaled = cv2.resize(img, (int(w_c * scale), int(h_c * scale)), interpolation=cv2.INTER_CUBIC)
+    session_id = body.get("session_id")
+    visitor_id = body.get("visitor_id")
+    search_id = body.get("search_id")
+
+    query_emb = get_search_session(session_id) or get_search_session(visitor_id) or get_search_session(search_id)
+
+    if query_emb is None:
+        if embedding and isinstance(embedding, list) and len(embedding) == 512:
+            query_emb = np.array(embedding, dtype=np.float32)
+            norm = np.linalg.norm(query_emb)
+            if norm > 0:
+                query_emb = query_emb / norm
+        elif face_thumb and isinstance(face_thumb, str) and face_thumb.startswith("data:image"):
+            try:
+                head, b64 = face_thumb.split(",", 1)
+                raw_bytes = base64.b64decode(b64)
+                nparr = np.frombuffer(raw_bytes, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 with lock:
-                    up_faces = face_app.get(upscaled)
-                if up_faces:
-                    target_f = max(up_faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
+                    faces = face_app.get(img)
+                if faces:
+                    target_f = max(faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
                     query_emb = target_f.normed_embedding
-        except Exception as e:
-            print("Error decoding face_thumb in match check:", e)
+                elif img is not None and img.size > 0:
+                    h_c, w_c = img.shape[:2]
+                    scale = max(640.0 / max(h_c, w_c), 2.5)
+                    upscaled = cv2.resize(img, (int(w_c * scale), int(h_c * scale)), interpolation=cv2.INTER_CUBIC)
+                    with lock:
+                        up_faces = face_app.get(upscaled)
+                    if up_faces:
+                        target_f = max(up_faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
+                        query_emb = target_f.normed_embedding
+            except Exception as e:
+                print("Error decoding face_thumb in match check:", e)
+
+        if query_emb is not None:
+            if session_id:
+                store_search_session(session_id, query_emb)
+            if visitor_id:
+                store_search_session(visitor_id, query_emb)
 
     if query_emb is None:
         return {"status": "error", "message": "No face embedding available to query", "count": 0, "total_count": 0, "photos": [], "has_more": False, "has_new": False, "new_count": 0}
