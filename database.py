@@ -269,6 +269,53 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_automations_event ON automations(event_slug, is_active);
         CREATE INDEX IF NOT EXISTS idx_automation_history_task ON automation_history(task_id);
         CREATE INDEX IF NOT EXISTS idx_automation_history_auto ON automation_history(automation_id, id);
+
+        -- Analytics & Telemetry Layer
+        CREATE TABLE IF NOT EXISTS analytics_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT UNIQUE NOT NULL,
+            event_type TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            visitor_id TEXT,
+            event_slug TEXT DEFAULT 'brk-sir',
+            search_id TEXT,
+            photo_id INTEGER REFERENCES photos(id) ON DELETE SET NULL,
+            photo_path TEXT,
+            album_name TEXT,
+            device_type TEXT DEFAULT 'desktop',
+            duration_ms REAL DEFAULT 0,
+            matches_count INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'success',
+            error_category TEXT,
+            metadata_json TEXT,
+            ip_hash TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS download_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id TEXT UNIQUE NOT NULL,
+            job_type TEXT NOT NULL DEFAULT 'zip',
+            session_id TEXT,
+            visitor_id TEXT,
+            event_slug TEXT DEFAULT 'brk-sir',
+            photo_count INTEGER DEFAULT 0,
+            zip_size_bytes INTEGER DEFAULT 0,
+            duration_seconds REAL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'processing',
+            error_message TEXT,
+            started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events(created_at);
+        CREATE INDEX IF NOT EXISTS idx_analytics_type_created ON analytics_events(event_type, created_at);
+        CREATE INDEX IF NOT EXISTS idx_analytics_session ON analytics_events(session_id);
+        CREATE INDEX IF NOT EXISTS idx_analytics_visitor ON analytics_events(visitor_id);
+        CREATE INDEX IF NOT EXISTS idx_analytics_photo_path ON analytics_events(photo_path);
+        CREATE INDEX IF NOT EXISTS idx_analytics_status ON analytics_events(status);
+        CREATE INDEX IF NOT EXISTS idx_download_jobs_started ON download_jobs(started_at);
+        CREATE INDEX IF NOT EXISTS idx_download_jobs_status ON download_jobs(status);
         """)
 
         # One-time schema migrations

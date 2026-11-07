@@ -2,6 +2,7 @@ storage/
 __pycache__/
 *.zip
 .DS_Store
+.agents/
 !requirements.txt
 
 

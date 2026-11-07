@@ -3599,6 +3599,94 @@
     let currentPhotosList = [];
     let currentPhotoIndex = 0;
 
+    // --- Privacy-Preserving Analytics Telemetry ---
+    function getVisitorId() {
+      try {
+        let v = localStorage.getItem('brk_visitor_id');
+        if (!v) {
+          v = 'v_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+          localStorage.setItem('brk_visitor_id', v);
+        }
+        return v;
+      } catch (e) {
+        return 'v_anon';
+      }
+    }
+
+    function getSessionId() {
+      try {
+        let s = sessionStorage.getItem('brk_session_id');
+        if (!s) {
+          s = 's_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+          sessionStorage.setItem('brk_session_id', s);
+        }
+        return s;
+      } catch (e) {
+        return 's_anon';
+      }
+    }
+
+    function getDeviceType() {
+      const w = window.innerWidth;
+      const ua = navigator.userAgent || '';
+      if (/Mobi|Android|iPhone/i.test(ua) || w <= 640) return 'mobile';
+      if (/iPad|Tablet/i.test(ua) || (w > 640 && w <= 1024)) return 'tablet';
+      return 'desktop';
+    }
+
+    function emitAnalyticsEvent(eventType, extra = {}) {
+      try {
+        const payload = {
+          event_type: eventType,
+          session_id: getSessionId(),
+          visitor_id: getVisitorId(),
+          device_type: getDeviceType(),
+          event_slug: slug || 'brk-sir',
+          ...extra
+        };
+        fetch('/api/analytics/event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    // Portal visit tracking (guarded against multiple rapid reloads in same session)
+    (function trackVisit() {
+      try {
+        const lastVisit = sessionStorage.getItem('brk_last_visit_ts');
+        const now = Date.now();
+        if (!lastVisit || (now - parseInt(lastVisit, 10)) > 120000) {
+          sessionStorage.setItem('brk_last_visit_ts', now.toString());
+          emitAnalyticsEvent('portal_visit');
+        }
+      } catch (e) {}
+    })();
+
+    // Genuine Photo View Debouncing (only count when user views photo for >= 1 second)
+    let photoViewDebounceTimer = null;
+    const viewedPhotosInSession = new Set();
+
+    function trackGenuinePhotoView(item) {
+      if (!item) return;
+      if (photoViewDebounceTimer) clearTimeout(photoViewDebounceTimer);
+      const photoPath = typeof item === 'string' ? item : (item.rel_path || item.filename || '');
+      if (!photoPath) return;
+
+      photoViewDebounceTimer = setTimeout(() => {
+        if (!viewedPhotosInSession.has(photoPath)) {
+          viewedPhotosInSession.add(photoPath);
+          const parsed = (typeof parsePhotoDate === 'function') ? parsePhotoDate(item) : {};
+          emitAnalyticsEvent('photo_opened', {
+            photo_path: photoPath,
+            album_name: parsed.title || ''
+          });
+        }
+      }, 1000); // 1.0 second dwell time
+    }
+
     async function loadEvent() {
       try {
         let res = await fetch('/api/public/gallery');
@@ -3753,7 +3841,9 @@
       try {
         const payload = {
           photos: Array.from(selectedPhotos),
-          quality: 'original'
+          quality: 'original',
+          session_id: getSessionId(),
+          visitor_id: getVisitorId()
         };
         const res = await fetch('/api/download/bulk-zip', {
           method: 'POST',
@@ -4378,7 +4468,9 @@
           embedding: currentSearchEmbedding,
           face_thumb: currentSearchFaceThumb,
           page: currentSearchPage + 1,
-          page_size: 50
+          page_size: 50,
+          session_id: getSessionId(),
+          visitor_id: getVisitorId()
         };
         let res = await fetch('/api/check-profile-matches', {
           method: 'POST',
@@ -4936,6 +5028,10 @@
       const item = currentPhotosList[normIndex];
       const filename = item ? getPhotoFilename(item) : `Photo ${normIndex + 1}`;
       const enc = item ? getPhotoEnc(item) : '';
+
+      if (item) {
+        trackGenuinePhotoView(item);
+      }
 
       $('lightboxCounter').textContent = `${normIndex + 1} / ${total}`;
       $('lightboxFilename').textContent = filename;
@@ -6174,6 +6270,9 @@
       }
       fd.append('page', 1);
       fd.append('page_size', 50);
+      fd.append('session_id', getSessionId());
+      fd.append('visitor_id', getVisitorId());
+      fd.append('device_type', getDeviceType());
 
       try {
         let res = await fetch('/api/search', { method: 'POST', body: fd });
@@ -6421,6 +6520,7 @@
       const curItem = currentPhotosList[currentPhotoIndex];
       if (!curItem) return;
       const enc = getPhotoEnc(curItem);
+      emitAnalyticsEvent('share_clicked', { photo_path: enc });
       const downloadUrl = `${window.location.origin}/download/hd/${enc}`;
       if (navigator.share) {
         navigator.share({

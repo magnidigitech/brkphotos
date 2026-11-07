@@ -1,4 +1,4 @@
-import os, sys, threading, subprocess, secrets, shutil, zipfile, io, re, time, base64, tempfile
+import os, sys, threading, subprocess, secrets, shutil, zipfile, io, re, time, base64, tempfile, uuid
 from typing import Optional
 
 # Limit CPU threads to prevent memory and CPU spikes on VPS
@@ -15,10 +15,11 @@ import cv2
 import numpy as np
 import requests
 from fastapi import FastAPI, File, HTTPException, UploadFile, Request, Depends, Form, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from insightface.app import FaceAnalysis
 import json
+import analytics
 
 from database import (
     get_db, init_db, migrate_existing_data,
@@ -1285,15 +1286,22 @@ def query_matched_photos(embs, names, query_emb, event_slug="brk-sir", filter_da
         "date_summary": date_summary
     }
 
-def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_index: Optional[int] = None, page: int = 1, page_size: int = 50, filter_date: Optional[str] = None, filter_album: Optional[str] = None):
+def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_index: Optional[int] = None, page: int = 1, page_size: int = 50, filter_date: Optional[str] = None, filter_album: Optional[str] = None, session_id: Optional[str] = None, visitor_id: Optional[str] = None, device_type: Optional[str] = None):
+    search_id = str(uuid.uuid4())[:12]
+    search_start = time.time()
+    analytics.record_search_started(search_id=search_id, session_id=session_id or "anon", visitor_id=visitor_id, device_type=device_type or "desktop", event_slug=event_slug)
+
     embs, names, known = get_event_index(event_slug)
     if len(names) == 0:
+        analytics.record_search_failed(search_id=search_id, session_id=session_id or "anon", error_category="no_index", visitor_id=visitor_id, event_slug=event_slug)
         raise HTTPException(503, "Photos are still being prepared for this event. Please check back soon.")
     data = selfie.file.read(MAX_UPLOAD + 1)
     if len(data) > MAX_UPLOAD:
+        analytics.record_search_failed(search_id=search_id, session_id=session_id or "anon", error_category="file_too_large", visitor_id=visitor_id, event_slug=event_slug)
         raise HTTPException(413, "Photo is too large. Use one under 10 MB.")
     img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
+        analytics.record_search_failed(search_id=search_id, session_id=session_id or "anon", error_category="unreadable_image", visitor_id=visitor_id, event_slug=event_slug)
         raise HTTPException(400, "That file is not a readable image.")
     h, w = img.shape[:2]
     if max(h, w) > 1280:
@@ -1302,6 +1310,8 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
     with lock:
         faces = face_app.get(img)
     if not faces:
+        duration_ms = round((time.time() - search_start) * 1000, 1)
+        analytics.record_search_failed(search_id=search_id, session_id=session_id or "anon", error_category="no_face_detected", duration_ms=duration_ms, visitor_id=visitor_id, event_slug=event_slug)
         raise HTTPException(422, "No face found. Try a clear, front-facing photo in good light.")
 
     # Sort faces left-to-right based on bounding box
@@ -1334,6 +1344,12 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
     selected_face_thumb = crop_face_thumb(img, face.bbox)
     res = query_matched_photos(embs, names, face.normed_embedding, event_slug, filter_date, filter_album, page, page_size)
 
+    duration_ms = round((time.time() - search_start) * 1000, 1)
+    if res["total_count"] > 0:
+        analytics.record_search_completed(search_id=search_id, session_id=session_id or "anon", matches_count=res["total_count"], duration_ms=duration_ms, visitor_id=visitor_id, event_slug=event_slug)
+    else:
+        analytics.record_search_no_results(search_id=search_id, session_id=session_id or "anon", duration_ms=duration_ms, visitor_id=visitor_id, event_slug=event_slug)
+
     return {
         "multiple_faces": False,
         "count": res["total_count"],
@@ -1355,13 +1371,14 @@ def perform_face_search(selfie: UploadFile, event_slug: str = "brk-sir", face_in
     }
 
 @app.post("/api/search")
-def default_search(selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50), filter_date: Optional[str] = Form(None), filter_album: Optional[str] = Form(None)):
+def default_search(selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50), filter_date: Optional[str] = Form(None), filter_album: Optional[str] = Form(None), session_id: Optional[str] = Form(None), visitor_id: Optional[str] = Form(None), device_type: Optional[str] = Form(None)):
     """Search for matching photos using face recognition with server-side pagination and date summary."""
-    return perform_face_search(selfie, "brk-sir", face_index=face_index, page=page, page_size=page_size, filter_date=filter_date, filter_album=filter_album)
+    return perform_face_search(selfie, "brk-sir", face_index=face_index, page=page, page_size=page_size, filter_date=filter_date, filter_album=filter_album, session_id=session_id, visitor_id=visitor_id, device_type=device_type)
 
 @app.post("/api/{slug}/search")
-def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50), filter_date: Optional[str] = Form(None), filter_album: Optional[str] = Form(None)):
+def event_search(slug: str, selfie: UploadFile = File(...), face_index: Optional[int] = Form(None), page: int = Form(1), page_size: int = Form(50), filter_date: Optional[str] = Form(None), filter_album: Optional[str] = Form(None), session_id: Optional[str] = Form(None), visitor_id: Optional[str] = Form(None), device_type: Optional[str] = Form(None)):
     """Search for matching photos using face recognition with server-side pagination and date summary."""
+    return perform_face_search(selfie, slug, face_index=face_index, page=page, page_size=page_size, filter_date=filter_date, filter_album=filter_album, session_id=session_id, visitor_id=visitor_id, device_type=device_type)
     return perform_face_search(selfie, slug, face_index=face_index, page=page, page_size=page_size, filter_date=filter_date, filter_album=filter_album)
 
 @app.post("/api/events/{slug}/check-profile-matches")
@@ -1420,10 +1437,21 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
 
     filter_date = body.get("filter_date")
     filter_album = body.get("filter_album")
+    search_start = time.time()
     res = query_matched_photos(embs, names, query_emb, slug, filter_date, filter_album, page, page_size)
     total_count = res["total_count"]
     has_new = total_count > last_count if last_count > 0 else False
     new_count = max(0, total_count - last_count) if last_count > 0 else 0
+
+    if page == 1:
+        search_id = str(uuid.uuid4())[:12]
+        sess_id = body.get("session_id") or "anon"
+        vis_id = body.get("visitor_id")
+        duration_ms = round((time.time() - search_start) * 1000, 1)
+        if total_count > 0:
+            analytics.record_search_completed(search_id=search_id, session_id=sess_id, matches_count=total_count, duration_ms=duration_ms, visitor_id=vis_id, event_slug=slug)
+        else:
+            analytics.record_search_no_results(search_id=search_id, session_id=sess_id, duration_ms=duration_ms, visitor_id=vis_id, event_slug=slug)
 
     return {
         "status": "ok",
@@ -1582,8 +1610,11 @@ def preview(name: str):
     raise HTTPException(404, "Preview photo not found")
 
 @app.get("/download/hd/{name:path}")
-def download_hd(name: str):
+def download_hd(name: str, req: Request):
     """Downloads HD (1080p/1920p) optimized photo directly from VPS storage as attachment."""
+    vis_id = req.headers.get("X-Visitor-Id") or req.cookies.get("brk_visitor_id")
+    sess_id = req.headers.get("X-Session-Id") or req.cookies.get("brk_session_id") or "anon"
+    analytics.record_photo_download(name, quality="hd", session_id=sess_id, visitor_id=vis_id)
     fname = Path(name).name
     stem = Path(name).stem
     ext = Path(name).suffix or ".jpg"
@@ -1643,8 +1674,11 @@ def download_hd(name: str):
     raise HTTPException(404, "HD photo not available on server")
 
 @app.get("/download/4k/{name:path}")
-def download_4k(name: str):
+def download_4k(name: str, req: Request):
     """Downloads original full-resolution 4K file directly from server without requiring Google login."""
+    vis_id = req.headers.get("X-Visitor-Id") or req.cookies.get("brk_visitor_id")
+    sess_id = req.headers.get("X-Session-Id") or req.cookies.get("brk_session_id") or "anon"
+    analytics.record_photo_download(name, quality="4k", session_id=sess_id, visitor_id=vis_id)
     fname = Path(name).name
     # 1. Check if original photo exists on VPS storage
     target = PHOTOS / name
@@ -1694,6 +1728,11 @@ async def download_bulk_zip(request: Request, background_tasks: BackgroundTasks,
 
     # Cap to 500 photos per zip archive
     selected = photo_items[:500]
+
+    job_id = f"zip_{int(time.time())}_{secrets.token_hex(3)}"
+    vis_id = body.get("visitor_id") or request.headers.get("X-Visitor-Id") or request.cookies.get("brk_visitor_id")
+    sess_id = body.get("session_id") or request.headers.get("X-Session-Id") or request.cookies.get("brk_session_id") or "anon"
+    analytics.start_download_job(job_id=job_id, job_type="bulk_zip", session_id=sess_id, visitor_id=vis_id, photo_count=len(selected), event_slug=slug)
 
     tmp_fd, tmp_zip_path = tempfile.mkstemp(suffix=".zip", prefix="brk_bulk_")
     os.close(tmp_fd)
@@ -1765,7 +1804,10 @@ async def download_bulk_zip(request: Request, background_tasks: BackgroundTasks,
     zip_size = os.path.getsize(tmp_zip_path) if os.path.exists(tmp_zip_path) else 0
     if zip_size <= 22 or len(added_names) == 0:
         cleanup_file(tmp_zip_path)
+        analytics.fail_download_job(job_id=job_id, error_message="None of the selected original photos could be found on the server.")
         raise HTTPException(404, "None of the selected original photos could be found on the server.")
+
+    analytics.finish_download_job(job_id=job_id, zip_size_bytes=zip_size, photo_count=len(added_names))
 
     zip_filename = f"BRK_Photos_{len(added_names)}_Original_Photos.zip"
     resp_headers = {
@@ -3243,26 +3285,115 @@ def admin_storage_metrics(token: str = Depends(get_auth_token)):
         "compression_ratio": round(raw_drive_bytes / max(vps_bytes, 1), 1) if vps_bytes else 28.5
     }
 
+# --- Analytics & Telemetry API Endpoints ---
+
+@app.post("/api/analytics/event")
+async def public_record_analytics_event(request: Request):
+    """
+    Public endpoint for client-side event tracking (portal_visit, photo_opened, share_clicked).
+    Non-blocking, privacy-preserving, rate-conscious.
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        return {"status": "error", "message": "Invalid JSON"}
+
+    event_type = data.get("event_type")
+    if not event_type or not isinstance(event_type, str):
+        return {"status": "error", "message": "Missing event_type"}
+
+    # Whitelist allowed client-side event types to prevent pollution
+    allowed_types = {"portal_visit", "photo_opened", "share_clicked"}
+    if event_type not in allowed_types:
+        return {"status": "ignored"}
+
+    session_id = data.get("session_id") or "anon"
+    visitor_id = data.get("visitor_id") or ""
+    device_type = data.get("device_type") or "desktop"
+    photo_path = data.get("photo_path")
+    album_name = data.get("album_name")
+    event_slug = data.get("event_slug") or "brk-sir"
+    client_ip = request.client.host if request.client else ""
+
+    analytics.record_event_async(
+        event_type=event_type,
+        session_id=session_id,
+        visitor_id=visitor_id,
+        device_type=device_type,
+        photo_path=photo_path,
+        album_name=album_name,
+        event_slug=event_slug,
+        ip_hash=analytics.hash_ip(client_ip),
+        metadata=data.get("metadata")
+    )
+    return {"status": "ok"}
+
+
+@app.get("/api/admin/analytics/dashboard")
+def admin_analytics_dashboard_endpoint(
+    range: str = "7d",
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    refresh: bool = False,
+    token: str = Depends(get_auth_token)
+):
+    """Returns comprehensive analytics dashboard metrics for the chosen date range."""
+    return analytics.get_analytics_dashboard(range_type=range, from_date_str=from_date, to_date_str=to_date, refresh=refresh)
+
+
+@app.get("/api/admin/analytics/system")
+def admin_analytics_system_endpoint(
+    refresh: bool = False,
+    token: str = Depends(get_auth_token)
+):
+    """Returns live server resource metrics, queue lengths, and warning indicators."""
+    return analytics.get_system_metrics(refresh=refresh)
+
+
+@app.get("/api/admin/analytics/downloads")
+def admin_analytics_downloads_endpoint(
+    range: str = "7d",
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    token: str = Depends(get_auth_token)
+):
+    """Returns download jobs history and statistics."""
+    dash = analytics.get_analytics_dashboard(range_type=range, from_date_str=from_date, to_date_str=to_date)
+    return dash.get("download_analytics", {})
+
+
+@app.get("/api/admin/analytics/export")
+def admin_analytics_export_endpoint(
+    range: str = "30d",
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    type: str = "daily",
+    token: str = Depends(get_auth_token)
+):
+    """Generates and exports CSV reports for analytics."""
+    csv_content = analytics.generate_csv_report(range_type=range, from_date_str=from_date, to_date_str=to_date, report_type=type)
+    filename = f"brk_analytics_{type}_{range}_{now_ist().strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
 @app.get("/api/admin/analytics")
 def admin_analytics_metrics(token: str = Depends(get_auth_token)):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(id) as total_events FROM events WHERE status = 'published'")
-    ev_count = cursor.fetchone()["total_events"]
-    cursor.execute("SELECT COUNT(id) as total_photos FROM photos WHERE is_deleted = 0")
-    ph_count = cursor.fetchone()["total_photos"]
-    cursor.execute("SELECT COUNT(id) as total_people FROM person_profiles")
-    ppl_count = cursor.fetchone()["total_people"]
-    conn.close()
-    
+    """Legacy backward-compatible summary endpoint using real live analytics data."""
+    dash = analytics.get_analytics_dashboard("today")
+    ov = dash["overview"]
+    lib = dash["library_analytics"]
     return {
-        "page_views": 1420 + (ev_count * 120),
-        "selfie_searches": 348,
-        "face_matches_found": 892,
-        "gdrive_raw_downloads": 412,
-        "active_galleries": ev_count,
-        "indexed_photos": ph_count,
-        "identified_people": ppl_count
+        "page_views": ov["unique_visitors"] or ov["total_searches"],
+        "selfie_searches": ov["total_searches"],
+        "face_matches_found": ov["successful_searches"],
+        "gdrive_raw_downloads": ov["zip_downloads"] + ov["original_downloads"],
+        "active_galleries": 1,
+        "indexed_photos": lib["indexed_photos"],
+        "identified_people": lib["people_clusters"]
     }
 
 # --- Static & Dynamic HTML Page Handlers ---

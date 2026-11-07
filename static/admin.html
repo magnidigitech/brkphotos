@@ -1475,6 +1475,227 @@
     }
   }
 
+  /* Dedicated Analytics Dashboard Styles */
+  .analytics-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .analytics-pill-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+  }
+  .analytics-pill {
+    background: transparent;
+    border: none;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 5px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: var(--font);
+  }
+  .analytics-pill:hover {
+    color: var(--ink);
+  }
+  .analytics-pill.active {
+    background: #ffffff;
+    color: var(--accent);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .analytics-custom-dates {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+  }
+  .analytics-date-input {
+    border: 1px solid var(--line);
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    color: var(--ink);
+    font-family: var(--font);
+  }
+  .analytics-subnav {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0.5rem;
+    overflow-x: auto;
+  }
+  .analytics-tab-btn {
+    background: transparent;
+    border: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font);
+    white-space: nowrap;
+  }
+  .analytics-tab-btn:hover {
+    color: var(--ink);
+    background: #f1f5f9;
+  }
+  .analytics-tab-btn.active {
+    color: #ffffff;
+    background: var(--accent);
+  }
+  .analytics-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 1200px) {
+    .analytics-kpi-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  @media (max-width: 768px) {
+    .analytics-kpi-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 480px) {
+    .analytics-kpi-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .analytics-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.15rem 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+  }
+  .analytics-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  .analytics-card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .analytics-card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: #f3f4f6;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .analytics-card-val {
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 0.35rem;
+  }
+  .analytics-card-footer {
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .analytics-chart-container {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  }
+  .analytics-chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  .analytics-chart-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .analytics-chart-subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .analytics-chart-legend {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+  .analytics-top-photo-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .analytics-top-photo-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: #1e293b;
+    border: 1px solid var(--line);
+  }
+  .analytics-warn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .warn-danger { background: #fee2e2; color: #dc2626; }
+  .warn-warning { background: #fef3c7; color: #d97706; }
+  .warn-info { background: #e0f2fe; color: #0284c7; }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -2079,32 +2300,498 @@
         </div>
       </section>
 
-      <!-- PANEL 8: ANALYTICS -->
+      <!-- PANEL 8: DEDICATED ANALYTICS & TELEMETRY DASHBOARD -->
       <section id="panel-analytics" hidden>
-        <div class="views-bar">
-          <div class="views-bar-title">Analytics</div>
+        <!-- Header & Date Controls -->
+        <div class="analytics-header-row">
+          <div>
+            <h2 class="views-bar-title" style="margin-bottom:0.2rem;">Portal Analytics & Telemetry</h2>
+            <p style="font-size:0.8rem;color:var(--muted);" id="analyticsDateRangeLabel">Live visitor traffic, face-search effectiveness, photo engagement, and system performance</p>
+          </div>
+
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0.6rem;">
+            <!-- Date Filter Pills -->
+            <div class="analytics-pill-group" id="analyticsRangePills">
+              <button class="analytics-pill" data-range="today">Today</button>
+              <button class="analytics-pill" data-range="yesterday">Yesterday</button>
+              <button class="analytics-pill active" data-range="7d">Last 7 Days</button>
+              <button class="analytics-pill" data-range="30d">Last 30 Days</button>
+              <button class="analytics-pill" data-range="month">This Month</button>
+              <button class="analytics-pill" data-range="custom">Custom</button>
+            </div>
+
+            <!-- Custom Date Inputs (hidden unless 'custom' pill is selected) -->
+            <div class="analytics-custom-dates" id="analyticsCustomDateWrap" hidden>
+              <input type="date" id="analyticsFromDate" class="analytics-date-input" title="Start Date">
+              <span style="color:var(--muted);font-weight:600;">to</span>
+              <input type="date" id="analyticsToDate" class="analytics-date-input" title="End Date">
+              <button id="analyticsApplyCustomBtn" class="btn-primary" style="padding:4px 10px;font-size:0.75rem;">Apply</button>
+            </div>
+
+            <!-- Action Buttons -->
+            <button class="btn-outline" id="analyticsRefreshBtn" title="Force refresh metrics and bypass cache">
+              <svg class="icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Refresh</span>
+            </button>
+            
+            <div style="position:relative;">
+              <button class="btn-outline" id="analyticsExportMenuBtn" title="Export CSV Report">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Export CSV</span>
+              </button>
+              <div id="analyticsExportDropdown" style="display:none;position:absolute;right:0;top:105%;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:50;min-width:180px;padding:4px 0;">
+                <button class="export-opt-btn" onclick="triggerCsvExport('daily')" style="width:100%;text-align:left;padding:8px 12px;background:none;border:none;font-size:0.8rem;cursor:pointer;font-family:var(--font);">Daily Summary CSV</button>
+                <button class="export-opt-btn" onclick="triggerCsvExport('downloads')" style="width:100%;text-align:left;padding:8px 12px;background:none;border:none;font-size:0.8rem;cursor:pointer;font-family:var(--font);">Download History CSV</button>
+                <button class="export-opt-btn" onclick="triggerCsvExport('top_photos')" style="width:100%;text-align:left;padding:8px 12px;background:none;border:none;font-size:0.8rem;cursor:pointer;font-family:var(--font);">Top 10 Photos CSV</button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="grid-metrics">
-          <div class="metric-box">
-            <div class="metric-label">Gallery Views</div>
-            <div class="metric-value" id="metricViews">1,660</div>
-            <div class="metric-footer">Public landing page impressions</div>
+        <!-- 4-Tab Navigation matching requested architecture -->
+        <div class="analytics-subnav">
+          <button class="analytics-tab-btn active" data-subtab="overview">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Overview</span>
+          </button>
+          <button class="analytics-tab-btn" data-subtab="visitors">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Visitors & Searches</span>
+          </button>
+          <button class="analytics-tab-btn" data-subtab="photos">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Photos & Downloads</span>
+          </button>
+          <button class="analytics-tab-btn" data-subtab="system">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            <span>System & Library</span>
+          </button>
+        </div>
+
+        <!-- System Alerts Banner (if any warnings) -->
+        <div id="analyticsWarningBanner" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1.25rem;font-size:0.85rem;display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg class="icon" style="color:#dc2626;" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span id="analyticsWarningText">System health normal</span>
           </div>
-          <div class="metric-box">
-            <div class="metric-label">AI Face Scans</div>
-            <div class="metric-value" id="metricSearches">348</div>
-            <div class="metric-footer">Selfie lookups performed</div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- SUB-TAB 1: OVERVIEW -->
+        <!-- =================================================================== -->
+        <div id="subtab-overview">
+          <!-- 10 Primary Metric Cards -->
+          <div class="analytics-kpi-grid">
+            <div class="analytics-card">
+              <div class="analytics-card-header">
+                <span class="analytics-card-title">Total Photos</span>
+                <div class="analytics-card-icon"><svg class="icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+              </div>
+              <div class="analytics-card-val" id="kpiTotalPhotos">0</div>
+              <div class="analytics-card-footer">Original photos in database</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-card-header">
+                <span class="analytics-card-title">Indexed Photos</span>
+                <div class="analytics-card-icon"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+              </div>
+              <div class="analytics-card-val" id="kpiIndexedPhotos">0</div>
+              <div class="analytics-card-footer">Processed for AI face search</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-card-header">
+                <span class="analytics-card-title">Pending Photos</span>
+                <div class="analytics-card-icon"><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+              </div>
+              <div class="analytics-card-val" id="kpiPendingPhotos">0</div>
+              <div class="analytics-card-footer">Waiting for indexing</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-card-header">
+                <span class="analytics-card-title">Total Searches</span>
+                <div class="analytics-card-icon"><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+              </div>
+              <div class="analytics-card-val" id="kpiTotalSearches">0</div>
+              <div class="analytics-card-footer">Selfie search requests</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-card-header">
+                <span class="analytics-card-title">Successful Searches</span>
+                <div class="analytics-card-icon" style="color:var(--emerald);background:#ecfdf5;"><svg class="icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+              </div>
+              <div class="analytics-card-val" style="color:var(--emerald);" id="kpiSuccessfulSearches">0</div>
+              <div class="analytics-card-footer">Returned &ge; 1 matching photo</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-card-header">
+                <span class="analytics-card-title">No-Match Searches</span>
+                <div class="analytics-card-icon" style="color:var(--orange);background:#fff7ed;"><svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
+              </div>
+              <div class="analytics-card-val" style="color:var(--orange);" id="kpiNoMatchSearches">0</div>
+              <div class="analytics-card-footer">Zero matching faces found</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-card-header">
+                <span class="analytics-card-title">Unique Visitors</span>
+                <div class="analytics-card-icon"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+              </div>
+              <div class="analytics-card-val" id="kpiUniqueVisitors">0</div>
+              <div class="analytics-card-footer">Distinct visitor profiles</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-card-header">
+                <span class="analytics-card-title">Photos Viewed</span>
+                <div class="analytics-card-icon"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+              </div>
+              <div class="analytics-card-val" id="kpiPhotosViewed">0</div>
+              <div class="analytics-card-footer">Genuine fullscreen lightbox opens</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-card-header">
+                <span class="analytics-card-title">ZIP Downloads</span>
+                <div class="analytics-card-icon"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+              </div>
+              <div class="analytics-card-val" id="kpiZipDownloads">0</div>
+              <div class="analytics-card-footer">Completed full-resolution bundles</div>
+            </div>
+
+            <div class="analytics-card">
+              <div class="analytics-card-header">
+                <span class="analytics-card-title">Original Downloads</span>
+                <div class="analytics-card-icon"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+              </div>
+              <div class="analytics-card-val" id="kpiSingleDownloads">0</div>
+              <div class="analytics-card-footer">Individual 4K / HD photo pulls</div>
+            </div>
           </div>
-          <div class="metric-box">
-            <div class="metric-label">Matches Found</div>
-            <div class="metric-value" id="metricMatches">892</div>
-            <div class="metric-footer">Positive face verifications</div>
+
+          <!-- Search Success Rate Banner -->
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:40px;height:40px;border-radius:10px;background:#ecfdf5;color:var(--emerald);display:flex;align-items:center;justify-content:center;">
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </div>
+              <div>
+                <div style="font-size:0.92rem;font-weight:700;color:var(--ink);">Face-Search Success Rate</div>
+                <div style="font-size:0.75rem;color:var(--muted);">(Successful Searches &divide; Completed Searches) &times; 100</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:8px;">
+              <span style="font-size:2rem;font-weight:800;color:var(--accent);" id="kpiSuccessRateText">0.0%</span>
+              <span style="font-size:0.8rem;color:var(--muted);">accuracy</span>
+            </div>
           </div>
-          <div class="metric-box">
-            <div class="metric-label">Downloads Initiated</div>
-            <div class="metric-value" id="metricDownloads">412</div>
-            <div class="metric-footer">Direct Google Drive 5TB pulls</div>
+
+          <!-- Charts Grid: Daily Volume & Search Results Breakdown -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;" id="overviewChartsGrid">
+            <!-- Chart 1: Visitors & Searches Per Day -->
+            <div class="analytics-chart-container">
+              <div class="analytics-chart-header">
+                <div>
+                  <h3 class="analytics-chart-title">Visitors & Searches per Day</h3>
+                  <p class="analytics-chart-subtitle">Daily engagement trends across selected timeframe</p>
+                </div>
+                <div class="analytics-chart-legend">
+                  <span class="legend-item"><span class="legend-dot" style="background:#0f5c4d;"></span> Visitors</span>
+                  <span class="legend-item"><span class="legend-dot" style="background:#0284c7;"></span> Searches</span>
+                </div>
+              </div>
+              <div id="chartDailyVisitorsSvgWrap" style="height:220px;width:100%;display:flex;align-items:center;justify-content:center;">
+                <span style="color:var(--muted);font-size:0.8rem;">Loading chart...</span>
+              </div>
+            </div>
+
+            <!-- Chart 2: Successful vs Zero-Result Searches -->
+            <div class="analytics-chart-container">
+              <div class="analytics-chart-header">
+                <div>
+                  <h3 class="analytics-chart-title">Search Outcome Breakdown</h3>
+                  <p class="analytics-chart-subtitle">Matches found vs zero matching photos found</p>
+                </div>
+                <div class="analytics-chart-legend">
+                  <span class="legend-item"><span class="legend-dot" style="background:#10b981;"></span> Successful</span>
+                  <span class="legend-item"><span class="legend-dot" style="background:#f97316;"></span> No Matches</span>
+                </div>
+              </div>
+              <div id="chartSearchOutcomeSvgWrap" style="height:220px;width:100%;display:flex;align-items:center;justify-content:center;">
+                <span style="color:var(--muted);font-size:0.8rem;">Loading chart...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- SUB-TAB 2: VISITORS & SEARCHES -->
+        <!-- =================================================================== -->
+        <div id="subtab-visitors" hidden>
+          <div class="grid-metrics" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;margin-bottom:1.5rem;">
+            <div class="metric-box">
+              <div class="metric-label">Total Visits</div>
+              <div class="metric-value" id="visTotalVisits">0</div>
+              <div class="metric-footer">Total portal landing sessions</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">First-Time Visitors</div>
+              <div class="metric-value" style="color:var(--emerald);" id="visFirstTime">0</div>
+              <div class="metric-footer">New visitors arriving for first time</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Returning Visitors</div>
+              <div class="metric-value" style="color:var(--accent);" id="visReturning">0</div>
+              <div class="metric-footer">Re-engaged previous visitors</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Abandonment Rate</div>
+              <div class="metric-value" id="visAbandonment">0.0%</div>
+              <div class="metric-footer">Searches started without completion</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Avg Matches Found</div>
+              <div class="metric-value" id="visAvgMatches">0.0</div>
+              <div class="metric-footer">Photos returned per successful match</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 2fr;gap:1.25rem;margin-bottom:1.5rem;">
+            <!-- Mobile vs Desktop Usage Card -->
+            <div class="analytics-chart-container">
+              <div class="analytics-chart-header">
+                <div>
+                  <h3 class="analytics-chart-title">Device Breakdown</h3>
+                  <p class="analytics-chart-subtitle">Mobile vs Desktop portal usage</p>
+                </div>
+              </div>
+              <div style="padding:1rem 0;display:flex;flex-direction:column;gap:1.25rem;">
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:0.82rem;font-weight:600;margin-bottom:6px;">
+                    <span>📱 Mobile / Tablet</span>
+                    <span id="visMobilePercent">0%</span>
+                  </div>
+                  <div style="height:10px;background:#f1f5f9;border-radius:99px;overflow:hidden;">
+                    <div id="visMobileBar" style="width:0%;height:100%;background:var(--accent);transition:width 0.4s ease;"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:0.82rem;font-weight:600;margin-bottom:6px;">
+                    <span>💻 Desktop / Laptop</span>
+                    <span id="visDesktopPercent">0%</span>
+                  </div>
+                  <div style="height:10px;background:#f1f5f9;border-radius:99px;overflow:hidden;">
+                    <div id="visDesktopBar" style="width:0%;height:100%;background:#0284c7;transition:width 0.4s ease;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hourly Traffic Activity Heatmap/Chart -->
+            <div class="analytics-chart-container">
+              <div class="analytics-chart-header">
+                <div>
+                  <h3 class="analytics-chart-title">Hourly Activity Distribution</h3>
+                  <p class="analytics-chart-subtitle">Peak search and visit activity by hour of the day (IST)</p>
+                </div>
+              </div>
+              <div id="chartHourlyActivitySvgWrap" style="height:180px;width:100%;display:flex;align-items:center;justify-content:center;">
+                <span style="color:var(--muted);font-size:0.8rem;">Loading hourly activity...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Face-Search Analytics Detailed Table -->
+          <div class="card-block">
+            <div class="card-block-header">
+              <h3 style="font-size:1.05rem;font-weight:700;">Face-Search Pipeline Performance</h3>
+              <p style="font-size:0.8rem;color:var(--muted);margin-top:2px;">Detailed latency, failure rates, and model performance metrics</p>
+            </div>
+            <div class="card-block-body" style="padding:0;">
+              <table style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:left;">
+                <tbody>
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <td style="padding:0.75rem 1rem;font-weight:600;">Average Search Processing Latency</td>
+                    <td style="padding:0.75rem 1rem;text-align:right;font-weight:700;" id="srchAvgLatency">0.0 ms</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <td style="padding:0.75rem 1rem;font-weight:600;">Face Detection Failures (No face found in uploaded selfie)</td>
+                    <td style="padding:0.75rem 1rem;text-align:right;font-weight:700;color:var(--orange);" id="srchFaceDetectFails">0</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <td style="padding:0.75rem 1rem;font-weight:600;">Slow Searches (> 3000 ms)</td>
+                    <td style="padding:0.75rem 1rem;text-align:right;font-weight:700;" id="srchSlowCount">0</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0.75rem 1rem;font-weight:600;">Technical Search Failures (Model/Backend errors)</td>
+                    <td style="padding:0.75rem 1rem;text-align:right;font-weight:700;color:var(--err);" id="srchTechnicalFails">0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- SUB-TAB 3: PHOTOS & DOWNLOADS -->
+        <!-- =================================================================== -->
+        <div id="subtab-photos" hidden>
+          <!-- Top 10 Most-Viewed Photographs -->
+          <div class="card-block" style="margin-bottom:1.5rem;">
+            <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <h3 style="font-size:1.05rem;font-weight:700;">Top 10 Most-Viewed Photographs</h3>
+                <p style="font-size:0.8rem;color:var(--muted);margin-top:2px;">Photographs receiving the highest genuine attention and downloads</p>
+              </div>
+              <button class="btn-outline" onclick="triggerCsvExport('top_photos')" style="font-size:0.75rem;padding:4px 10px;">Export Top 10 CSV</button>
+            </div>
+            <div class="card-block-body" style="padding:0;overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:left;">
+                <thead>
+                  <tr style="background:#f9fafb;border-bottom:1px solid var(--line);color:var(--muted);font-weight:600;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em;">
+                    <th style="padding:0.75rem 1rem;width:40px;">Rank</th>
+                    <th style="padding:0.75rem 1rem;">Photograph</th>
+                    <th style="padding:0.75rem 1rem;">Album / Ceremony</th>
+                    <th style="padding:0.75rem 1rem;text-align:center;">Genuine Views</th>
+                    <th style="padding:0.75rem 1rem;text-align:center;">Downloads</th>
+                    <th style="padding:0.75rem 1rem;text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="topPhotosTableBody">
+                  <tr><td colspan="6" style="padding:1.5rem;text-align:center;color:var(--muted);">No photo engagement recorded for this date range yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Download Analytics & History Table -->
+          <div class="card-block">
+            <div class="card-block-header" style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <h3 style="font-size:1.05rem;font-weight:700;">ZIP & Bulk Download Activity</h3>
+                <p style="font-size:0.8rem;color:var(--muted);margin-top:2px;">Recent full-resolution zip package generation history</p>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;">
+                <span class="badge badge-published" id="dlCompletionRateBadge">100% completed</span>
+                <button class="btn-outline" onclick="triggerCsvExport('downloads')" style="font-size:0.75rem;padding:4px 10px;">Export Downloads CSV</button>
+              </div>
+            </div>
+            <div class="card-block-body" style="padding:0;overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:left;">
+                <thead>
+                  <tr style="background:#f9fafb;border-bottom:1px solid var(--line);color:var(--muted);font-weight:600;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em;">
+                    <th style="padding:0.75rem 1rem;">Date & Time</th>
+                    <th style="padding:0.75rem 1rem;">Job Reference</th>
+                    <th style="padding:0.75rem 1rem;">Type</th>
+                    <th style="padding:0.75rem 1rem;">Photos Count</th>
+                    <th style="padding:0.75rem 1rem;">Package Size</th>
+                    <th style="padding:0.75rem 1rem;">Duration</th>
+                    <th style="padding:0.75rem 1rem;text-align:right;">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="downloadHistoryTableBody">
+                  <tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--muted);">No recent download jobs found.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- SUB-TAB 4: SYSTEM & LIBRARY -->
+        <!-- =================================================================== -->
+        <div id="subtab-system" hidden>
+          <!-- System Resource Monitoring -->
+          <div class="analytics-chart-container" style="margin-bottom:1.5rem;">
+            <div class="analytics-chart-header">
+              <div>
+                <h3 class="analytics-chart-title">Server Resource Telemetry</h3>
+                <p class="analytics-chart-subtitle">Real-time CPU, RAM, and storage utilization</p>
+              </div>
+              <span id="sysSampledAtBadge" style="font-size:0.72rem;color:var(--muted);font-family:monospace;">Updated: Just now</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;padding:0.5rem 0;">
+              <!-- CPU -->
+              <div style="background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:1rem;">
+                <div style="display:flex;justify-content:space-between;font-size:0.78rem;font-weight:700;color:var(--muted);margin-bottom:6px;">
+                  <span>CPU LOAD</span>
+                  <span id="sysCpuPercent">0.0%</span>
+                </div>
+                <div style="height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-bottom:8px;">
+                  <div id="sysCpuBar" style="width:0%;height:100%;background:var(--accent);transition:width 0.4s ease;"></div>
+                </div>
+                <div style="font-size:0.72rem;color:var(--muted);">Multi-core compute load</div>
+              </div>
+
+              <!-- RAM -->
+              <div style="background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:1rem;">
+                <div style="display:flex;justify-content:space-between;font-size:0.78rem;font-weight:700;color:var(--muted);margin-bottom:6px;">
+                  <span>RAM USAGE</span>
+                  <span id="sysRamPercent">0.0%</span>
+                </div>
+                <div style="height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-bottom:8px;">
+                  <div id="sysRamBar" style="width:0%;height:100%;background:var(--emerald);transition:width 0.4s ease;"></div>
+                </div>
+                <div style="font-size:0.72rem;color:var(--muted);"><span id="sysRamUsed">0</span> / <span id="sysRamTotal">0</span> MB</div>
+              </div>
+
+              <!-- DISK -->
+              <div style="background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:1rem;">
+                <div style="display:flex;justify-content:space-between;font-size:0.78rem;font-weight:700;color:var(--muted);margin-bottom:6px;">
+                  <span>SSD STORAGE</span>
+                  <span id="sysDiskPercent">0.0%</span>
+                </div>
+                <div style="height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-bottom:8px;">
+                  <div id="sysDiskBar" style="width:0%;height:100%;background:#0284c7;transition:width 0.4s ease;"></div>
+                </div>
+                <div style="font-size:0.72rem;color:var(--muted);"><span id="sysDiskAvail">0</span> GB free of <span id="sysDiskTotal">0</span> GB</div>
+              </div>
+
+              <!-- DATABASE -->
+              <div style="background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:1rem;">
+                <div style="display:flex;justify-content:space-between;font-size:0.78rem;font-weight:700;color:var(--muted);margin-bottom:6px;">
+                  <span>DATABASE SIZE</span>
+                  <span id="sysDbSize">0.0 MB</span>
+                </div>
+                <div style="font-size:0.72rem;color:var(--muted);margin-top:14px;">SQLite WAL index & event store</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Photo Library Processing Breakdown -->
+          <div class="card-block">
+            <div class="card-block-header">
+              <h3 style="font-size:1.05rem;font-weight:700;">Photo Library & Indexing State</h3>
+              <p style="font-size:0.8rem;color:var(--muted);margin-top:2px;">Breakdown of face detection coverage and background pipeline health</p>
+            </div>
+            <div class="card-block-body" style="padding:0;">
+              <table style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:left;">
+                <tbody>
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <td style="padding:0.75rem 1rem;font-weight:600;">Total Detected Face Records</td>
+                    <td style="padding:0.75rem 1rem;text-align:right;font-weight:700;" id="libDetectedFaces">0</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <td style="padding:0.75rem 1rem;font-weight:600;">Identified People Clusters</td>
+                    <td style="padding:0.75rem 1rem;text-align:right;font-weight:700;" id="libPeopleClusters">0</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <td style="padding:0.75rem 1rem;font-weight:600;">Thumbnails Cache Size on Disk</td>
+                    <td style="padding:0.75rem 1rem;text-align:right;font-weight:700;" id="libThumbsSize">0.0 MB</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0.75rem 1rem;font-weight:600;">Active Upload & Download Queue Backlog</td>
+                    <td style="padding:0.75rem 1rem;text-align:right;font-weight:700;" id="libQueueBacklog">0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -4639,17 +5326,516 @@ async function loadStorage() {
   } catch (e) {}
 }
 
-// Analytics
-async function loadAnalytics() {
+// --- Dedicated Analytics & Telemetry Controller ---
+let analyticsCurrentRange = '7d';
+let analyticsCustomFrom = '';
+let analyticsCustomTo = '';
+let analyticsCurrentSubTab = 'overview';
+let analyticsData = null;
+let analyticsSystemData = null;
+let isAnalyticsInitialized = false;
+
+function initAnalyticsEventListeners() {
+  if (isAnalyticsInitialized) return;
+  isAnalyticsInitialized = true;
+
+  // Range Pills
+  $('analyticsRangePills')?.querySelectorAll('.analytics-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $('analyticsRangePills').querySelectorAll('.analytics-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const r = btn.dataset.range;
+      analyticsCurrentRange = r;
+
+      const customWrap = $('analyticsCustomDateWrap');
+      if (r === 'custom') {
+        if (customWrap) customWrap.hidden = false;
+        // Pre-fill inputs if empty
+        const todayStr = new Date().toISOString().split('T')[0];
+        const weekAgoStr = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+        if (!$('analyticsFromDate').value) $('analyticsFromDate').value = weekAgoStr;
+        if (!$('analyticsToDate').value) $('analyticsToDate').value = todayStr;
+      } else {
+        if (customWrap) customWrap.hidden = true;
+        analyticsCustomFrom = '';
+        analyticsCustomTo = '';
+        loadAnalytics(false);
+      }
+    });
+  });
+
+  // Apply Custom Date Button
+  $('analyticsApplyCustomBtn')?.addEventListener('click', () => {
+    analyticsCustomFrom = $('analyticsFromDate').value;
+    analyticsCustomTo = $('analyticsToDate').value;
+    if (!analyticsCustomFrom) {
+      alert('Please select a valid start date');
+      return;
+    }
+    loadAnalytics(false);
+  });
+
+  // Sub-Tab Navigation
+  document.querySelectorAll('.analytics-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.analytics-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const subtab = btn.dataset.subtab;
+      analyticsCurrentSubTab = subtab;
+
+      const subpanels = ['overview', 'visitors', 'photos', 'system'];
+      subpanels.forEach(sp => {
+        const el = $(`subtab-${sp}`);
+        if (el) el.hidden = (sp !== subtab);
+      });
+
+      if (analyticsData) {
+        renderCurrentSubTabCharts();
+      }
+    });
+  });
+
+  // Refresh Button
+  $('analyticsRefreshBtn')?.addEventListener('click', () => {
+    const btn = $('analyticsRefreshBtn');
+    btn.classList.add('loading');
+    loadAnalytics(true).finally(() => {
+      setTimeout(() => btn.classList.remove('loading'), 300);
+    });
+  });
+
+  // Export CSV Dropdown Toggle
+  const exportBtn = $('analyticsExportMenuBtn');
+  const exportMenu = $('analyticsExportDropdown');
+  if (exportBtn && exportMenu) {
+    exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportMenu.style.display = exportMenu.style.display === 'block' ? 'none' : 'block';
+    });
+    document.addEventListener('click', () => {
+      if (exportMenu) exportMenu.style.display = 'none';
+    });
+  }
+}
+
+function triggerCsvExport(type = 'daily') {
+  let url = `/api/admin/analytics/export?type=${type}&range=${analyticsCurrentRange}`;
+  if (analyticsCurrentRange === 'custom') {
+    if (analyticsCustomFrom) url += `&from_date=${analyticsCustomFrom}`;
+    if (analyticsCustomTo) url += `&to_date=${analyticsCustomTo}`;
+  }
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `brk_analytics_${type}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+async function loadAnalytics(forceRefresh = false) {
+  initAnalyticsEventListeners();
+
+  let dashUrl = `/api/admin/analytics/dashboard?range=${analyticsCurrentRange}`;
+  if (analyticsCurrentRange === 'custom' && analyticsCustomFrom) {
+    dashUrl += `&from_date=${analyticsCustomFrom}&to_date=${analyticsCustomTo}`;
+  }
+  if (forceRefresh) dashUrl += '&refresh=true';
+
+  let sysUrl = `/api/admin/analytics/system`;
+  if (forceRefresh) sysUrl += '?refresh=true';
+
   try {
-    const res = await fetch('/api/admin/analytics');
-    if (!res.ok) return;
-    const j = await res.json();
-    $('metricViews').textContent = (j.page_views || 1660).toLocaleString();
-    $('metricSearches').textContent = j.selfie_searches || 348;
-    $('metricMatches').textContent = j.face_matches_found || 892;
-    $('metricDownloads').textContent = j.gdrive_raw_downloads || 412;
-  } catch (e) {}
+    const [dashRes, sysRes] = await Promise.all([
+      fetch(dashUrl),
+      fetch(sysUrl)
+    ]);
+
+    if (dashRes.ok) {
+      analyticsData = await dashRes.json();
+      populateDashboardMetrics(analyticsData);
+    }
+    if (sysRes.ok) {
+      analyticsSystemData = await sysRes.json();
+      populateSystemMetrics(analyticsSystemData);
+    }
+
+    renderCurrentSubTabCharts();
+  } catch (err) {
+    console.error('Error loading analytics dashboard:', err);
+  }
+}
+
+function populateDashboardMetrics(data) {
+  if (!data) return;
+
+  // Header Date Label
+  const lbl = $('analyticsDateRangeLabel');
+  if (lbl) {
+    lbl.textContent = `Showing metrics for: ${data.window_label || 'Current Period'} (${data.start_time.split(' ')[0]} to ${data.end_time.split(' ')[0]})`;
+  }
+
+  // 1. Overview Tab KPI Cards
+  const ov = data.overview || {};
+  $('kpiTotalPhotos').textContent = (ov.total_photographs || 0).toLocaleString();
+  $('kpiIndexedPhotos').textContent = (ov.indexed_photographs || 0).toLocaleString();
+  $('kpiPendingPhotos').textContent = (ov.pending_photographs || 0).toLocaleString();
+  $('kpiTotalSearches').textContent = (ov.total_searches || 0).toLocaleString();
+  $('kpiSuccessfulSearches').textContent = (ov.successful_searches || 0).toLocaleString();
+  $('kpiNoMatchSearches').textContent = (ov.no_match_searches || 0).toLocaleString();
+  $('kpiUniqueVisitors').textContent = (ov.unique_visitors || 0).toLocaleString();
+  $('kpiPhotosViewed').textContent = (ov.photos_viewed || 0).toLocaleString();
+  $('kpiZipDownloads').textContent = (ov.zip_downloads || 0).toLocaleString();
+  $('kpiSingleDownloads').textContent = (ov.original_downloads || 0).toLocaleString();
+  $('kpiSuccessRateText').textContent = `${(ov.search_success_rate || 0.0).toFixed(1)}%`;
+
+  // 2. Visitors Tab
+  const vis = data.visitor_analytics || {};
+  $('visTotalVisits').textContent = (vis.total_visits || 0).toLocaleString();
+  $('visFirstTime').textContent = (vis.first_time_visitors || 0).toLocaleString();
+  $('visReturning').textContent = (vis.returning_visitors || 0).toLocaleString();
+  $('visAbandonment').textContent = `${(vis.abandonment_rate || 0.0).toFixed(1)}%`;
+  $('visAvgMatches').textContent = (vis.avg_photos_per_match || 0.0).toFixed(1);
+
+  // Device percentage
+  const mob = vis.mobile_percent || 65.0;
+  const dsk = vis.desktop_percent || 35.0;
+  $('visMobilePercent').textContent = `${mob.toFixed(1)}%`;
+  $('visDesktopPercent').textContent = `${dsk.toFixed(1)}%`;
+  if ($('visMobileBar')) $('visMobileBar').style.width = `${mob}%`;
+  if ($('visDesktopBar')) $('visDesktopBar').style.width = `${dsk}%`;
+
+  // Search details
+  const srch = data.search_analytics || {};
+  $('srchAvgLatency').textContent = `${(srch.avg_duration_ms || 0.0).toFixed(1)} ms`;
+  $('srchFaceDetectFails').textContent = (srch.face_detection_failures || 0).toLocaleString();
+  $('srchSlowCount').textContent = (srch.slow_searches || 0).toLocaleString();
+  $('srchTechnicalFails').textContent = (srch.search_failures || 0).toLocaleString();
+
+  // 3. Photos Tab (Top 10 Most-Viewed)
+  const pe = data.photo_engagement || {};
+  const topPhotos = pe.top_photos || [];
+  const tbody = $('topPhotosTableBody');
+  if (tbody) {
+    if (topPhotos.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:1.5rem;text-align:center;color:var(--muted);">No photo engagement recorded for this timeframe yet.</td></tr>`;
+    } else {
+      tbody.innerHTML = topPhotos.map((p, idx) => `
+        <tr style="border-bottom:1px solid var(--line);">
+          <td style="padding:0.75rem 1rem;font-weight:700;color:var(--muted);">#${idx + 1}</td>
+          <td style="padding:0.75rem 1rem;">
+            <div class="analytics-top-photo-row">
+              <img src="${p.thumb_url}" class="analytics-top-photo-thumb" alt="${p.filename}" onerror="this.src='/static/images/favicon.png'">
+              <div>
+                <div style="font-weight:600;color:var(--ink);font-size:0.85rem;">${p.filename}</div>
+                <div style="font-size:0.75rem;color:var(--muted);">${p.captured_at || 'Captured date unrecorded'}</div>
+              </div>
+            </div>
+          </td>
+          <td style="padding:0.75rem 1rem;color:var(--muted);">${p.album_name || 'BRK Sir Event'}</td>
+          <td style="padding:0.75rem 1rem;text-align:center;font-weight:700;color:var(--accent);">${p.views.toLocaleString()}</td>
+          <td style="padding:0.75rem 1rem;text-align:center;font-weight:700;color:var(--emerald);">${p.downloads.toLocaleString()}</td>
+          <td style="padding:0.75rem 1rem;text-align:right;">
+            <a href="${p.preview_url}" target="_blank" class="btn-icon-sub" title="Inspect Photo" style="display:inline-flex;">
+              <svg class="icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </a>
+          </td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // Download History
+  const dl = data.download_analytics || {};
+  $('dlCompletionRateBadge').textContent = `${(dl.zip_completion_rate || 100.0).toFixed(1)}% completed`;
+  const dlHistory = dl.download_history || [];
+  const dlTbody = $('downloadHistoryTableBody');
+  if (dlTbody) {
+    if (dlHistory.length === 0) {
+      dlTbody.innerHTML = `<tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--muted);">No recent download jobs recorded.</td></tr>`;
+    } else {
+      dlTbody.innerHTML = dlHistory.map(j => {
+        let statusBadge = '<span class="badge badge-published">Completed</span>';
+        if (j.status === 'failed') statusBadge = '<span class="badge" style="background:#fee2e2;color:#dc2626;">Failed</span>';
+        else if (j.status === 'processing') statusBadge = '<span class="badge" style="background:#fef3c7;color:#d97706;">Processing</span>';
+
+        return `
+          <tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:0.75rem 1rem;font-family:monospace;font-size:0.8rem;">${j.started_at}</td>
+            <td style="padding:0.75rem 1rem;font-family:monospace;font-weight:600;color:var(--muted);">${j.job_id}</td>
+            <td style="padding:0.75rem 1rem;text-transform:uppercase;font-size:0.75rem;font-weight:700;">${j.job_type}</td>
+            <td style="padding:0.75rem 1rem;font-weight:600;">${j.photo_count} photos</td>
+            <td style="padding:0.75rem 1rem;">${j.size_mb} MB</td>
+            <td style="padding:0.75rem 1rem;">${j.duration_s}s</td>
+            <td style="padding:0.75rem 1rem;text-align:right;">${statusBadge}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+
+  // 4. Photo Library Breakdown
+  const lib = data.library_analytics || {};
+  $('libDetectedFaces').textContent = (lib.detected_faces || 0).toLocaleString();
+  $('libPeopleClusters').textContent = (lib.people_clusters || 0).toLocaleString();
+}
+
+function populateSystemMetrics(sys) {
+  if (!sys) return;
+
+  // CPU
+  const cpu = sys.cpu_percent || 0.0;
+  $('sysCpuPercent').textContent = `${cpu.toFixed(1)}%`;
+  if ($('sysCpuBar')) $('sysCpuBar').style.width = `${Math.min(100, cpu)}%`;
+
+  // RAM
+  const ram = sys.ram || {};
+  const ramPct = ram.percent || 0.0;
+  $('sysRamPercent').textContent = `${ramPct.toFixed(1)}%`;
+  $('sysRamUsed').textContent = Math.round(ram.used_mb || 0);
+  $('sysRamTotal').textContent = Math.round(ram.total_mb || 0);
+  if ($('sysRamBar')) $('sysRamBar').style.width = `${Math.min(100, ramPct)}%`;
+
+  // Disk
+  const disk = sys.disk || {};
+  const diskPct = disk.percent || 0.0;
+  $('sysDiskPercent').textContent = `${diskPct.toFixed(1)}%`;
+  $('sysDiskAvail').textContent = (disk.available_gb || 0).toFixed(1);
+  $('sysDiskTotal').textContent = (disk.total_gb || 0).toFixed(1);
+  if ($('sysDiskBar')) $('sysDiskBar').style.width = `${Math.min(100, diskPct)}%`;
+
+  // Storage
+  const st = sys.storage || {};
+  $('sysDbSize').textContent = `${(st.database_mb || 0.0).toFixed(2)} MB`;
+  $('libThumbsSize').textContent = `${(st.thumbnails_mb || 0.0).toFixed(1)} MB`;
+
+  // Queue
+  const q = sys.queues || {};
+  $('libQueueBacklog').textContent = `${q.upload_queue_len || 0} queued / ${q.active_tasks || 0} active`;
+
+  // Sampled at badge
+  if ($('sysSampledAtBadge')) $('sysSampledAtBadge').textContent = `Sampled: ${sys.sampled_at || 'Just now'}`;
+
+  // Warnings
+  const warnBanner = $('analyticsWarningBanner');
+  const warnText = $('analyticsWarningText');
+  if (sys.warnings && sys.warnings.length > 0) {
+    if (warnBanner && warnText) {
+      warnBanner.style.display = 'flex';
+      warnText.textContent = sys.warnings.map(w => w.message).join(' | ');
+    }
+  } else if (warnBanner) {
+    warnBanner.style.display = 'none';
+  }
+}
+
+function renderCurrentSubTabCharts() {
+  if (!analyticsData) return;
+  const series = analyticsData.chart_series || [];
+
+  if (analyticsCurrentSubTab === 'overview') {
+    renderDailyTrafficChart(series);
+    renderSearchOutcomeChart(series);
+  } else if (analyticsCurrentSubTab === 'visitors') {
+    const hourly = analyticsData.visitor_analytics?.hourly_distribution || {};
+    renderHourlyActivityChart(hourly);
+  }
+}
+
+// --- Interactive Native SVG Chart Generators (Zero Dependencies) ---
+
+function renderDailyTrafficChart(series) {
+  const wrap = $('chartDailyVisitorsSvgWrap');
+  if (!wrap) return;
+  if (!series || series.length === 0) {
+    wrap.innerHTML = '<span style="color:var(--muted);font-size:0.8rem;">No activity data recorded in this period</span>';
+    return;
+  }
+
+  const w = wrap.clientWidth || 500;
+  const h = 210;
+  const padL = 40;
+  const padR = 20;
+  const padT = 20;
+  const padB = 30;
+
+  const maxVal = Math.max(10, ...series.map(s => Math.max(s.visits || 0, s.total_searches || 0)));
+  const usableW = w - padL - padR;
+  const usableH = h - padT - padB;
+  const stepX = series.length > 1 ? usableW / (series.length - 1) : usableW;
+
+  const pointsVisits = series.map((s, i) => {
+    const x = padL + i * stepX;
+    const y = padT + usableH - ((s.visits || 0) / maxVal) * usableH;
+    return { x, y, val: s.visits || 0, label: s.label };
+  });
+
+  const pointsSearches = series.map((s, i) => {
+    const x = padL + i * stepX;
+    const y = padT + usableH - ((s.total_searches || 0) / maxVal) * usableH;
+    return { x, y, val: s.total_searches || 0, label: s.label };
+  });
+
+  const lineVisitsD = pointsVisits.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
+  const areaVisitsD = pointsVisits.length > 0
+    ? `${lineVisitsD} L ${pointsVisits[pointsVisits.length - 1].x} ${padT + usableH} L ${pointsVisits[0].x} ${padT + usableH} Z`
+    : '';
+
+  const lineSearchesD = pointsSearches.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
+
+  // Grid Lines
+  const gridLines = [0, 0.33, 0.66, 1.0].map(ratio => {
+    const y = padT + usableH - (ratio * usableH);
+    const val = Math.round(ratio * maxVal);
+    return `
+      <line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>
+      <text x="${padL - 8}" y="${y + 4}" font-size="10" fill="#94a3b8" text-anchor="end">${val}</text>
+    `;
+  }).join('');
+
+  // X-Axis Labels (show subset if many days)
+  const skipMod = Math.max(1, Math.floor(series.length / 7));
+  const xLabels = pointsVisits.map((p, i) => {
+    if (i % skipMod !== 0 && i !== pointsVisits.length - 1) return '';
+    return `<text x="${p.x}" y="${h - 8}" font-size="10" fill="#94a3b8" text-anchor="middle">${p.label}</text>`;
+  }).join('');
+
+  // Data Dots
+  const dotsVisits = pointsVisits.map(p => `
+    <circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#0f5c4d" stroke="#ffffff" stroke-width="1.5">
+      <title>Visitors on ${p.label}: ${p.val}</title>
+    </circle>
+  `).join('');
+
+  const dotsSearches = pointsSearches.map(p => `
+    <circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#0284c7" stroke="#ffffff" stroke-width="1.5">
+      <title>Searches on ${p.label}: ${p.val}</title>
+    </circle>
+  `).join('');
+
+  wrap.innerHTML = `
+    <svg width="100%" height="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="overflow:visible;">
+      ${gridLines}
+      <path d="${areaVisitsD}" fill="rgba(15, 92, 77, 0.08)"/>
+      <path d="${lineVisitsD}" fill="none" stroke="#0f5c4d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${lineSearchesD}" fill="none" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dotsVisits}
+      ${dotsSearches}
+      ${xLabels}
+    </svg>
+  `;
+}
+
+function renderSearchOutcomeChart(series) {
+  const wrap = $('chartSearchOutcomeSvgWrap');
+  if (!wrap) return;
+  if (!series || series.length === 0) {
+    wrap.innerHTML = '<span style="color:var(--muted);font-size:0.8rem;">No search outcomes recorded in this period</span>';
+    return;
+  }
+
+  const w = wrap.clientWidth || 500;
+  const h = 210;
+  const padL = 40;
+  const padR = 20;
+  const padT = 20;
+  const padB = 30;
+
+  const maxVal = Math.max(10, ...series.map(s => (s.successful_searches || 0) + (s.zero_results || 0)));
+  const usableW = w - padL - padR;
+  const usableH = h - padT - padB;
+  const barSlotW = usableW / series.length;
+  const barWidth = Math.max(4, Math.min(24, barSlotW * 0.6));
+
+  const gridLines = [0, 0.5, 1.0].map(ratio => {
+    const y = padT + usableH - (ratio * usableH);
+    const val = Math.round(ratio * maxVal);
+    return `
+      <line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>
+      <text x="${padL - 8}" y="${y + 4}" font-size="10" fill="#94a3b8" text-anchor="end">${val}</text>
+    `;
+  }).join('');
+
+  const skipMod = Math.max(1, Math.floor(series.length / 7));
+  const bars = series.map((s, i) => {
+    const cx = padL + i * barSlotW + barSlotW / 2;
+    const x = cx - barWidth / 2;
+
+    const succH = ((s.successful_searches || 0) / maxVal) * usableH;
+    const zeroH = ((s.zero_results || 0) / maxVal) * usableH;
+
+    const succY = padT + usableH - succH;
+    const zeroY = succY - zeroH;
+
+    const xLabel = (i % skipMod === 0 || i === series.length - 1)
+      ? `<text x="${cx}" y="${h - 8}" font-size="10" fill="#94a3b8" text-anchor="middle">${s.label}</text>`
+      : '';
+
+    return `
+      <g>
+        <title>${s.label}: ${s.successful_searches} successful matches, ${s.zero_results} no-match</title>
+        <!-- Successful Matches Bar (Green) -->
+        <rect x="${x}" y="${succY}" width="${barWidth}" height="${succH}" fill="#10b981" rx="2"/>
+        <!-- Zero Matches Bar (Orange Stacked) -->
+        <rect x="${x}" y="${zeroY}" width="${barWidth}" height="${zeroH}" fill="#f97316" rx="2"/>
+        ${xLabel}
+      </g>
+    `;
+  }).join('');
+
+  wrap.innerHTML = `
+    <svg width="100%" height="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="overflow:visible;">
+      ${gridLines}
+      ${bars}
+    </svg>
+  `;
+}
+
+function renderHourlyActivityChart(hourlyMap) {
+  const wrap = $('chartHourlyActivitySvgWrap');
+  if (!wrap) return;
+
+  const hours = Object.keys(hourlyMap).sort();
+  const values = hours.map(h => hourlyMap[h] || 0);
+  const maxVal = Math.max(5, ...values);
+
+  const w = wrap.clientWidth || 600;
+  const h = 180;
+  const padL = 30;
+  const padR = 20;
+  const padT = 15;
+  const padB = 25;
+
+  const usableW = w - padL - padR;
+  const usableH = h - padT - padB;
+  const slotW = usableW / 24;
+  const barW = Math.max(3, slotW * 0.7);
+
+  const bars = hours.map((hourKey, i) => {
+    const val = hourlyMap[hourKey] || 0;
+    const barH = (val / maxVal) * usableH;
+    const cx = padL + i * slotW + slotW / 2;
+    const x = cx - barW / 2;
+    const y = padT + usableH - barH;
+
+    // Show label every 3 hours: 00, 03, 06, 09, 12, 15, 18, 21
+    const showLabel = (i % 3 === 0);
+    const label = showLabel ? `<text x="${cx}" y="${h - 6}" font-size="9" fill="#94a3b8" text-anchor="middle">${hourKey.split(':')[0]}h</text>` : '';
+
+    return `
+      <g>
+        <title>${hourKey}: ${val} portal events</title>
+        <rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="#0f5c4d" rx="2"/>
+        ${label}
+      </g>
+    `;
+  }).join('');
+
+  wrap.innerHTML = `
+    <svg width="100%" height="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="overflow:visible;">
+      <line x1="${padL}" y1="${padT + usableH}" x2="${w - padR}" y2="${padT + usableH}" stroke="#e2e8f0" stroke-width="1"/>
+      ${bars}
+    </svg>
+  `;
 }
 
 // Activity Logs & Task Management
