@@ -3919,17 +3919,117 @@
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
 
+    function normalizeBaseFilename(fname) {
+      if (!fname || typeof fname !== 'string') return '';
+      const base = fname.split('/').pop().toLowerCase().trim();
+      const lastDot = base.lastIndexOf('.');
+      const stem = lastDot > 0 ? base.substring(0, lastDot) : base;
+      return stem
+        .replace(/[\s_]*\((?:[0-9]+|copy(?:\s+[0-9]+)?)\)$/i, '')
+        .replace(/[\s_-]+copy(?:[\s_-]*[0-9]+|\([0-9]+\))?$/i, '')
+        .trim();
+    }
+
+    function parseDateString(text) {
+      if (!text || typeof text !== 'string') return null;
+      const s = text.trim();
+      if (!s) return null;
+
+      // 1. DD-MM-YYYY or DD-MM-YY (e.g. "28-10-2026", "28/10/26", "28.10.2026")
+      const mDmy = s.match(/\b(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2}|\d{2})\b/);
+      if (mDmy) {
+        const d = parseInt(mDmy[1], 10);
+        const m = parseInt(mDmy[2], 10);
+        let y = parseInt(mDmy[3], 10);
+        if (y < 100) y += 2000;
+        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+          const dt = new Date(y, m - 1, d);
+          if (!isNaN(dt.getTime()) && dt.getDate() === d) {
+            return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          }
+        }
+      }
+
+      // 2. YYYY-MM-DD or YYYY/MM/DD
+      const mYmd = s.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
+      if (mYmd) {
+        const y = parseInt(mYmd[1], 10);
+        const m = parseInt(mYmd[2], 10);
+        const d = parseInt(mYmd[3], 10);
+        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+          const dt = new Date(y, m - 1, d);
+          if (!isNaN(dt.getTime()) && dt.getDate() === d) {
+            return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          }
+        }
+      }
+
+      // 3. DD Mon YYYY (e.g. "28 Oct 2026", "28 October 2026")
+      const mText1 = s.match(/\b(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2}|\d{2})\b/);
+      if (mText1) {
+        const d = parseInt(mText1[1], 10);
+        const monStr = mText1[2].toLowerCase().substring(0, 3);
+        let y = parseInt(mText1[3], 10);
+        if (y < 100) y += 2000;
+        const mIdx = MONTH_NAMES.findIndex(mon => mon.toLowerCase() === monStr);
+        if (mIdx !== -1 && d >= 1 && d <= 31) {
+          const dt = new Date(y, mIdx, d);
+          if (!isNaN(dt.getTime()) && dt.getDate() === d) {
+            return `${y}-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          }
+        }
+      }
+
+      // 4. Mon DD, YYYY (e.g. "Oct 28, 2026")
+      const mText2 = s.match(/\b([A-Za-z]+)\s+(\d{1,2}),?\s+(20\d{2}|\d{2})\b/);
+      if (mText2) {
+        const monStr = mText2[1].toLowerCase().substring(0, 3);
+        const d = parseInt(mText2[2], 10);
+        let y = parseInt(mText2[3], 10);
+        if (y < 100) y += 2000;
+        const mIdx = MONTH_NAMES.findIndex(mon => mon.toLowerCase() === monStr);
+        if (mIdx !== -1 && d >= 1 && d <= 31) {
+          const dt = new Date(y, mIdx, d);
+          if (!isNaN(dt.getTime()) && dt.getDate() === d) {
+            return `${y}-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          }
+        }
+      }
+
+      // 5. YYYYMMDD in filenames (e.g. IMG_20261028_123456)
+      const mCam = s.match(/\b(20\d{2})(\d{2})(\d{2})[_-]\d{4,6}\b/);
+      if (mCam) {
+        const y = parseInt(mCam[1], 10);
+        const m = parseInt(mCam[2], 10);
+        const d = parseInt(mCam[3], 10);
+        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+          const dt = new Date(y, m - 1, d);
+          if (!isNaN(dt.getTime()) && dt.getDate() === d) {
+            return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          }
+        }
+      }
+
+      return null;
+    }
+
     function parsePhotoDate(item) {
       let album = '';
       let event = '';
       let dateStr = '';
+      let relPath = '';
+      let filename = '';
 
       if (typeof item === 'object' && item !== null) {
-        album = (item.album_name || '').trim();
+        album = (item.album_name || item.album_slug || '').trim();
         event = (item.event_name || '').trim();
-        dateStr = (item.captured_at || item.created_at || '').trim();
+        dateStr = (item.captured_at || '').trim();
+        relPath = (item.rel_path || '').trim();
+        filename = (item.filename || '').trim();
       } else if (typeof item === 'string') {
-        const parts = item.split('/');
+        relPath = item.trim();
+        const parts = relPath.split('/');
+        filename = parts[parts.length - 1] || '';
         if (parts.length > 2) {
           album = parts[parts.length - 2].trim();
           event = parts[parts.length - 3].trim();
@@ -3938,91 +4038,43 @@
         }
       }
 
-      // 1. Strict parsing of DD-MM-YY or DD-MM-YYYY from album name (e.g. "01-11-26" or "21-10-2026")
-      const dmy = album.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
-      if (dmy) {
-        const d = parseInt(dmy[1], 10);
-        const m = parseInt(dmy[2], 10);
-        let y = parseInt(dmy[3], 10);
-        if (y < 100) y += 2000;
-        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-          const dateObj = new Date(y, m - 1, d);
-          if (!isNaN(dateObj.getTime()) && dateObj.getDate() === d) {
-            const dayPad = String(d).padStart(2, '0');
-            const monthPad = String(m).padStart(2, '0');
-            const dateKey = `${y}-${monthPad}-${dayPad}`;
-            return {
-              isDate: true,
-              key: dateKey,
-              dateKey,
-              year: y,
-              month: m - 1,
-              day: d,
-              sortTime: dateObj.getTime(),
-              title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
-              rawAlbum: album
-            };
-          }
-        }
+      // 1. Check EXIF capture date
+      let dKey = parseDateString(dateStr);
+
+      // 2. Extract date from album name or slug
+      if (!dKey && album) {
+        dKey = parseDateString(album);
       }
 
-      // Strict parsing of YYYY-MM-DD from album name
-      const ymdAlb = album.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
-      if (ymdAlb) {
-        const y = parseInt(ymdAlb[1], 10);
-        const m = parseInt(ymdAlb[2], 10);
-        const d = parseInt(ymdAlb[3], 10);
-        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-          const dateObj = new Date(y, m - 1, d);
-          if (!isNaN(dateObj.getTime()) && dateObj.getDate() === d) {
-            const dayPad = String(d).padStart(2, '0');
-            const monthPad = String(m).padStart(2, '0');
-            const dateKey = `${y}-${monthPad}-${dayPad}`;
-            return {
-              isDate: true,
-              key: dateKey,
-              dateKey,
-              year: y,
-              month: m - 1,
-              day: d,
-              sortTime: dateObj.getTime(),
-              title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
-              rawAlbum: album
-            };
-          }
-        }
+      // 3. Extract date from rel_path folder
+      if (!dKey && relPath) {
+        dKey = parseDateString(relPath);
       }
 
-      // 2. Try parsing captured_at / created_at date (YYYY-MM-DD)
-      if (dateStr) {
-        const ymd = dateStr.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-        if (ymd) {
-          const y = parseInt(ymd[1], 10);
-          const m = parseInt(ymd[2], 10);
-          const d = parseInt(ymd[3], 10);
-          if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-            const dateObj = new Date(y, m - 1, d);
-            if (!isNaN(dateObj.getTime()) && dateObj.getDate() === d) {
-              const dayPad = String(d).padStart(2, '0');
-              const monthPad = String(m).padStart(2, '0');
-              const dateKey = `${y}-${monthPad}-${dayPad}`;
-              return {
-                isDate: true,
-                key: dateKey,
-                dateKey,
-                year: y,
-                month: m - 1,
-                day: d,
-                sortTime: dateObj.getTime(),
-                title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
-                rawAlbum: album || dateKey
-              };
-            }
-          }
-        }
+      // 4. Extract date from filename
+      if (!dKey && filename) {
+        dKey = parseDateString(filename);
       }
 
-      // 3. Fallback to Other Albums & Events (non-date album titles like "PART 01", "18-10-2026 ceremony")
+      if (dKey) {
+        const [y, m, d] = dKey.split('-').map(v => parseInt(v, 10));
+        const dt = new Date(y, m - 1, d);
+        const dayPad = String(d).padStart(2, '0');
+        const monthPad = String(m).padStart(2, '0');
+        return {
+          isDate: true,
+          key: dKey,
+          dateKey: dKey,
+          year: y,
+          month: m - 1,
+          day: d,
+          sortTime: dt.getTime(),
+          title: `${dayPad} ${MONTH_NAMES[m - 1]} ${y}`,
+          rawAlbum: album || dKey
+        };
+      }
+
+      // Fallback to non-date album title or event name
       const fallback = album || event || 'Celebration Photos';
       return {
         isDate: false,
@@ -4593,15 +4645,27 @@
       const seenFnames = new Set(rawPhotosList.map(item => {
         return (typeof item === 'string' ? item.split('/').pop() : (item.filename || item.rel_path.split('/').pop())).toLowerCase();
       }));
+      const seenStems = new Set(rawPhotosList.map(item => {
+        const fn = (typeof item === 'string' ? item.split('/').pop() : (item.filename || item.rel_path.split('/').pop())).toLowerCase();
+        return normalizeBaseFilename(fn);
+      }).filter(Boolean));
+      const seenSha = new Set(rawPhotosList.map(item => (typeof item === 'object' && item && item.sha256) ? item.sha256 : null).filter(Boolean));
 
       const added = [];
       for (const item of newPhotos) {
         const fn = (typeof item === 'string' ? item.split('/').pop() : (item.filename || item.rel_path.split('/').pop())).toLowerCase();
-        if (!seenFnames.has(fn)) {
-          seenFnames.add(fn);
-          added.push(item);
-          rawPhotosList.push(item);
-        }
+        const stem = normalizeBaseFilename(fn);
+        const sha = (typeof item === 'object' && item && item.sha256) ? item.sha256 : null;
+
+        if (seenFnames.has(fn)) continue;
+        if (sha && seenSha.has(sha)) continue;
+        if (stem && seenStems.has(stem)) continue;
+
+        seenFnames.add(fn);
+        if (stem) seenStems.add(stem);
+        if (sha) seenSha.add(sha);
+        added.push(item);
+        rawPhotosList.push(item);
       }
       if (added.length === 0) return;
 
@@ -4741,13 +4805,22 @@
 
     function renderPhotos(photosList) {
       const seenFnames = new Set();
+      const seenStems = new Set();
+      const seenSha = new Set();
       const uniquePhotos = [];
       for (const item of (photosList || [])) {
         const fn = (typeof item === 'string' ? item.split('/').pop() : (item.filename || item.rel_path.split('/').pop())).toLowerCase();
-        if (!seenFnames.has(fn)) {
-          seenFnames.add(fn);
-          uniquePhotos.push(item);
-        }
+        const stem = normalizeBaseFilename(fn);
+        const sha = (typeof item === 'object' && item && item.sha256) ? item.sha256 : null;
+
+        if (seenFnames.has(fn)) continue;
+        if (sha && seenSha.has(sha)) continue;
+        if (stem && seenStems.has(stem)) continue;
+
+        seenFnames.add(fn);
+        if (stem) seenStems.add(stem);
+        if (sha) seenSha.add(sha);
+        uniquePhotos.push(item);
       }
 
       rawPhotosList = uniquePhotos;

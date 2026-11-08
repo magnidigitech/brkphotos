@@ -31,41 +31,81 @@ def parse_date_string(text: str) -> Optional[str]:
     """Extracts an ISO date YYYY-MM-DD from various folder, album, or filename strings."""
     if not text:
         return None
-    # 1. Matches DD-MM-YYYY or DD-MM-YY (e.g. 29-10-2026, 29-10-26, 01-10-26)
-    m = re.search(r'\b(0?[1-9]|[12][0-9]|3[01])[-/.](0?[1-9]|1[0-2])[-/.](20\d\d|\d\d)\b', text)
+    # 1. Matches DD-MM-YYYY or DD-MM-YY (e.g. 29-10-2026, 29-10-26, 01-10-26, 28_10_2026)
+    m = re.search(r'\b(0?[1-9]|[12][0-9]|3[01])[-/._](0?[1-9]|1[0-2])[-/._](20\d\d|\d\d)\b', text)
     if m:
         day, month, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
         if year < 100:
             year += 2000
-        return f"{year:04d}-{month:02d}-{day:02d}"
+        try:
+            datetime(year, month, day)
+            return f"{year:04d}-{month:02d}-{day:02d}"
+        except ValueError:
+            pass
     
-    # 2. Matches YYYY-MM-DD (e.g. 2026-10-29)
-    m = re.search(r'\b(20\d\d)[-/.](0?[1-9]|1[0-2])[-/.](0?[1-9]|[12][0-9]|3[01])\b', text)
+    # 2. Matches YYYY-MM-DD (e.g. 2026-10-29, 2026_10_29)
+    m = re.search(r'\b(20\d\d)[-/._](0?[1-9]|1[0-2])[-/._](0?[1-9]|[12][0-9]|3[01])\b', text)
     if m:
         year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        return f"{year:04d}-{month:02d}-{day:02d}"
+        try:
+            datetime(year, month, day)
+            return f"{year:04d}-{month:02d}-{day:02d}"
+        except ValueError:
+            pass
     
-    # 3. Matches DD MON (e.g. 01 JUN, 15 OCT 2026)
+    # 3. Matches YYYYMMDD in phone/camera filenames (e.g. IMG_20261028_123456, PXL_20261028)
+    m = re.search(r'(?:IMG_|PXL_|VID_|DSC_|PHOTO_)?(20\d\d)(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])', text, re.IGNORECASE)
+    if m:
+        year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        try:
+            datetime(year, month, day)
+            return f"{year:04d}-{month:02d}-{day:02d}"
+        except ValueError:
+            pass
+
+    # 4. Matches DD Month YYYY or Month DD YYYY (e.g. 28 Oct 2026, 28 October 2026, Oct 28 2026)
     months = {'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-              'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12}
-    m = re.search(r'\b(0?[1-9]|[12][0-9]|3[01])[\s_-]+([a-zA-Z]{3,9})(?:[\s_-]+(20\d\d|\d\d))?\b', text)
+              'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+              'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+              'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12}
+    m = re.search(r'\b(0?[1-9]|[12][0-9]|3[01])(?:st|nd|rd|th)?[\s_-]+([a-zA-Z]{3,9})(?:[\s_,-]+(20\d\d|\d\d))?\b', text, re.IGNORECASE)
     if m:
         day = int(m.group(1))
-        mon_str = m.group(2).lower()[:3]
+        mon_str = m.group(2).lower()
         if mon_str in months:
             month = months[mon_str]
             yr = int(m.group(3)) if m.group(3) else 2026
             if yr < 100:
                 yr += 2000
-            return f"{yr:04d}-{month:02d}-{day:02d}"
+            try:
+                datetime(yr, month, day)
+                return f"{yr:04d}-{month:02d}-{day:02d}"
+            except ValueError:
+                pass
+
+    m2 = re.search(r'\b([a-zA-Z]{3,9})[\s_-]+(0?[1-9]|[12][0-9]|3[01])(?:st|nd|rd|th)?(?:[\s_,-]+(20\d\d|\d\d))?\b', text, re.IGNORECASE)
+    if m2:
+        mon_str = m2.group(1).lower()
+        day = int(m2.group(2))
+        if mon_str in months:
+            month = months[mon_str]
+            yr = int(m2.group(3)) if m2.group(3) else 2026
+            if yr < 100:
+                yr += 2000
+            try:
+                datetime(yr, month, day)
+                return f"{yr:04d}-{month:02d}-{day:02d}"
+            except ValueError:
+                pass
+
     return None
 
 def extract_photo_capture_date(file_path: Optional[Path] = None, rel_path: str = "", album_hint: str = "") -> str:
     """
     Extracts the most accurate ISO timestamp (YYYY-MM-DD HH:MM:SS) for a photograph:
-    1. EXIF DateTimeOriginal / DateTimeDigitized from file
-    2. Reliable date in album name or slug (e.g. 29-10-2026)
-    3. Date in rel_path or filename
+    1. EXIF DateTimeOriginal / DateTimeDigitized from file (including Exif IFD 0x8769)
+    2. Reliable date in album name or slug (e.g. 28-10-2026, 28 Oct 2026)
+    3. Date in rel_path or filename (e.g. 28-10-2026/DSC_001.jpg, IMG_20261028_123456.jpg)
     4. Fallback to file creation timestamp or now
     """
     # 1. EXIF metadata
@@ -75,17 +115,27 @@ def extract_photo_capture_date(file_path: Optional[Path] = None, rel_path: str =
             with Image.open(file_path) as img:
                 exif = img.getexif()
                 if exif:
+                    sub_ifd = {}
+                    try:
+                        sub_ifd = exif.get_ifd(0x8769)
+                    except Exception:
+                        pass
                     for tag_id in (36867, 36868, 306): # DateTimeOriginal, DateTimeDigitized, DateTime
-                        val = exif.get(tag_id)
+                        val = sub_ifd.get(tag_id) or exif.get(tag_id)
                         if val and isinstance(val, str) and len(val) >= 10:
                             parts = val.strip().split()
                             date_part = parts[0].replace(":", "-")
                             time_part = parts[1] if len(parts) > 1 else "12:00:00"
-                            return f"{date_part} {time_part}"
+                            try:
+                                y, m, d = [int(v) for v in date_part.split("-")[:3]]
+                                if 1990 <= y <= 2035 and 1 <= m <= 12 and 1 <= d <= 31:
+                                    return f"{y:04d}-{m:02d}-{d:02d} {time_part}"
+                            except Exception:
+                                pass
         except Exception:
             pass
 
-    # 2. Date in album hint (e.g. 29-10-2026, 28-10-26, 01-10-26)
+    # 2. Date in album hint (e.g. 29-10-2026, 28-10-26, 01-10-26, 28 Oct 2026)
     d = parse_date_string(album_hint)
     if d:
         return f"{d} 12:00:00"
@@ -540,15 +590,15 @@ def init_db():
     backfill_photo_dates()
 
 def backfill_photo_dates():
-    """Extracts and populates captured_at for any photos missing date metadata."""
+    """Extracts, populates, and aligns captured_at for photos with consistent event dates."""
     conn = get_db()
     c = conn.cursor()
     try:
         c.execute("""
-            SELECT p.id, p.rel_path, p.filename, p.created_at, a.name as album_name, a.slug as album_slug
+            SELECT p.id, p.rel_path, p.filename, p.captured_at, p.created_at, a.name as album_name, a.slug as album_slug
             FROM photos p
             LEFT JOIN albums a ON p.album_id = a.id
-            WHERE p.captured_at IS NULL OR p.captured_at = ''
+            WHERE p.is_deleted = 0
         """)
         rows = c.fetchall()
         if not rows:
@@ -556,17 +606,33 @@ def backfill_photo_dates():
             return 0
         updated = 0
         for r in rows:
-            d = extract_photo_capture_date(
-                file_path=PHOTOS / r["rel_path"] if (PHOTOS / r["rel_path"]).exists() else None,
-                rel_path=r["rel_path"],
-                album_hint=r["album_name"] or r["album_slug"] or ""
-            )
-            c.execute("UPDATE photos SET captured_at = ? WHERE id = ?", (d, r["id"]))
-            updated += 1
+            album_hint = r["album_name"] or r["album_slug"] or ""
+            expected_date = parse_date_string(album_hint) or parse_date_string(r["rel_path"]) or parse_date_string(r["filename"])
+            current_cap = (r["captured_at"] or "").strip()
+
+            needs_update = False
+            if not current_cap:
+                needs_update = True
+            elif expected_date and not current_cap.startswith(expected_date):
+                created = (r["created_at"] or "").strip()
+                if not created or current_cap.startswith(created[:10]):
+                    needs_update = True
+
+            if needs_update:
+                file_p = PHOTOS / r["rel_path"] if (PHOTOS / r["rel_path"]).exists() else None
+                d = extract_photo_capture_date(
+                    file_path=file_p,
+                    rel_path=r["rel_path"],
+                    album_hint=album_hint
+                )
+                if d and d != current_cap:
+                    c.execute("UPDATE photos SET captured_at = ? WHERE id = ?", (d, r["id"]))
+                    updated += 1
         conn.commit()
         conn.close()
         return updated
-    except Exception:
+    except Exception as e:
+        print("backfill_photo_dates error:", e)
         conn.close()
         return 0
 

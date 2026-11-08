@@ -32,6 +32,7 @@ from database import (
     create_automation, get_automations, get_automation_by_id, update_automation,
     delete_automation, toggle_automation, record_automation_history, get_automation_history,
     get_due_automations, advance_automation_schedule, is_automation_task_pending, now_ist, extract_photo_capture_date,
+    parse_date_string,
     get_setting, set_setting, get_all_settings,
     record_indexing_error, get_indexing_errors,
     record_match_review, get_match_reviews, update_match_feedback,
@@ -1210,49 +1211,49 @@ def get_search_session(session_key: str):
 
 MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
+def normalize_base_stem(fname: str) -> str:
+    if not fname:
+        return ""
+    stem = Path(fname).stem.lower().strip()
+    stem = re.sub(r'[\s_]*\((?:[0-9]+|copy(?:\s+[0-9]+)?)\)$', '', stem, flags=re.I)
+    stem = re.sub(r'[\s_-]+copy(?:[\s_-]*[0-9]+|\([0-9]+\))?$', '', stem, flags=re.I)
+    return stem.strip()
+
+def phash_hamming(h1: Optional[str], h2: Optional[str]) -> int:
+    if not h1 or not h2 or len(h1) != 16 or len(h2) != 16:
+        return 99
+    try:
+        return bin(int(h1, 16) ^ int(h2, 16)).count('1')
+    except Exception:
+        return 99
+
 def parse_photo_date_info(item: dict) -> dict:
     """Parses date or album name from a photo record matching frontend logic."""
-    album = (item.get("album_name") or "").strip()
-    cap_dt = (item.get("captured_at") or item.get("created_at") or "").strip()
+    album = (item.get("album_name") or item.get("album_slug") or "").strip()
+    cap_dt = (item.get("captured_at") or "").strip()
+    rel = (item.get("rel_path") or "").strip()
+    fname = (item.get("filename") or "").strip()
 
-    # 1. Match DD-MM-YY or DD-MM-YYYY in album name (e.g. "01-11-26", "21-10-2026")
-    m_dmy = re.match(r"^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$", album)
-    if m_dmy:
-        d = int(m_dmy.group(1))
-        m = int(m_dmy.group(2))
-        y = int(m_dmy.group(3))
-        if y < 100:
-            y += 2000
-        try:
-            datetime(y, m, d)
-            return {"is_date": True, "date_key": f"{y:04d}-{m:02d}-{d:02d}", "raw_album": album}
-        except ValueError:
-            pass
-
-    # Match YYYY-MM-DD in album name
-    m_ymd_alb = re.match(r"^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$", album)
-    if m_ymd_alb:
-        y = int(m_ymd_alb.group(1))
-        m = int(m_ymd_alb.group(2))
-        d = int(m_ymd_alb.group(3))
-        try:
-            datetime(y, m, d)
-            return {"is_date": True, "date_key": f"{y:04d}-{m:02d}-{d:02d}", "raw_album": album}
-        except ValueError:
-            pass
-
-    # 2. Match YYYY-MM-DD in captured_at / created_at
+    # 1. Match captured_at (EXIF date)
     if cap_dt:
-        m_ymd = re.match(r"^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})", cap_dt)
-        if m_ymd:
-            y = int(m_ymd.group(1))
-            m = int(m_ymd.group(2))
-            d = int(m_ymd.group(3))
-            try:
-                datetime(y, m, d)
-                return {"is_date": True, "date_key": f"{y:04d}-{m:02d}-{d:02d}", "raw_album": album or f"{y:04d}-{m:02d}-{d:02d}"}
-            except ValueError:
-                pass
+        d = parse_date_string(cap_dt)
+        if d:
+            return {"is_date": True, "date_key": d, "raw_album": album or d}
+
+    # 2. Extract date from album name or slug (e.g. "28-10-2026", "28-10-26", "28 Oct 2026")
+    d = parse_date_string(album)
+    if d:
+        return {"is_date": True, "date_key": d, "raw_album": album}
+
+    # 3. Extract date from rel_path folder component (e.g. "28-10-2026/DSC_001.jpg")
+    d = parse_date_string(rel)
+    if d:
+        return {"is_date": True, "date_key": d, "raw_album": album or d}
+
+    # 4. Extract date from filename (e.g. "IMG_20261028_123456.jpg")
+    d = parse_date_string(fname)
+    if d:
+        return {"is_date": True, "date_key": d, "raw_album": album or d}
 
     fallback = album or item.get("event_name") or "Celebration Photos"
     return {"is_date": False, "date_key": None, "raw_album": fallback}
@@ -1301,7 +1302,7 @@ def query_matched_photos(embs, names, query_emb, event_slug="brk-sir", filter_da
         high_thresh = 0.60
         med_thresh = 0.48
 
-    best_by_filename = {}
+    candidates = {}
     matched_faces_map = {}
 
     # Support both single face embedding (512D) and multi-face list for group photo discovery
@@ -1311,81 +1312,153 @@ def query_matched_photos(embs, names, query_emb, event_slug="brk-sir", filter_da
             sims = embs @ q_vec
             for idx in np.where(sims >= min_thresh)[0]:
                 n = names[idx]
-                fname = Path(n).name
                 score = float(sims[idx])
-                if fname not in best_by_filename or score > best_by_filename[fname]["score"]:
-                    best_by_filename[fname] = {"rel_path": n, "score": score}
-                matched_faces_map.setdefault(fname, set()).add(f_idx)
+                if n not in candidates or score > candidates[n]["score"]:
+                    candidates[n] = {"rel_path": n, "score": score}
+                matched_faces_map.setdefault(n, set()).add(f_idx)
     else:
         q_vec = np.array(query_emb, dtype=np.float32)
         sims = embs @ q_vec
         for idx in np.where(sims >= min_thresh)[0]:
             n = names[idx]
-            fname = Path(n).name
             score = float(sims[idx])
-            if fname not in best_by_filename or score > best_by_filename[fname]["score"]:
-                best_by_filename[fname] = {"rel_path": n, "score": score}
-            matched_faces_map.setdefault(fname, set()).add(0)
+            if n not in candidates or score > candidates[n]["score"]:
+                candidates[n] = {"rel_path": n, "score": score}
+            matched_faces_map.setdefault(n, set()).add(0)
 
-    ranked = sorted(best_by_filename.items(), key=lambda kv: -kv[1]["score"])
+    ranked_candidates = sorted(candidates.values(), key=lambda x: -x["score"])
     reload_drive_map()
 
     photo_info = {}
-    if ranked:
+    if ranked_candidates:
         conn = get_db()
         cursor = conn.cursor()
         # Query only matched items in batches of 200 to respect SQLite parameter limits
         chunk_size = 200
-        for i in range(0, len(ranked), chunk_size):
-            chunk = ranked[i:i + chunk_size]
-            chunk_fnames = [fname for fname, _ in chunk]
-            chunk_paths = [item["rel_path"] for _, item in chunk]
-            all_ids = list(set(chunk_fnames + chunk_paths))
+        for i in range(0, len(ranked_candidates), chunk_size):
+            chunk = ranked_candidates[i:i + chunk_size]
+            chunk_paths = [item["rel_path"] for item in chunk]
+            chunk_fnames = [Path(p).name for p in chunk_paths]
+            all_ids = list(set(chunk_paths + chunk_fnames))
             placeholders = ",".join("?" for _ in all_ids)
             cursor.execute(f"""
-                SELECT p.filename, p.rel_path, p.is_featured, p.drive_file_id, p.captured_at, p.created_at,
+                SELECT p.id, p.filename, p.rel_path, p.sha256_hash, p.phash, p.file_size_bytes, p.width, p.height,
+                       p.is_featured, p.drive_file_id, p.captured_at, p.created_at,
                        a.name as album_name, a.slug as album_slug, 
                        e.name as event_name, e.slug as event_slug
                 FROM photos p
                 JOIN events e ON p.event_id = e.id
                 LEFT JOIN albums a ON p.album_id = a.id
-                WHERE (p.filename IN ({placeholders}) OR p.rel_path IN ({placeholders}))
+                WHERE (p.rel_path IN ({placeholders}) OR p.filename IN ({placeholders}))
                   AND (e.slug = ? OR ? IN ('brk-sir', 'brksir', 'wedding', 'default', ''))
                   AND p.is_deleted = 0
             """, all_ids + all_ids + [event_slug, event_slug])
             for r in cursor.fetchall():
                 d = dict(r)
-                if d.get("filename"):
-                    photo_info[d["filename"]] = d
                 if d.get("rel_path"):
                     photo_info[d["rel_path"]] = d
+                if d.get("filename"):
+                    photo_info.setdefault(d["filename"], d)
         conn.close()
 
-    photos_data = []
-    for fname, item in ranked:
+    # Multi-criteria Deduplication & Clean Date Synthesis
+    deduped_photos = []
+    seen_sha = {}      # sha256 -> index in deduped_photos
+    seen_stems = {}    # normalized_stem -> index in deduped_photos
+    seen_phash = []    # list of (phash_str, index in deduped_photos)
+    seen_pids = set()  # photo_id set
+
+    for item in ranked_candidates:
         n = item["rel_path"]
+        fname = Path(n).name
         score = item["score"]
         score_val = round(float(score), 3)
+
+        info = photo_info.get(n) or photo_info.get(fname)
+        # Skip deleted or nonexistent photos
+        if not info:
+            continue
+
+        p_id = info.get("id")
+        if p_id and p_id in seen_pids:
+            continue
+
+        album_name = (info.get("album_name") or info.get("album_slug") or "").strip()
+        cap_dt = (info.get("captured_at") or "").strip()
+        clean_date = parse_date_string(cap_dt) or parse_date_string(album_name) or parse_date_string(n) or parse_date_string(fname)
+        if clean_date:
+            final_cap_dt = f"{clean_date} 12:00:00" if (not cap_dt or not cap_dt.startswith(clean_date)) else cap_dt
+        else:
+            final_cap_dt = ""
+
         conf_info = classify_confidence(score_val, high_thresh, med_thresh, min_thresh)
-        info = photo_info.get(fname) or photo_info.get(n) or {}
-        cap_dt = info.get("captured_at") or info.get("created_at") or ""
-        photos_data.append({
-            "rel_path": n,
-            "filename": fname,
+        photo_entry = {
+            "id": p_id,
+            "rel_path": info.get("rel_path") or n,
+            "filename": info.get("filename") or fname,
             "drive_file_id": info.get("drive_file_id") or drive_map.get(n) or drive_map.get(fname),
             "similarity": score_val,
             "confidence": score_val,
             "confidence_tier": conf_info["tier"],
             "confidence_label": conf_info["label"],
-            "matched_faces": sorted(list(matched_faces_map.get(fname, [0]))),
+            "matched_faces": sorted(list(matched_faces_map.get(n, [0]))),
             "is_featured": bool(info.get("is_featured", 0)),
-            "captured_at": cap_dt,
+            "captured_at": final_cap_dt,
             "created_at": info.get("created_at", ""),
-            "album_name": info.get("album_name", ""),
+            "album_name": album_name,
             "event_name": info.get("event_name", ""),
-            "event_slug": info.get("event_slug", event_slug)
-        })
+            "event_slug": info.get("event_slug", event_slug),
+            "width": info.get("width") or 0,
+            "height": info.get("height") or 0,
+            "file_size_bytes": info.get("file_size_bytes") or 0,
+            "sha256_hash": info.get("sha256_hash") or "",
+            "phash": info.get("phash") or ""
+        }
 
+        # Check duplicates via SHA-256, normalized stem, or perceptual dHash
+        stem = normalize_base_stem(photo_entry["filename"])
+        sha = photo_entry["sha256_hash"]
+        ph = photo_entry["phash"]
+
+        dup_idx = None
+        if sha and len(sha) == 64 and sha in seen_sha:
+            dup_idx = seen_sha[sha]
+        elif stem and stem in seen_stems:
+            dup_idx = seen_stems[stem]
+        elif ph and len(ph) == 16:
+            for ex_ph, ex_idx in seen_phash:
+                if phash_hamming(ph, ex_ph) <= 4:
+                    dup_idx = ex_idx
+                    break
+
+        if dup_idx is not None:
+            existing = deduped_photos[dup_idx]
+            new_area = photo_entry["width"] * photo_entry["height"]
+            ex_area = existing["width"] * existing["height"]
+            new_size = photo_entry["file_size_bytes"]
+            ex_size = existing["file_size_bytes"]
+
+            is_better = (new_area > ex_area) or (new_area == ex_area and new_size > ex_size) or (new_area == ex_area and photo_entry["is_featured"] and not existing["is_featured"])
+            best_date = photo_entry["captured_at"] or existing["captured_at"]
+            best_faces = sorted(list(set(existing["matched_faces"] + photo_entry["matched_faces"])))
+
+            if is_better:
+                photo_entry["captured_at"] = best_date
+                photo_entry["matched_faces"] = best_faces
+                deduped_photos[dup_idx] = photo_entry
+                if p_id: seen_pids.add(p_id)
+            else:
+                existing["captured_at"] = best_date
+                existing["matched_faces"] = best_faces
+        else:
+            idx = len(deduped_photos)
+            deduped_photos.append(photo_entry)
+            if p_id: seen_pids.add(p_id)
+            if sha and len(sha) == 64: seen_sha[sha] = idx
+            if stem: seen_stems[stem] = idx
+            if ph and len(ph) == 16: seen_phash.append((ph, idx))
+
+    photos_data = deduped_photos
     date_summary = aggregate_photo_dates(photos_data)
     unfiltered_total_count = len(photos_data)
 
@@ -1396,8 +1469,26 @@ def query_matched_photos(embs, names, query_emb, event_slug="brk-sir", filter_da
 
     total_count = len(photos_data)
 
-    photos_data.sort(key=lambda p: p.get("captured_at") or p.get("created_at") or "", reverse=True)
-    photos_data.sort(key=lambda p: 0 if p.get("is_featured") else 1)
+    # Consistent chronological sorting: Featured first, then newest capture date first
+    def photo_sort_key(p):
+        feat = 0 if p.get("is_featured") else 1
+        parsed = parse_photo_date_info(p)
+        if parsed.get("is_date") and parsed.get("date_key"):
+            date_rank = 0
+            date_val = parsed["date_key"]
+        else:
+            date_rank = 1
+            date_val = ""
+        return (feat, date_rank, date_val, p.get("filename", ""))
+
+    photos_data.sort(key=photo_sort_key, reverse=False)
+
+    # When sorting newest first, reverse within chronological groups
+    photos_data.sort(key=lambda p: (
+        0 if p.get("is_featured") else 1,
+        0 if parse_photo_date_info(p).get("is_date") else 1,
+        -(datetime.strptime(parse_photo_date_info(p)["date_key"], "%Y-%m-%d").timestamp() if parse_photo_date_info(p).get("is_date") else 0)
+    ))
 
     if page_size > 0:
         start_idx = max(0, (page - 1) * page_size)
