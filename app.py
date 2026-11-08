@@ -2175,7 +2175,7 @@ async def admin_login(payload: dict, req: Request):
     ua = req.headers.get("User-Agent", "Unknown")
     
     # 1. Rate limiting: 5 failed attempts in 15 minutes window
-    fails = count_recent_failed_logins(ip, window_minutes=15)
+    fails = count_recent_failed_logins(ip, minutes=15)
     if fails >= 5:
         record_security_event("login_blocked", f"Rate limit reached ({fails} failed attempts). IP temporarily blocked.", ip=ip, user_agent=ua, status="blocked")
         raise HTTPException(429, "Too many failed login attempts. For security reasons, please wait 15 minutes before trying again.")
@@ -2304,7 +2304,7 @@ async def admin_auth_recovery_code_verify(payload: dict, req: Request):
 async def admin_passkey_auth_challenge(req: Request):
     ip = get_client_ip(req)
     
-    if count_recent_failed_logins(ip, window_minutes=15) >= 5:
+    if count_recent_failed_logins(ip, minutes=15) >= 5:
         raise HTTPException(429, "Too many failed login attempts. Please wait 15 minutes.")
         
     admin_user = get_admin_user("admin")
@@ -2313,7 +2313,7 @@ async def admin_passkey_auth_challenge(req: Request):
         
     passkeys = get_user_passkeys(admin_user["id"])
     if not passkeys:
-        raise HTTPException(400, "No Passkeys registered yet on this server.")
+        raise HTTPException(400, "No Passkeys registered yet on this server. Please sign in with your password first to register a passkey in Settings.")
         
     challenge_data = auth_security.generate_webauthn_challenge()
     challenge_id = challenge_data["challenge_id"]
@@ -2356,11 +2356,14 @@ async def admin_passkey_auth_verify(payload: dict, req: Request):
         raise HTTPException(401, "Passkey device not recognized on this server.")
         
     parsed = auth_security.parse_client_data_json(client_data_json)
-    if parsed.get("type") != "webauthn.get":
-        raise HTTPException(400, "Invalid WebAuthn operation type.")
+    if not parsed or parsed.get("type") != "webauthn.get":
+        raise HTTPException(400, "Invalid WebAuthn operation type or corrupted client data.")
     
+    expected_chal_raw = challenge.get("challenge") or ""
+    if not expected_chal_raw:
+        raise HTTPException(400, "Invalid or missing challenge in session.")
     client_chal = parsed.get("challenge", "").replace("-", "+").replace("_", "/")
-    expected_chal = challenge["challenge"].replace("-", "+").replace("_", "/")
+    expected_chal = expected_chal_raw.replace("-", "+").replace("_", "/")
     while len(client_chal) % 4 != 0: client_chal += "="
     while len(expected_chal) % 4 != 0: expected_chal += "="
     if client_chal != expected_chal:

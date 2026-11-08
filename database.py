@@ -2135,7 +2135,8 @@ def get_security_events(limit: int = 50) -> List[dict]:
     conn.close()
     return rows
 
-def count_recent_failed_logins(ip: str, minutes: int = 5) -> int:
+def count_recent_failed_logins(ip: str, minutes: int = 5, window_minutes: Optional[int] = None) -> int:
+    eff_minutes = window_minutes if window_minutes is not None else minutes
     conn = get_db()
     c = conn.cursor()
     c.execute("""
@@ -2143,7 +2144,7 @@ def count_recent_failed_logins(ip: str, minutes: int = 5) -> int:
         FROM security_logs
         WHERE event_type = 'login_failed' AND ip_address = ?
           AND created_at >= datetime('now', '-' || ? || ' minutes')
-    """, (ip, minutes))
+    """, (ip, eff_minutes))
     count = c.fetchone()[0] or 0
     conn.close()
     return count

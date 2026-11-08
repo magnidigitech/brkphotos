@@ -4189,6 +4189,30 @@ function showRecoveryCodeStep() {
   }
 }
 
+async function safeFetchJson(url, options = {}) {
+  try {
+    const res = await fetch(url, options);
+    let data = null;
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) {
+      try { data = await res.json(); } catch (_) {}
+    }
+    if (!data) {
+      try {
+        const text = await res.text();
+        try { data = JSON.parse(text); } catch (_) {
+          data = { detail: text || `HTTP ${res.status}` };
+        }
+      } catch (_) {
+        data = { detail: `HTTP ${res.status}` };
+      }
+    }
+    return { ok: res.ok, status: res.status, data };
+  } catch (netErr) {
+    return { ok: false, status: 0, data: { detail: netErr.message || 'Network connection failed' } };
+  }
+}
+
 async function handleAdminLogin() {
   const keyInput = $('adminKey');
   if (!keyInput) return;
@@ -4202,21 +4226,20 @@ async function handleAdminLogin() {
   const alertEl = $('loginAlert');
   if (alertEl) alertEl.hidden = true;
   try {
-    const res = await fetch('/api/admin/login', {
+    const { ok, data: j } = await safeFetchJson('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key })
     });
-    const j = await res.json();
     
     // Check if 2FA is required
-    if (res.ok && j.status === '2fa_required') {
+    if (ok && j.status === '2fa_required') {
       currentChallengeId = j.challenge_id;
       show2faStep();
       return;
     }
 
-    if (res.ok && j.token) {
+    if (ok && j.token) {
       localStorage.setItem('admin_token', j.token);
       localStorage.setItem('admin_active_tab', 'dashboard');
       $('authView').hidden = true;
@@ -4257,13 +4280,12 @@ async function handle2faVerify() {
   if (alertEl) alertEl.hidden = true;
 
   try {
-    const res = await fetch('/api/admin/auth/2fa/verify', {
+    const { ok, data: j } = await safeFetchJson('/api/admin/auth/2fa/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ challenge_id: currentChallengeId, code: code })
     });
-    const j = await res.json();
-    if (res.ok && j.token) {
+    if (ok && j.token) {
       localStorage.setItem('admin_token', j.token);
       localStorage.setItem('admin_active_tab', 'dashboard');
       $('authView').hidden = true;
@@ -4305,13 +4327,12 @@ async function handleRecoveryCodeVerify() {
   if (alertEl) alertEl.hidden = true;
 
   try {
-    const res = await fetch('/api/admin/auth/recovery-code/verify', {
+    const { ok, data: j } = await safeFetchJson('/api/admin/auth/recovery-code/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ challenge_id: currentChallengeId, recovery_code: code })
     });
-    const j = await res.json();
-    if (res.ok && j.token) {
+    if (ok && j.token) {
       localStorage.setItem('admin_token', j.token);
       localStorage.setItem('admin_active_tab', 'dashboard');
       if (j.warning) {
@@ -4360,11 +4381,10 @@ async function handlePasskeyLogin() {
   }
 
   try {
-    // 1. Fetch challenge from backend
-    const chalRes = await fetch('/api/admin/auth/passkey/generate-challenge', { method: 'POST' });
-    const chalData = await chalRes.json();
-    if (!chalRes.ok) {
-      throw new Error(chalData.detail || 'Could not initialize passkey login.');
+    // 1. Fetch challenge from backend safely
+    const { ok: chalOk, data: chalData } = await safeFetchJson('/api/admin/auth/passkey/generate-challenge', { method: 'POST' });
+    if (!chalOk) {
+      throw new Error(chalData?.detail || 'Could not initialize passkey login.');
     }
 
     // 2. Format options for WebAuthn get
@@ -4390,7 +4410,7 @@ async function handlePasskeyLogin() {
     const signature = bufferToBase64url(credential.response.signature);
     const credentialId = credential.id;
 
-    const verifyRes = await fetch('/api/admin/auth/passkey/verify', {
+    const { ok: verifyOk, data: verifyData } = await safeFetchJson('/api/admin/auth/passkey/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -4401,9 +4421,8 @@ async function handlePasskeyLogin() {
         signature: signature
       })
     });
-    const verifyData = await verifyRes.json();
-    if (!verifyRes.ok) {
-      throw new Error(verifyData.detail || 'Passkey verification failed on server.');
+    if (!verifyOk) {
+      throw new Error(verifyData?.detail || 'Passkey verification failed on server.');
     }
 
     // 5. Store token & enter admin console
@@ -4416,7 +4435,7 @@ async function handlePasskeyLogin() {
   } catch (err) {
     if (err.name !== 'NotAllowedError') {
       if (alertEl) {
-        alertEl.textContent = 'Passkey authentication failed: ' + (err.message || 'Cancelled');
+        alertEl.textContent = (err.message || 'Passkey authentication failed.');
         alertEl.hidden = false;
       }
     }
