@@ -2333,12 +2333,8 @@ async def admin_auth_2fa_verify(payload: dict, req: Request):
         raise HTTPException(400, "2FA verification challenge expired. Please log in again.")
         
     user_id = challenge["user_id"] or 1
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, username, totp_secret FROM admin_users WHERE id = ?", (user_id,))
-    u = cursor.fetchone()
-    conn.close()
-    if not u or not u["totp_secret"]:
+    u = get_admin_user(user_id)
+    if not u or not u.get("totp_secret"):
         raise HTTPException(400, "2FA is not configured for this account.")
         
     secret = auth_security.decrypt_secret(u["totp_secret"])
@@ -2533,7 +2529,7 @@ def admin_totp_setup_endpoint(req: Request, token: str = Depends(get_auth_token)
         
     secret = auth_security.generate_totp_secret()
     host = req.url.hostname or "photos.bhashyamramakrishna.in"
-    otpauth_uri = auth_security.generate_totp_uri(secret, account_name=f"admin@{host}", issuer="BRK Photos")
+    otpauth_uri = auth_security.generate_totp_uri(secret, username=f"admin@{host}", issuer="BRK Photos")
     qr_svg = auth_security.generate_qr_svg(otpauth_uri)
     recovery_codes = auth_security.generate_recovery_codes(10)
     
@@ -2668,7 +2664,7 @@ def admin_passkey_register_verify(payload: dict, req: Request, token: str = Depe
     if parsed.get("type") != "webauthn.create":
         raise HTTPException(400, "Invalid WebAuthn operation.")
         
-    save_passkey(user_id, credential_id, public_key, device_name, aaguid="")
+    save_passkey(user_id, credential_id, public_key, device_name)
     record_security_event("passkey_registered", f"New passkey enrolled: '{device_name}'", ip=ip, user_agent=ua)
     return {"status": "ok", "message": f"Passkey '{device_name}' registered successfully."}
 
@@ -2700,18 +2696,23 @@ def admin_get_sessions_endpoint(token: str = Depends(get_auth_token)):
     return {"status": "ok", "sessions": sessions}
 
 @app.post("/api/admin/security/sessions/revoke")
-def admin_revoke_session_endpoint(payload: dict, token: str = Depends(get_auth_token)):
+def admin_revoke_session_endpoint(payload: dict, req: Request, token: str = Depends(get_auth_token)):
+    ip = get_client_ip(req)
+    ua = req.headers.get("User-Agent", "Unknown")
     session_id = payload.get("session_id")
     revoke_all_others = payload.get("revoke_all_others", False)
     user = get_admin_user("admin")
+    user_id = user["id"] if user else 1
     
     conn = get_db()
     cursor = conn.cursor()
     if revoke_all_others:
         current_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-        cursor.execute("UPDATE admin_sessions SET is_revoked = 1 WHERE user_id = ? AND token_hash != ?", (user["id"], current_hash))
+        cursor.execute("DELETE FROM admin_sessions WHERE user_id = ? AND token_hash != ?", (user_id, current_hash))
+        record_security_event("sessions_revoked", "Revoked all other active sessions", ip=ip, user_agent=ua)
     elif session_id:
-        cursor.execute("UPDATE admin_sessions SET is_revoked = 1 WHERE id = ? AND user_id = ?", (session_id, user["id"]))
+        cursor.execute("DELETE FROM admin_sessions WHERE id = ? AND user_id = ?", (session_id, user_id))
+        record_security_event("session_revoked", f"Revoked active session #{session_id}", ip=ip, user_agent=ua)
     conn.commit()
     conn.close()
     return {"status": "ok"}

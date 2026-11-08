@@ -543,6 +543,15 @@ def init_db():
             conn.execute("CREATE INDEX IF NOT EXISTS idx_face_detections_photo ON face_detections(photo_id);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_face_detections_person ON face_detections(person_id);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_face_detections_event ON face_detections(event_id);")
+            conn.commit()
+        except Exception:
+            pass
+
+        try:
+            conn.execute("ALTER TABLE admin_sessions ADD COLUMN is_revoked BOOLEAN DEFAULT 0;")
+            conn.commit()
+        except Exception:
+            pass
             conn.execute("CREATE INDEX IF NOT EXISTS idx_person_profiles_event ON person_profiles(event_id);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_filename ON photos(filename);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_photos_event_deleted ON photos(event_id, is_deleted);")
@@ -1951,7 +1960,7 @@ def get_recovery_codes_status(user_id: int = 1) -> dict:
         "used": total - unused
     }
 
-def save_passkey(user_id: int, credential_id: str, public_key: str, device_name: str, transports: str = "") -> bool:
+def save_passkey(user_id: int, credential_id: str, public_key: str, device_name: str, transports: str = "", aaguid: str = "", **kwargs) -> bool:
     conn = get_db()
     c = conn.cursor()
     c.execute("""
@@ -1994,10 +2003,19 @@ def update_passkey_last_used(identifier: Union[int, str], sign_count: int = 0) -
     conn.close()
     return True
 
-def delete_passkey(arg1: int, arg2: int) -> bool:
+def delete_passkey(arg1: Union[int, str], arg2: Optional[Union[int, str]] = None) -> bool:
     conn = get_db()
     c = conn.cursor()
-    c.execute("DELETE FROM admin_passkeys WHERE (id = ? AND user_id = ?) OR (id = ? AND user_id = ?)", (arg1, arg2, arg2, arg1))
+    if arg2 is not None:
+        c.execute("""
+            DELETE FROM admin_passkeys
+            WHERE (id = ? AND user_id = ?)
+               OR (id = ? AND user_id = ?)
+               OR credential_id = ?
+               OR credential_id = ?
+        """, (arg1, arg2, arg2, arg1, str(arg1), str(arg2)))
+    else:
+        c.execute("DELETE FROM admin_passkeys WHERE id = ? OR credential_id = ?", (arg1, str(arg1)))
     rows = c.rowcount
     conn.commit()
     conn.close()
@@ -2118,7 +2136,7 @@ def validate_admin_session(token_or_hash: str) -> Optional[dict]:
         SELECT s.*, u.username, u.totp_enabled
         FROM admin_sessions s
         JOIN admin_users u ON s.user_id = u.id
-        WHERE s.token_hash = ? AND s.expires_at > CURRENT_TIMESTAMP
+        WHERE s.token_hash = ? AND s.expires_at > CURRENT_TIMESTAMP AND (s.is_revoked = 0 OR s.is_revoked IS NULL)
         LIMIT 1
     """, (t_hash,))
     row = c.fetchone()
@@ -2160,7 +2178,7 @@ def get_active_admin_sessions(user_id: int = 1) -> List[dict]:
     c.execute("""
         SELECT id, token_hash, ip_address, user_agent, created_at, expires_at, last_active_at
         FROM admin_sessions
-        WHERE user_id = ? AND expires_at > CURRENT_TIMESTAMP
+        WHERE user_id = ? AND expires_at > CURRENT_TIMESTAMP AND (is_revoked = 0 OR is_revoked IS NULL)
         ORDER BY last_active_at DESC
     """, (user_id,))
     rows = [dict(r) for r in c.fetchall()]

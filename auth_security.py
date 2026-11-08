@@ -162,10 +162,11 @@ def verify_totp_code(secret: str, code: str, window: int = 1) -> bool:
     return False
 
 
-def generate_totp_uri(secret: str, username: str = "admin", issuer: str = "BRK Photos") -> str:
+def generate_totp_uri(secret: str, username: str = "admin", issuer: str = "BRK Photos", account_name: Optional[str] = None, **kwargs) -> str:
     """Generates standard otpauth URI compatible with all Authenticator apps."""
     clean_secret = secret.strip().upper().replace(" ", "")
-    return f"otpauth://totp/{issuer}:{username}?secret={clean_secret}&issuer={issuer}&algorithm=SHA1&digits=6&period=30"
+    user = account_name or username
+    return f"otpauth://totp/{issuer}:{user}?secret={clean_secret}&issuer={issuer}&algorithm=SHA1&digits=6&period=30"
 
 
 # ---------------------------------------------------------------------------
