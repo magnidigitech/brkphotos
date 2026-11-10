@@ -4336,7 +4336,14 @@ def admin_get_indexing_errors_endpoint(
 
 @app.get("/admin")
 def admin_page():
-    return FileResponse(BASE / "static" / "admin.html")
+    return FileResponse(
+        BASE / "static" / "admin.html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        }
+    )
 
 @app.get("/")
 def root_index():

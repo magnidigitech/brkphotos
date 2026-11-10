@@ -1896,7 +1896,7 @@
         <div style="flex:1;height:1px;background:var(--line);"></div>
       </div>
       
-      <form id="loginForm" onsubmit="handleAdminLogin(); return false;">
+      <form id="loginForm" onsubmit="handleAdminLogin(event); return false;">
         <div class="field" style="margin-bottom:1rem;">
           <label for="adminKey" style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.35rem;">Admin Password</label>
           <input type="password" id="adminKey" required placeholder="••••••••••••" autocomplete="current-password" style="width:100%;padding:0.65rem;border-radius:8px;border:1px solid var(--line);">
@@ -4189,9 +4189,19 @@ function showRecoveryCodeStep() {
   }
 }
 
-async function safeFetchJson(url, options = {}) {
+async function safeFetchJson(url, options = {}, timeoutMs = 15000) {
+  let timer = null;
+  let signal = options.signal;
+  if (!signal && timeoutMs > 0 && typeof AbortController !== 'undefined') {
+    const controller = new AbortController();
+    signal = controller.signal;
+    timer = setTimeout(() => controller.abort(), timeoutMs);
+  }
   try {
-    const res = await fetch(url, options);
+    const fetchOptions = { ...options };
+    if (signal) fetchOptions.signal = signal;
+    const res = await fetch(url, fetchOptions);
+    if (timer) clearTimeout(timer);
     let data = null;
     const ct = res.headers.get('content-type') || '';
     if (ct.includes('application/json')) {
@@ -4209,60 +4219,105 @@ async function safeFetchJson(url, options = {}) {
     }
     return { ok: res.ok, status: res.status, data };
   } catch (netErr) {
-    return { ok: false, status: 0, data: { detail: netErr.message || 'Network connection failed' } };
+    if (timer) clearTimeout(timer);
+    const isTimeout = netErr.name === 'AbortError';
+    return {
+      ok: false,
+      status: 0,
+      data: {
+        detail: isTimeout
+          ? 'Network request timed out. Please check your connection and try again.'
+          : (netErr.message || 'Network connection failed')
+      }
+    };
   }
 }
 
-async function handleAdminLogin() {
+let isLoggingIn = false;
+
+async function handleAdminLogin(e) {
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+  if (isLoggingIn) return false;
+
   const keyInput = $('adminKey');
-  if (!keyInput) return;
+  if (!keyInput) return false;
   const key = keyInput.value.trim();
-  if (!key) return;
+  if (!key) {
+    keyInput.focus();
+    return false;
+  }
+
+  isLoggingIn = true;
   const btn = $('loginBtn');
   if (btn) {
     btn.disabled = true;
     btn.textContent = 'Authenticating...';
   }
   const alertEl = $('loginAlert');
-  if (alertEl) alertEl.hidden = true;
+  if (alertEl) {
+    alertEl.hidden = true;
+    alertEl.textContent = '';
+  }
+
+  // Safety fallback: ensure button is never stuck indefinitely
+  const safetyTimer = setTimeout(() => {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+    isLoggingIn = false;
+  }, 12000);
+
   try {
-    const { ok, data: j } = await safeFetchJson('/api/admin/login', {
+    const { ok, status, data: j } = await safeFetchJson('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key })
-    });
-    
+    }, 10000);
+
+    clearTimeout(safetyTimer);
+
     // Check if 2FA is required
-    if (ok && j.status === '2fa_required') {
+    if (ok && j && j.status === '2fa_required') {
       currentChallengeId = j.challenge_id;
       show2faStep();
-      return;
+      return false;
     }
 
-    if (ok && j.token) {
+    if (ok && j && j.token) {
       localStorage.setItem('admin_token', j.token);
       localStorage.setItem('admin_active_tab', 'dashboard');
       $('authView').hidden = true;
       $('appShell').hidden = false;
-      await checkAuth();
-      switchTab('dashboard');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+      isLoggingIn = false;
+      checkAuth().catch(err => console.error('checkAuth post-login error:', err));
+      return true;
     } else {
+      const errMsg = (j && (j.detail || j.message)) || (status === 401 ? 'Incorrect security passkey or password.' : 'Authentication failed. Please try again.');
       if (alertEl) {
-        alertEl.textContent = j.detail || 'Incorrect security passkey or password.';
+        alertEl.textContent = errMsg;
         alertEl.hidden = false;
       }
     }
   } catch (err) {
+    clearTimeout(safetyTimer);
     if (alertEl) {
       alertEl.textContent = 'Server connection error: ' + (err.message || 'Unable to reach backend.');
       alertEl.hidden = false;
     }
   } finally {
+    clearTimeout(safetyTimer);
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Sign In';
     }
+    isLoggingIn = false;
   }
+  return false;
 }
 
 async function handle2faVerify() {
@@ -4284,15 +4339,19 @@ async function handle2faVerify() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ challenge_id: currentChallengeId, code: code })
-    });
+    }, 10000);
     if (ok && j.token) {
       localStorage.setItem('admin_token', j.token);
       localStorage.setItem('admin_active_tab', 'dashboard');
       $('authView').hidden = true;
       $('appShell').hidden = false;
       resetLoginSteps();
-      await checkAuth();
-      switchTab('dashboard');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Verify & Sign In';
+      }
+      checkAuth().catch(err => console.error('checkAuth post-2fa error:', err));
+      return;
     } else {
       if (alertEl) {
         alertEl.textContent = j.detail || 'Invalid 6-digit authenticator code.';
@@ -4331,7 +4390,7 @@ async function handleRecoveryCodeVerify() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ challenge_id: currentChallengeId, recovery_code: code })
-    });
+    }, 10000);
     if (ok && j.token) {
       localStorage.setItem('admin_token', j.token);
       localStorage.setItem('admin_active_tab', 'dashboard');
@@ -4341,8 +4400,12 @@ async function handleRecoveryCodeVerify() {
       $('authView').hidden = true;
       $('appShell').hidden = false;
       resetLoginSteps();
-      await checkAuth();
-      switchTab('dashboard');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Authenticate with Recovery Code';
+      }
+      checkAuth().catch(err => console.error('checkAuth post-recovery error:', err));
+      return;
     } else {
       if (alertEl) {
         alertEl.textContent = j.detail || 'Invalid or already-consumed recovery code.';
@@ -4382,7 +4445,7 @@ async function handlePasskeyLogin() {
 
   try {
     // 1. Fetch challenge from backend safely
-    const { ok: chalOk, data: chalData } = await safeFetchJson('/api/admin/auth/passkey/generate-challenge', { method: 'POST' });
+    const { ok: chalOk, data: chalData } = await safeFetchJson('/api/admin/auth/passkey/generate-challenge', { method: 'POST' }, 10000);
     if (!chalOk) {
       throw new Error(chalData?.detail || 'Could not initialize passkey login.');
     }
@@ -4420,7 +4483,7 @@ async function handlePasskeyLogin() {
         authenticator_data: authenticatorData,
         signature: signature
       })
-    });
+    }, 10000);
     if (!verifyOk) {
       throw new Error(verifyData?.detail || 'Passkey verification failed on server.');
     }
@@ -4430,8 +4493,14 @@ async function handlePasskeyLogin() {
     localStorage.setItem('admin_active_tab', 'dashboard');
     $('authView').hidden = true;
     $('appShell').hidden = false;
-    await checkAuth();
-    switchTab('dashboard');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg class="icon" style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3z"/><circle cx="12" cy="16" r="1"/></svg>
+        Sign in with Passkey / Face ID
+      `;
+    }
+    checkAuth().catch(err => console.error('checkAuth post-passkey error:', err));
   } catch (err) {
     if (err.name !== 'NotAllowedError') {
       if (alertEl) {
@@ -4450,10 +4519,7 @@ async function handlePasskeyLogin() {
   }
 }
 
-$('loginForm')?.addEventListener('submit', async e => {
-  if (e) e.preventDefault();
-  await handleAdminLogin();
-});
+// Single submission handler wired to loginForm onsubmit (duplicate listener removed)
 
 $('logoutBtn').addEventListener('click', async () => {
   localStorage.removeItem('admin_token');
