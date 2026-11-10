@@ -1,5 +1,7 @@
-import os, sys, threading, subprocess, secrets, shutil, zipfile, io, re, time, base64, tempfile, uuid, hashlib
+import os, sys, threading, subprocess, secrets, shutil, zipfile, io, re, time, base64, tempfile, uuid, hashlib, logging, sqlite3
 from typing import Optional
+
+logger = logging.getLogger("uvicorn.error")
 
 # Limit CPU threads to prevent memory and CPU spikes on VPS
 os.environ["OMP_NUM_THREADS"] = "2"
@@ -191,10 +193,17 @@ def get_auth_token(req: Request) -> str:
     token = req.headers.get("X-Admin-Token") or req.cookies.get("admin_token")
     if not token:
         raise HTTPException(401, "Unauthorized. Authentication credentials required.")
-    # 1. Validate persistent session from database
-    session = validate_admin_session(token)
-    if session:
-        return token
+    # 1. Validate persistent session from database (fail closed)
+    try:
+        session = validate_admin_session(token)
+        if session:
+            return token
+    except sqlite3.OperationalError as op_err:
+        logger.error(f"get_auth_token database schema error: {op_err}")
+        raise HTTPException(503, "Authentication service temporarily unavailable. Please retry after system maintenance.")
+    except Exception as e:
+        logger.error(f"get_auth_token database validation error: {type(e).__name__}")
+        raise HTTPException(401, "Authentication credentials invalid or session expired.")
     # 2. Backward compatibility with in-memory tokens
     if token in active_tokens:
         return token
@@ -2265,49 +2274,55 @@ def admin_login(payload: dict, req: Request):
     ip = get_client_ip(req)
     ua = req.headers.get("User-Agent", "Unknown")
     
-    # 1. Rate limiting: 5 failed attempts in 15 minutes window
-    fails = count_recent_failed_logins(ip, minutes=15)
-    if fails >= 5:
-        record_security_event("login_blocked", f"Rate limit reached ({fails} failed attempts). IP temporarily blocked.", ip=ip, user_agent=ua, status="blocked")
-        raise HTTPException(429, "Too many failed login attempts. For security reasons, please wait 15 minutes before trying again.")
+    try:
+        # 1. Rate limiting: 5 failed attempts in 15 minutes window
+        fails = count_recent_failed_logins(ip, minutes=15)
+        if fails >= 5:
+            record_security_event("login_blocked", f"Rate limit reached ({fails} failed attempts). IP temporarily blocked.", ip=ip, user_agent=ua, status="blocked")
+            raise HTTPException(429, "Too many failed login attempts. For security reasons, please wait 15 minutes before trying again.")
+            
+        key = (payload.get("key") or payload.get("password") or "").strip()
+        username = payload.get("username", "admin").strip()
         
-    key = (payload.get("key") or payload.get("password") or "").strip()
-    username = payload.get("username", "admin").strip()
-    
-    user = get_admin_user(username) or get_admin_user("admin")
-    
-    valid = False
-    if user and user.get("password_hash"):
-        valid = auth_security.verify_password(key, user["password_hash"])
-    if not valid and key == ADMIN_KEY:
-        valid = True
+        user = get_admin_user(username) or get_admin_user("admin")
         
-    if not valid:
-        record_security_event("login_failed", f"Failed login attempt for '{username}'", ip=ip, user_agent=ua, status="failed")
-        remaining = max(0, 5 - (fails + 1))
-        raise HTTPException(401, f"Incorrect security key or password. {remaining} attempt(s) remaining before temporary lockout.")
+        valid = False
+        if user and user.get("password_hash"):
+            valid = auth_security.verify_password(key, user["password_hash"])
+        if not valid and key == ADMIN_KEY:
+            valid = True
+            
+        if not valid:
+            record_security_event("login_failed", f"Failed login attempt for '{username}'", ip=ip, user_agent=ua, status="failed")
+            remaining = max(0, 5 - (fails + 1))
+            raise HTTPException(401, f"Incorrect security key or password. {remaining} attempt(s) remaining before temporary lockout.")
+            
+        # Check if 2FA (TOTP) is enabled
+        if user and user.get("totp_enabled") and user.get("totp_secret"):
+            challenge_id = secrets.token_hex(16)
+            save_auth_challenge(challenge_id, "2fa_login", "totp_pending", user_id=user["id"], expires_in_seconds=300)
+            record_security_event("2fa_challenge_prompted", f"Password verified for '{user['username']}'; awaiting 2FA code", ip=ip, user_agent=ua)
+            return {
+                "status": "2fa_required",
+                "challenge_id": challenge_id,
+                "message": "Enter the 6-digit code from your authenticator app."
+            }
+            
+        # Successful password-only login
+        session_token = secrets.token_urlsafe(32)
+        user_id = user["id"] if user else 1
+        create_admin_session(session_token, user_id=user_id, ip_address=ip, user_agent=ua, expires_days=7)
+        active_tokens.add(session_token)
+        record_security_event("login_success", f"Password login successful for '{user['username'] if user else 'admin'}'", ip=ip, user_agent=ua)
         
-    # Check if 2FA (TOTP) is enabled
-    if user and user.get("totp_enabled") and user.get("totp_secret"):
-        challenge_id = secrets.token_hex(16)
-        save_auth_challenge(challenge_id, "2fa_login", "totp_pending", user_id=user["id"], expires_in_seconds=300)
-        record_security_event("2fa_challenge_prompted", f"Password verified for '{user['username']}'; awaiting 2FA code", ip=ip, user_agent=ua)
-        return {
-            "status": "2fa_required",
-            "challenge_id": challenge_id,
-            "message": "Enter the 6-digit code from your authenticator app."
-        }
-        
-    # Successful password-only login
-    session_token = secrets.token_urlsafe(32)
-    user_id = user["id"] if user else 1
-    create_admin_session(session_token, user_id=user_id, ip_address=ip, user_agent=ua, expires_days=7)
-    active_tokens.add(session_token)
-    record_security_event("login_success", f"Password login successful for '{user['username'] if user else 'admin'}'", ip=ip, user_agent=ua)
-    
-    response = JSONResponse({"status": "ok", "token": session_token})
-    response.set_cookie("admin_token", session_token, httponly=True, samesite="lax", max_age=86400 * 7)
-    return response
+        response = JSONResponse({"status": "ok", "token": session_token})
+        response.set_cookie("admin_token", session_token, httponly=True, samesite="lax", max_age=86400 * 7)
+        return response
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"admin_login unexpected database exception: {type(e).__name__}")
+        raise HTTPException(500, "Authentication service temporarily unavailable. Please try again.")
 
 @app.post("/api/admin/logout")
 def admin_logout(req: Request, token: str = Depends(get_auth_token)):
@@ -2661,7 +2676,7 @@ def admin_passkey_register_verify(payload: dict, req: Request, token: str = Depe
         
     user_id = challenge["user_id"] or 1
     parsed = auth_security.parse_client_data_json(client_data_json)
-    if parsed.get("type") != "webauthn.create":
+    if not parsed or parsed.get("type") != "webauthn.create":
         raise HTTPException(400, "Invalid WebAuthn operation.")
         
     save_passkey(user_id, credential_id, public_key, device_name)
@@ -2710,10 +2725,12 @@ def admin_revoke_session_endpoint(payload: dict, req: Request, token: str = Depe
         record_security_event("sessions_revoked", "Revoked all other active sessions", ip=ip, user_agent=ua)
     elif session_id:
         conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM admin_sessions WHERE id = ? AND user_id = ?", (session_id, user_id))
-        conn.commit()
-        conn.close()
+        try:
+            with conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM admin_sessions WHERE id = ? AND user_id = ?", (session_id, user_id))
+        finally:
+            conn.close()
         record_security_event("session_revoked", f"Revoked active session #{session_id}", ip=ip, user_agent=ua)
     return {"status": "ok"}
 

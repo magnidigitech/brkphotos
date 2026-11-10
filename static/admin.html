@@ -4202,21 +4202,32 @@ async function safeFetchJson(url, options = {}, timeoutMs = 15000) {
     if (signal) fetchOptions.signal = signal;
     const res = await fetch(url, fetchOptions);
     if (timer) clearTimeout(timer);
+
+    // Read body text exactly once to avoid ReadableStream already-read errors
+    let rawText = '';
+    try {
+      rawText = await res.text();
+    } catch (_) {
+      rawText = '';
+    }
+
     let data = null;
-    const ct = res.headers.get('content-type') || '';
-    if (ct.includes('application/json')) {
-      try { data = await res.json(); } catch (_) {}
-    }
-    if (!data) {
+    if (rawText && rawText.trim()) {
       try {
-        const text = await res.text();
-        try { data = JSON.parse(text); } catch (_) {
-          data = { detail: text || `HTTP ${res.status}` };
-        }
+        data = JSON.parse(rawText);
       } catch (_) {
-        data = { detail: `HTTP ${res.status}` };
+        const clean = rawText.trim();
+        const isHtmlOrRaw = clean.startsWith('<') || clean.toLowerCase().includes('internal server error') || clean.length > 200;
+        data = {
+          detail: isHtmlOrRaw
+            ? (res.status >= 500 ? 'Service temporarily unavailable. Please try again shortly.' : `Server returned error (${res.status}).`)
+            : clean
+        };
       }
+    } else {
+      data = { detail: res.ok ? '' : `Server returned error (${res.status}).` };
     }
+
     return { ok: res.ok, status: res.status, data };
   } catch (netErr) {
     if (timer) clearTimeout(timer);
@@ -7936,9 +7947,8 @@ let cachedTotpSetupData = null;
 
 async function loadSecuritySettings() {
   try {
-    const res = await fetch('/api/admin/security/status');
-    if (!res.ok) return;
-    const data = await res.json();
+    const { ok, data } = await safeFetchJson('/api/admin/security/status');
+    if (!ok || !data) return;
 
     // 1. Two-Step Verification (TOTP)
     const badge = $('totpStatusBadge');
@@ -8096,13 +8106,12 @@ async function handleAdminChangePassword() {
   if (statusMsg) statusMsg.hidden = true;
 
   try {
-    const res = await fetch('/api/admin/security/password/update', {
+    const { ok, status, data: j } = await safeFetchJson('/api/admin/security/password/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ current_password: currentPwd, new_password: newPwd })
     });
-    const j = await res.json();
-    if (res.ok) {
+    if (ok) {
       if (statusMsg) {
         statusMsg.textContent = 'Password updated successfully!';
         statusMsg.style.color = '#15803d';
@@ -8112,7 +8121,7 @@ async function handleAdminChangePassword() {
       loadSecurityLogs();
     } else {
       if (statusMsg) {
-        statusMsg.textContent = j.detail || 'Password update failed.';
+        statusMsg.textContent = j?.detail || j?.message || 'Password update failed.';
         statusMsg.style.color = 'var(--err)';
         statusMsg.hidden = false;
       }
@@ -8240,20 +8249,19 @@ async function handleConfirmDisableTotp() {
   if (alertEl) alertEl.hidden = true;
 
   try {
-    const res = await fetch('/api/admin/security/totp/disable', {
+    const { ok, data: j } = await safeFetchJson('/api/admin/security/totp/disable', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pwd })
     });
-    const j = await res.json();
-    if (res.ok) {
+    if (ok) {
       closeModal('disableTotpModal');
       alert('Two-step verification has been disabled.');
       loadSecuritySettings();
       loadSecurityLogs();
     } else {
       if (alertEl) {
-        alertEl.textContent = j.detail || 'Incorrect password.';
+        alertEl.textContent = j?.detail || j?.message || 'Incorrect password.';
         alertEl.hidden = false;
       }
     }
@@ -8283,15 +8291,14 @@ async function handleConfirmRegenRecovery() {
   if (alertEl) alertEl.hidden = true;
 
   try {
-    const res = await fetch('/api/admin/security/recovery-codes/regenerate', {
+    const { ok, data: j } = await safeFetchJson('/api/admin/security/recovery-codes/regenerate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pwd })
     });
-    const j = await res.json();
-    if (res.ok) {
+    if (ok) {
       closeModal('regenRecoveryModal');
-      const codes = j.recovery_codes || [];
+      const codes = j?.recovery_codes || [];
       const text = "BRK Photos Admin - Newly Regenerated Emergency Recovery Codes\n" +
         "Generated on: " + new Date().toISOString() + "\n\n" +
         codes.join('\n') +
@@ -8302,7 +8309,7 @@ async function handleConfirmRegenRecovery() {
       loadSecurityLogs();
     } else {
       if (alertEl) {
-        alertEl.textContent = j.detail || 'Incorrect password.';
+        alertEl.textContent = j?.detail || j?.message || 'Incorrect password.';
         alertEl.hidden = false;
       }
     }
@@ -8467,9 +8474,8 @@ async function loadSecurityLogs() {
   if (!tbody) return;
 
   try {
-    const res = await fetch('/api/admin/security/logs?limit=50');
-    if (!res.ok) return;
-    const j = await res.json();
+    const { ok, data: j } = await safeFetchJson('/api/admin/security/logs?limit=50');
+    if (!ok || !j) return;
     const logs = j.events || [];
 
     tbody.replaceChildren();

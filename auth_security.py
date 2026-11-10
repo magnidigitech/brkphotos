@@ -147,15 +147,16 @@ def generate_totp_code(secret: str, time_step: Optional[int] = None) -> str:
     return f"{code:06d}"
 
 
-def verify_totp_code(secret: str, code: str, window: int = 1) -> bool:
+def verify_totp_code(secret: str, code: str, window: int = 1, valid_window: Optional[int] = None, **kwargs) -> bool:
     """
     Verifies a 6-digit TOTP code against a secret with +/- 1 time-step clock drift allowance.
     """
     if not secret or not code or len(code.strip()) != 6:
         return False
+    eff_window = valid_window if valid_window is not None else window
     code = code.strip()
     current_step = int(time.time() // 30)
-    for offset in range(-window, window + 1):
+    for offset in range(-eff_window, eff_window + 1):
         expected = generate_totp_code(secret, current_step + offset)
         if hmac.compare_digest(code, expected):
             return True
