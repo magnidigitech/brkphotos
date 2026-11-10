@@ -2261,7 +2261,7 @@ def public_album_photos(slug: str, album_slug: str):
 # --- Admin APIs ---
 
 @app.post("/api/admin/login")
-async def admin_login(payload: dict, req: Request):
+def admin_login(payload: dict, req: Request):
     ip = get_client_ip(req)
     ua = req.headers.get("User-Agent", "Unknown")
     
@@ -2321,7 +2321,7 @@ def admin_logout(req: Request, token: str = Depends(get_auth_token)):
     return response
 
 @app.post("/api/admin/auth/2fa/verify")
-async def admin_auth_2fa_verify(payload: dict, req: Request):
+def admin_auth_2fa_verify(payload: dict, req: Request):
     ip = get_client_ip(req)
     ua = req.headers.get("User-Agent", "Unknown")
     challenge_id = payload.get("challenge_id", "").strip()
@@ -2351,7 +2351,7 @@ async def admin_auth_2fa_verify(payload: dict, req: Request):
     return response
 
 @app.post("/api/admin/auth/recovery-code/verify")
-async def admin_auth_recovery_code_verify(payload: dict, req: Request):
+def admin_auth_recovery_code_verify(payload: dict, req: Request):
     ip = get_client_ip(req)
     ua = req.headers.get("User-Agent", "Unknown")
     challenge_id = payload.get("challenge_id", "").strip()
@@ -2388,7 +2388,7 @@ async def admin_auth_recovery_code_verify(payload: dict, req: Request):
     return response
 
 @app.post("/api/admin/auth/passkey/generate-challenge")
-async def admin_passkey_auth_challenge(req: Request):
+def admin_passkey_auth_challenge(req: Request):
     ip = get_client_ip(req)
     
     if count_recent_failed_logins(ip, minutes=15) >= 5:
@@ -2424,7 +2424,7 @@ async def admin_passkey_auth_challenge(req: Request):
     }
 
 @app.post("/api/admin/auth/passkey/verify")
-async def admin_passkey_auth_verify(payload: dict, req: Request):
+def admin_passkey_auth_verify(payload: dict, req: Request):
     ip = get_client_ip(req)
     ua = req.headers.get("User-Agent", "Unknown")
     
@@ -2704,17 +2704,17 @@ def admin_revoke_session_endpoint(payload: dict, req: Request, token: str = Depe
     user = get_admin_user("admin")
     user_id = user["id"] if user else 1
     
-    conn = get_db()
-    cursor = conn.cursor()
     if revoke_all_others:
         current_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-        cursor.execute("DELETE FROM admin_sessions WHERE user_id = ? AND token_hash != ?", (user_id, current_hash))
+        revoke_all_admin_sessions(user_id=user_id, keep_token_hash=current_hash)
         record_security_event("sessions_revoked", "Revoked all other active sessions", ip=ip, user_agent=ua)
     elif session_id:
+        conn = get_db()
+        cursor = conn.cursor()
         cursor.execute("DELETE FROM admin_sessions WHERE id = ? AND user_id = ?", (session_id, user_id))
+        conn.commit()
+        conn.close()
         record_security_event("session_revoked", f"Revoked active session #{session_id}", ip=ip, user_agent=ua)
-    conn.commit()
-    conn.close()
     return {"status": "ok"}
 
 @app.get("/api/admin/security/logs")

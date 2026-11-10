@@ -4266,14 +4266,14 @@ async function handleAdminLogin(e) {
       btn.textContent = 'Sign In';
     }
     isLoggingIn = false;
-  }, 12000);
+  }, 25000);
 
   try {
     const { ok, status, data: j } = await safeFetchJson('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key })
-    }, 10000);
+    }, 20000);
 
     clearTimeout(safetyTimer);
 
