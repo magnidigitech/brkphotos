@@ -3237,6 +3237,11 @@
             <p id="photosSectionSubtitle"></p>
           </div>
           <div class="gallery-actions-wrap">
+            <button class="gallery-action-btn" id="openMyAlbumsBtn" title="View albums created on this device">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <span>My Albums</span>
+              <span id="myAlbumsBadge" class="filter-active-dot" style="display:none;background:#10b981;"></span>
+            </button>
             <button class="gallery-action-btn" id="toggleSelectBtn">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="9 11 12 14 22 4"></polyline></svg>
               <span id="toggleSelectText">Select</span>
@@ -3319,6 +3324,10 @@
         <button id="bulkSelectAllBtn" class="btn-bulk" title="Select All Photos">Select All</button>
       </div>
       <div class="bulk-actions-wrap">
+        <button id="bulkCreateAlbumBtn" class="btn-bulk btn-bulk-album" style="background:var(--emerald,#059669);color:#fff;" title="Create Private Shareable Album">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span id="bulkCreateAlbumText">Create Album</span>
+        </button>
         <button id="bulkDownloadZipBtn" class="btn-bulk btn-bulk-download">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span id="bulkDownloadZipText">Download ZIP</span>
@@ -3625,6 +3634,128 @@
     </div>
   </div>
 
+  <!-- ========================================================================= -->
+  <!-- MY EVENT ALBUM: MODALS & DRAWERS -->
+  <!-- ========================================================================= -->
+
+  <!-- Modal 1: Create Album Modal -->
+  <div id="createAlbumModalBackdrop" class="filter-sheet-backdrop" style="display:none;align-items:center;justify-content:center;padding:1rem;z-index:99998;">
+    <div style="background:var(--surface,#131c2e);border:1px solid var(--line,#2d3748);border-radius:14px;max-width:500px;width:100%;padding:1.5rem;box-shadow:0 20px 40px rgba(0,0,0,0.5);color:var(--text,#f3f4f6);max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+        <div>
+          <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:0.25rem;">Create “My Event Album”</h3>
+          <p style="font-size:0.82rem;color:var(--muted,#9ca3af);">Generate a private, shareable link for your selected photos.</p>
+        </div>
+        <button id="btnCloseCreateAlbumModal" style="background:transparent;border:none;color:var(--muted,#9ca3af);font-size:1.5rem;line-height:1;cursor:pointer;">&times;</button>
+      </div>
+
+      <!-- Selected Photos Preview -->
+      <div style="margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem;font-weight:600;margin-bottom:0.5rem;">
+          <span id="albumModalSelectedCount">Selected Photos: 0</span>
+          <span style="color:#10b981;">Max 100 photos</span>
+        </div>
+        <div id="albumModalThumbStrip" style="display:flex;gap:0.5rem;overflow-x:auto;padding-bottom:0.5rem;min-height:64px;">
+          <!-- Populated dynamically with selected thumbnails -->
+        </div>
+      </div>
+
+      <!-- Custom Title -->
+      <div style="margin-bottom:1rem;">
+        <label for="inputAlbumTitle" style="display:block;font-size:0.82rem;font-weight:600;margin-bottom:0.35rem;">Album Title</label>
+        <input type="text" id="inputAlbumTitle" maxlength="100" value="BRK Sir — My Moments"
+          style="width:100%;padding:0.65rem 0.85rem;background:var(--bg,#0b0f19);border:1px solid var(--line,#2d3748);border-radius:8px;color:#fff;font-size:0.9rem;" />
+      </div>
+
+      <!-- Expiry Duration -->
+      <div style="margin-bottom:1rem;">
+        <label for="selectAlbumExpiry" style="display:block;font-size:0.82rem;font-weight:600;margin-bottom:0.35rem;">Link Validity</label>
+        <select id="selectAlbumExpiry"
+          style="width:100%;padding:0.65rem 0.85rem;background:var(--bg,#0b0f19);border:1px solid var(--line,#2d3748);border-radius:8px;color:#fff;font-size:0.9rem;">
+          <option value="7">7 Days</option>
+          <option value="14">14 Days</option>
+          <option value="30" selected>30 Days (Default)</option>
+          <option value="60">60 Days</option>
+          <option value="90">90 Days (Maximum)</option>
+        </select>
+      </div>
+
+      <!-- Mandatory Security Notice -->
+      <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:0.75rem 0.9rem;font-size:0.8rem;color:#34d399;line-height:1.45;margin-bottom:1.25rem;">
+        Anyone with this link can view these selected photos and download them where permitted. You can disable the link from this browser.
+      </div>
+
+      <div id="albumCreateErrorAlert" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-size:0.82rem;padding:0.6rem 0.8rem;border-radius:8px;margin-bottom:1rem;"></div>
+
+      <!-- Actions -->
+      <div style="display:flex;justify-content:flex-end;gap:0.75rem;">
+        <button id="btnCancelCreateAlbum" class="btn-bulk btn-bulk-close" style="padding:0.55rem 1rem;font-size:0.85rem;">Cancel</button>
+        <button id="btnConfirmCreateAlbum" class="btn-bulk" style="background:#0f5c4d;color:#fff;padding:0.55rem 1.25rem;font-size:0.85rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+          <span>Create Album Link</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Link-Ready Success Screen -->
+  <div id="albumSuccessModalBackdrop" class="filter-sheet-backdrop" style="display:none;align-items:center;justify-content:center;padding:1rem;z-index:99998;">
+    <div style="background:var(--surface,#131c2e);border:1px solid var(--line,#2d3748);border-radius:14px;max-width:480px;width:100%;padding:1.75rem 1.5rem;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.5);color:var(--text,#f3f4f6);">
+      <div style="width:52px;height:52px;border-radius:50%;background:rgba(16,185,129,0.15);color:#10b981;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:0.35rem;">Your Album is Ready!</h3>
+      <p id="successAlbumSubtitle" style="font-size:0.85rem;color:var(--muted,#9ca3af);margin-bottom:1.25rem;">Anyone with this link can view and download your selected photos.</p>
+
+      <!-- Link Box -->
+      <div style="position:relative;margin-bottom:1rem;">
+        <input type="text" id="successShareLinkInput" readonly
+          style="width:100%;padding:0.75rem 0.85rem;padding-right:85px;background:var(--bg,#0b0f19);border:1px solid var(--line,#2d3748);border-radius:8px;color:#fff;font-size:0.85rem;font-family:monospace;" />
+        <button id="btnCopySuccessLink"
+          style="position:absolute;right:6px;top:6px;bottom:6px;background:#0f5c4d;color:#fff;border:none;border-radius:6px;padding:0 0.75rem;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          Copy
+        </button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:0.75rem;margin-bottom:1.25rem;">
+        <a id="btnWhatsAppShare" href="#" target="_blank"
+          style="flex:1;background:#25D366;color:#fff;padding:0.65rem;border-radius:8px;font-size:0.88rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.995.543 1.956.819 2.796.819 3.183 0 5.77-2.587 5.77-5.766.001-3.182-2.585-5.77-5.77-5.771zm0 10.518c-.808 0-1.636-.234-2.316-.639l-.166-.099-1.579.414.421-1.54-.108-.172c-.443-.706-.677-1.488-.676-2.316 0-2.617 2.13-4.747 4.75-4.747 2.62 0 4.75 2.13 4.75 4.747 0 2.618-2.13 4.748-4.75 4.748z"/></svg>
+          Share on WhatsApp
+        </a>
+      </div>
+
+      <p style="font-size:0.78rem;color:var(--muted,#9ca3af);margin-bottom:1.25rem;">
+        You can view or revoke this link anytime from <strong>My Albums</strong> in this browser.
+      </p>
+
+      <button id="btnCloseSuccessModal" class="btn-bulk btn-bulk-close" style="width:100%;padding:0.6rem;font-size:0.85rem;">
+        Done
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 3: My Shared Albums Drawer / Modal -->
+  <div id="myAlbumsModalBackdrop" class="filter-sheet-backdrop" style="display:none;align-items:center;justify-content:center;padding:1rem;z-index:99998;">
+    <div style="background:var(--surface,#131c2e);border:1px solid var(--line,#2d3748);border-radius:14px;max-width:540px;width:100%;padding:1.5rem;box-shadow:0 20px 40px rgba(0,0,0,0.5);color:var(--text,#f3f4f6);max-height:85vh;display:flex;flex-direction:column;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--line,#2d3748);">
+        <div>
+          <h3 style="font-size:1.2rem;font-weight:700;">My Shared Albums</h3>
+          <p style="font-size:0.8rem;color:var(--muted,#9ca3af);">Private albums created from this browser.</p>
+        </div>
+        <button id="btnCloseMyAlbumsModal" style="background:transparent;border:none;color:var(--muted,#9ca3af);font-size:1.5rem;line-height:1;cursor:pointer;">&times;</button>
+      </div>
+
+      <div id="myAlbumsListContainer" style="flex:1;overflow-y:auto;margin-bottom:1rem;display:flex;flex-direction:column;gap:0.75rem;">
+        <!-- Dynamically rendered list of albums -->
+      </div>
+
+      <div style="font-size:0.75rem;color:var(--muted,#9ca3af);padding-top:0.75rem;border-top:1px solid var(--line,#2d3748);text-align:center;">
+        Creator controls are stored in this browser. Clearing browser data removes management access.
+      </div>
+    </div>
+  </div>
+
   <script>
     const $ = id => document.getElementById(id);
     const slug = window.location.pathname.replace(/^\/|\/$/g, '') || 'brk-sir';
@@ -3823,6 +3954,7 @@
     function updateBulkBar() {
       const countEl = $('bulkSelectedCount');
       const zipBtn = $('bulkDownloadZipBtn');
+      const albumBtn = $('bulkCreateAlbumBtn');
       const selectAllBtn = $('bulkSelectAllBtn');
       const count = selectedPhotos.size;
 
@@ -3833,6 +3965,11 @@
         zipBtn.disabled = count === 0;
         zipBtn.style.opacity = count === 0 ? '0.5' : '1';
         zipBtn.style.pointerEvents = count === 0 ? 'none' : 'auto';
+      }
+      if (albumBtn) {
+        albumBtn.disabled = count === 0;
+        albumBtn.style.opacity = count === 0 ? '0.5' : '1';
+        albumBtn.style.pointerEvents = count === 0 ? 'none' : 'auto';
       }
       if (selectAllBtn) {
         const allPaths = currentPhotosList.map(item => typeof item === 'string' ? item : item.rel_path);
@@ -4539,6 +4676,7 @@
     let currentSearchFaceThumb = null;
     let currentSearchEmbedding = null;
     let currentSearchId = null;
+    let currentCreationToken = null;
     let currentSelectedFaceIndex = null;
     let currentSearchPage = 1;
     let currentSearchHasMore = false;
@@ -4604,7 +4742,14 @@
         }
 
         if (data && data.photos && data.photos.length > 0) {
-          if (data.search_id) currentSearchId = data.search_id;
+          if (data.search_id) {
+            currentSearchId = data.search_id;
+            try { localStorage.setItem('brk_current_search_id', data.search_id); } catch (e) {}
+          }
+          if (data.creation_token) {
+            currentCreationToken = data.creation_token;
+            try { localStorage.setItem('brk_current_creation_token', data.creation_token); } catch (e) {}
+          }
           if (data.embedding && !currentSearchEmbedding) {
             currentSearchEmbedding = data.embedding;
             try { localStorage.setItem('brk_saved_embedding', JSON.stringify(data.embedding)); } catch (e) {}
@@ -6204,6 +6349,14 @@
         }
         if (res.ok) {
           const data = await res.json();
+          if (data.search_id) {
+            currentSearchId = data.search_id;
+            try { localStorage.setItem('brk_current_search_id', data.search_id); } catch (e) {}
+          }
+          if (data.creation_token) {
+            currentCreationToken = data.creation_token;
+            try { localStorage.setItem('brk_current_creation_token', data.creation_token); } catch (e) {}
+          }
           if (data.embedding && !savedEmb) {
             try { localStorage.setItem('brk_saved_embedding', JSON.stringify(data.embedding)); } catch (e) {}
           }
@@ -6271,6 +6424,8 @@
           if (savedEmbJson) {
             try { currentSearchEmbedding = JSON.parse(savedEmbJson); } catch (e) {}
           }
+          currentSearchId = localStorage.getItem('brk_current_search_id') || null;
+          currentCreationToken = localStorage.getItem('brk_current_creation_token') || null;
           currentSearchPage = Math.max(1, Math.floor(photos.length / 50));
           currentSearchHasMore = actualCount > photos.length;
 
@@ -6309,9 +6464,12 @@
       localStorage.removeItem('brk_saved_count');
       localStorage.removeItem('brk_acknowledged_count');
       localStorage.removeItem('brk_saved_time');
+      localStorage.removeItem('brk_current_search_id');
+      localStorage.removeItem('brk_current_creation_token');
       currentSearchFaceThumb = null;
       currentSearchEmbedding = null;
       currentSearchId = null;
+      currentCreationToken = null;
       currentSelectedFaceIndex = null;
       currentSearchHasMore = false;
       totalMatchingPhotosCount = 0;
@@ -6433,6 +6591,13 @@
           currentSearchFaceThumb = j.face_thumb || null;
           currentSearchEmbedding = j.embedding || null;
           currentSearchId = j.search_id || null;
+          currentCreationToken = j.creation_token || null;
+          if (currentSearchId) {
+            try { localStorage.setItem('brk_current_search_id', currentSearchId); } catch(e){}
+          }
+          if (currentCreationToken) {
+            try { localStorage.setItem('brk_current_creation_token', currentCreationToken); } catch(e){}
+          }
           currentSelectedFaceIndex = faceIndex;
           currentSearchPage = j.page || 1;
           currentSearchHasMore = !!j.has_more;
@@ -6526,6 +6691,388 @@
     $('bulkSelectAllBtn')?.addEventListener('click', selectAllPhotos);
     $('bulkDownloadZipBtn')?.addEventListener('click', downloadSelectedZip);
     $('bulkCancelBtn')?.addEventListener('click', clearSelection);
+
+    // =========================================================================
+    // MY EVENT ALBUM: CLIENT LOGIC
+    // =========================================================================
+
+    function updateMyAlbumsBadge() {
+      const badge = $('myAlbumsBadge');
+      if (!badge) return;
+      try {
+        const albums = JSON.parse(localStorage.getItem('my_shared_albums') || '[]');
+        const activeCount = albums.filter(a => !a.is_revoked && (!a.expires_at || new Date(a.expires_at) > new Date())).length;
+        if (activeCount > 0) {
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+      } catch (e) {
+        badge.style.display = 'none';
+      }
+    }
+
+    function generate256BitHexToken(prefix = '') {
+      const arr = new Uint8Array(32);
+      if (window.crypto && window.crypto.getRandomValues) {
+        window.crypto.getRandomValues(arr);
+      } else {
+        for (let i = 0; i < 32; i++) arr[i] = Math.floor(Math.random() * 256);
+      }
+      const hex = Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+      return prefix ? (prefix + hex) : hex;
+    }
+
+    function openCreateAlbumModal() {
+      if (selectedPhotos.size === 0) {
+        showToast('Please select at least one photograph to create an album.');
+        return;
+      }
+      if (selectedPhotos.size > 100) {
+        showToast('You can select up to 100 photographs for an album.');
+        return;
+      }
+
+      const sId = currentSearchId || localStorage.getItem('brk_current_search_id');
+      const cTok = currentCreationToken || localStorage.getItem('brk_current_creation_token');
+
+      if (!sId || !cTok) {
+        showToast('Please find your photos first using Face Search to create your private album.');
+        return;
+      }
+
+      // Populate selected preview count & thumbnails
+      const countEl = $('albumModalSelectedCount');
+      if (countEl) countEl.textContent = `Selected Photos: ${selectedPhotos.size}`;
+
+      const strip = $('albumModalThumbStrip');
+      if (strip) {
+        strip.replaceChildren();
+        const allItems = (currentPhotosList && currentPhotosList.length > 0)
+          ? currentPhotosList
+          : (window.rawPhotosList || []);
+
+        const selectedArray = Array.from(selectedPhotos);
+        selectedArray.slice(0, 20).forEach(path => {
+          const item = allItems.find(it => (typeof it === 'string' ? it : it.rel_path) === path);
+          const enc = item ? getPhotoEnc(item) : encodeURIComponent(path);
+          const img = document.createElement('img');
+          img.src = `/thumb/${enc}`;
+          img.alt = 'Selected photo';
+          img.style.cssText = 'width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.1);flex-shrink:0;';
+          strip.appendChild(img);
+        });
+
+        if (selectedArray.length > 20) {
+          const more = document.createElement('div');
+          more.style.cssText = 'width:56px;height:56px;border-radius:8px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:var(--muted,#9ca3af);flex-shrink:0;';
+          more.textContent = `+${selectedArray.length - 20}`;
+          strip.appendChild(more);
+        }
+      }
+
+      // Set default title
+      const titleInput = $('inputAlbumTitle');
+      if (titleInput) {
+        const evTitle = $('heroTitle')?.textContent?.trim() || 'BRK Sir';
+        titleInput.value = `${evTitle} — My Moments`;
+      }
+
+      const expirySelect = $('selectAlbumExpiry');
+      if (expirySelect) expirySelect.value = '30';
+
+      $('createAlbumModalBackdrop').style.display = 'flex';
+    }
+
+    function closeCreateAlbumModal() {
+      const modal = $('createAlbumModalBackdrop');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function confirmCreateAlbum() {
+      const sId = currentSearchId || localStorage.getItem('brk_current_search_id');
+      const cTok = currentCreationToken || localStorage.getItem('brk_current_creation_token');
+
+      if (!sId || !cTok) {
+        showToast('Search session proof missing. Please search again with your selfie.');
+        return;
+      }
+
+      const allItems = (currentPhotosList && currentPhotosList.length > 0)
+        ? currentPhotosList
+        : (window.rawPhotosList || []);
+
+      const photoIds = [];
+      for (const path of selectedPhotos) {
+        const item = allItems.find(it => (typeof it === 'string' ? it : it.rel_path) === path);
+        if (item && item.id) {
+          photoIds.push(item.id);
+        }
+      }
+
+      if (photoIds.length === 0) {
+        showToast('Could not resolve photo IDs. Please ensure photos are loaded and try again.');
+        return;
+      }
+
+      const title = $('inputAlbumTitle')?.value?.trim() || 'My Event Album';
+      const expiryDays = parseInt($('selectAlbumExpiry')?.value || '30', 10);
+
+      const confirmBtn = $('btnConfirmCreateAlbum');
+      const origText = confirmBtn ? confirmBtn.innerHTML : '';
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<svg class="icon-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><span>Creating...</span>';
+      }
+
+      // Generate client-side cryptographic tokens
+      const clientShareToken = generate256BitHexToken('sh_');
+      const clientManageToken = generate256BitHexToken('mg_');
+
+      try {
+        const payload = {
+          search_id: sId,
+          creation_token: cTok,
+          photo_ids: photoIds,
+          title: title,
+          expiry_days: expiryDays,
+          share_token: clientShareToken,
+          manage_token: clientManageToken
+        };
+
+        const res = await fetch('/api/shared-albums', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Session-Id': getSessionId()
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const j = await res.json();
+        if (!res.ok) {
+          throw new Error(j.detail || 'Album creation failed.');
+        }
+
+        closeCreateAlbumModal();
+
+        // Save album to localStorage for creator management
+        const fullShareUrl = window.location.origin + (j.share_url || `/s/${j.share_token}`);
+        const savedAlbums = JSON.parse(localStorage.getItem('my_shared_albums') || '[]');
+        savedAlbums.unshift({
+          id: j.id,
+          title: j.title || title,
+          share_token: j.share_token,
+          manage_token: j.manage_token,
+          share_url: fullShareUrl,
+          photo_count: j.photo_count || photoIds.length,
+          created_at: j.created_at || new Date().toISOString(),
+          expires_at: j.expires_at,
+          is_revoked: false
+        });
+        localStorage.setItem('my_shared_albums', JSON.stringify(savedAlbums));
+        updateMyAlbumsBadge();
+
+        // Populate Success Modal
+        const linkInput = $('successShareLinkInput');
+        if (linkInput) linkInput.value = fullShareUrl;
+
+        const waBtn = $('btnWhatsAppShare');
+        if (waBtn) {
+          const waText = encodeURIComponent(`Here is my private photo album "${j.title || title}":\n${fullShareUrl}`);
+          waBtn.href = `https://api.whatsapp.com/send?text=${waText}`;
+        }
+
+        const subTitle = $('successAlbumSubtitle');
+        if (subTitle) {
+          subTitle.textContent = `${photoIds.length} photograph${photoIds.length === 1 ? '' : 's'} included. Link expires in ${expiryDays} days.`;
+        }
+
+        $('albumSuccessModalBackdrop').style.display = 'flex';
+        showToast('Private album created successfully!');
+      } catch (err) {
+        showToast(`Failed to create album: ${err.message}`);
+      } finally {
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = origText;
+        }
+      }
+    }
+
+    function closeSuccessModal() {
+      const modal = $('albumSuccessModalBackdrop');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function openMyAlbumsModal() {
+      renderMyAlbumsList();
+      $('myAlbumsModalBackdrop').style.display = 'flex';
+    }
+
+    function closeMyAlbumsModal() {
+      $('myAlbumsModalBackdrop').style.display = 'none';
+    }
+
+    function renderMyAlbumsList() {
+      const container = $('myAlbumsListContainer');
+      if (!container) return;
+      container.replaceChildren();
+
+      let albums = [];
+      try {
+        albums = JSON.parse(localStorage.getItem('my_shared_albums') || '[]');
+      } catch (e) {
+        albums = [];
+      }
+
+      if (albums.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:2.5rem 1rem;color:var(--muted,#9ca3af);">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin:0 auto 0.75rem;opacity:0.6;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <p style="font-weight:600;font-size:0.95rem;margin-bottom:0.25rem;">No albums created yet</p>
+            <p style="font-size:0.8rem;">Select photos from your face search results and click "Create Album" to share them privately.</p>
+          </div>
+        `;
+        return;
+      }
+
+      albums.forEach((album, idx) => {
+        const isExpired = album.expires_at && new Date(album.expires_at) < new Date();
+        const isRevoked = !!album.is_revoked;
+        const statusText = isRevoked ? 'Revoked' : (isExpired ? 'Expired' : 'Active');
+        const statusColor = isRevoked ? '#ef4444' : (isExpired ? '#f59e0b' : '#10b981');
+
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--bg,#0b0f19);border:1px solid var(--line,#2d3748);border-radius:10px;padding:1rem;display:flex;flex-direction:column;gap:0.75rem;';
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
+            <div>
+              <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:0.2rem;color:#fff;">${album.title || 'My Event Album'}</h4>
+              <p style="font-size:0.78rem;color:var(--muted,#9ca3af);">
+                ${album.photo_count || 0} photos • Created ${album.created_at ? new Date(album.created_at).toLocaleDateString() : ''}
+              </p>
+            </div>
+            <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:700;background:rgba(255,255,255,0.08);color:${statusColor};border:1px solid ${statusColor}44;">
+              ${statusText}
+            </span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+            ${(!isRevoked && !isExpired) ? `
+              <button class="btn-copy-album-link" data-url="${album.share_url}"
+                style="background:rgba(15,92,77,0.3);border:1px solid #0f5c4d;color:#10b981;border-radius:6px;padding:0.4rem 0.65rem;font-size:0.78rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Copy Link
+              </button>
+              <a href="https://api.whatsapp.com/send?text=${encodeURIComponent('Check out my photo album: ' + album.share_url)}" target="_blank"
+                style="background:#25D366;color:#fff;border-radius:6px;padding:0.4rem 0.65rem;font-size:0.78rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+                WhatsApp
+              </a>
+              <a href="${album.share_url}" target="_blank"
+                style="background:rgba(255,255,255,0.08);border:1px solid var(--line,#2d3748);color:#fff;border-radius:6px;padding:0.4rem 0.65rem;font-size:0.78rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+                Open
+              </a>
+            ` : ''}
+            ${!isRevoked ? `
+              <button class="btn-revoke-album" data-idx="${idx}" data-manage-token="${album.manage_token || ''}"
+                style="margin-left:auto;background:transparent;border:1px solid #ef444455;color:#ef4444;border-radius:6px;padding:0.4rem 0.65rem;font-size:0.78rem;font-weight:600;cursor:pointer;">
+                Revoke Link
+              </button>
+            ` : `
+              <span style="font-size:0.75rem;color:#ef4444;margin-left:auto;">Link deactivated</span>
+            `}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      // Wire copy buttons in drawer
+      container.querySelectorAll('.btn-copy-album-link').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const url = btn.getAttribute('data-url');
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(() => {
+              const orig = btn.innerHTML;
+              btn.textContent = 'Copied!';
+              setTimeout(() => { btn.innerHTML = orig; }, 1800);
+            }).catch(() => showToast('Link: ' + url));
+          } else {
+            showToast('Link: ' + url);
+          }
+        });
+      });
+
+      // Wire revoke buttons in drawer
+      container.querySelectorAll('.btn-revoke-album').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const idx = parseInt(btn.getAttribute('data-idx'), 10);
+          const mgToken = btn.getAttribute('data-manage-token');
+          if (!mgToken) {
+            showToast('Management token missing for this album.');
+            return;
+          }
+          if (!confirm('Are you sure you want to revoke this album link? Anyone with the link will no longer be able to view these photos.')) {
+            return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = 'Revoking...';
+          try {
+            const res = await fetch(`/api/shared-albums/manage/${encodeURIComponent(mgToken)}/revoke`, {
+              method: 'POST'
+            });
+            if (!res.ok) {
+              const j = await res.json().catch(() => ({}));
+              throw new Error(j.detail || 'Revocation failed.');
+            }
+            albums[idx].is_revoked = true;
+            localStorage.setItem('my_shared_albums', JSON.stringify(albums));
+            updateMyAlbumsBadge();
+            renderMyAlbumsList();
+            showToast('Album link revoked successfully.');
+          } catch (e) {
+            showToast('Could not revoke album: ' + e.message);
+            btn.disabled = false;
+            btn.textContent = 'Revoke Link';
+          }
+        });
+      });
+    }
+
+    // My Event Album Listeners
+    $('bulkCreateAlbumBtn')?.addEventListener('click', openCreateAlbumModal);
+    $('openMyAlbumsBtn')?.addEventListener('click', openMyAlbumsModal);
+    $('btnCloseCreateAlbumModal')?.addEventListener('click', closeCreateAlbumModal);
+    $('btnCancelCreateAlbum')?.addEventListener('click', closeCreateAlbumModal);
+    $('btnConfirmCreateAlbum')?.addEventListener('click', confirmCreateAlbum);
+    $('btnCloseSuccessModal')?.addEventListener('click', closeSuccessModal);
+    $('btnCloseMyAlbumsModal')?.addEventListener('click', closeMyAlbumsModal);
+
+    $('btnCopySuccessLink')?.addEventListener('click', () => {
+      const link = $('successShareLinkInput')?.value;
+      if (link && navigator.clipboard) {
+        navigator.clipboard.writeText(link).then(() => {
+          const btn = $('btnCopySuccessLink');
+          const orig = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(() => { btn.textContent = orig; }, 1800);
+        }).catch(() => showToast('Link: ' + link));
+      }
+    });
+
+    // Dismiss modals on backdrop click
+    $('createAlbumModalBackdrop')?.addEventListener('click', (e) => {
+      if (e.target === $('createAlbumModalBackdrop')) closeCreateAlbumModal();
+    });
+    $('albumSuccessModalBackdrop')?.addEventListener('click', (e) => {
+      if (e.target === $('albumSuccessModalBackdrop')) closeSuccessModal();
+    });
+    $('myAlbumsModalBackdrop')?.addEventListener('click', (e) => {
+      if (e.target === $('myAlbumsModalBackdrop')) closeMyAlbumsModal();
+    });
+
+    // Initialize My Albums Badge
+    updateMyAlbumsBadge();
 
     // Discovery & Sort Listeners
     $('sortOrderBtn')?.addEventListener('click', toggleSortOrder);

@@ -3,6 +3,29 @@ from typing import Optional
 
 logger = logging.getLogger("uvicorn.error")
 
+def redact_token_from_string(text: str) -> str:
+    if not text or not isinstance(text, str):
+        return text
+    text = re.sub(r"/s/[a-zA-Z0-9_\-]{16,80}", "/s/[REDACTED]", text)
+    text = re.sub(r"/api/shared/[a-zA-Z0-9_\-]{16,80}", "/api/shared/[REDACTED]", text)
+    text = re.sub(r"/api/shared-albums/manage/[a-zA-Z0-9_\-]{16,80}", "/api/shared-albums/manage/[REDACTED]", text)
+    return text
+
+class TokenRedactingFilter(logging.Filter):
+    def filter(self, record):
+        if hasattr(record, "args") and isinstance(record.args, tuple):
+            args_list = list(record.args)
+            for idx, arg in enumerate(args_list):
+                if isinstance(arg, str):
+                    args_list[idx] = redact_token_from_string(arg)
+            record.args = tuple(args_list)
+        if hasattr(record, "msg") and isinstance(record.msg, str):
+            record.msg = redact_token_from_string(record.msg)
+        return True
+
+logging.getLogger("uvicorn.access").addFilter(TokenRedactingFilter())
+logging.getLogger("uvicorn.error").addFilter(TokenRedactingFilter())
+
 # Limit CPU threads to prevent memory and CPU spikes on VPS
 os.environ["OMP_NUM_THREADS"] = "2"
 os.environ["OPENBLAS_NUM_THREADS"] = "2"
@@ -17,7 +40,7 @@ import cv2
 import numpy as np
 import requests
 from fastapi import FastAPI, File, HTTPException, UploadFile, Request, Depends, Form, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from insightface.app import FaceAnalysis
 import json
@@ -46,7 +69,12 @@ from database import (
     save_auth_challenge, consume_auth_challenge,
     create_admin_session, validate_admin_session, revoke_admin_session,
     revoke_all_admin_sessions, get_active_admin_sessions,
-    record_security_event, get_security_events, count_recent_failed_logins
+    record_security_event, get_security_events, count_recent_failed_logins,
+    save_search_result_proof, get_search_result_proof, create_shared_album_atomic,
+    get_shared_album_by_token, get_shared_album_photos_page, verify_photo_in_shared_album,
+    get_all_photo_records_for_shared_album, revoke_shared_album_by_creator,
+    admin_get_shared_albums, admin_get_shared_album_photos, admin_revoke_shared_album, admin_update_shared_album_expiry,
+    admin_delete_shared_album, check_and_increment_shared_rate_limit, record_shared_album_access_log
 )
 import auth_security
 from ai_matching import (
@@ -1647,8 +1675,30 @@ def perform_face_search(
     except Exception as e:
         print(f"Match review recording notice: {e}")
 
+    # Record expiring server-side proof of matched photos for My Event Album creation
+    creation_token = None
+    all_matched_ids = [p["id"] for p in res.get("all_photos", []) if p.get("id")]
+    if all_matched_ids:
+        try:
+            conn_ev = get_db()
+            c_ev = conn_ev.cursor()
+            c_ev.execute("SELECT id FROM events WHERE slug = ? OR ? IN ('wedding', 'default', 'brk-sir', 'brksir') LIMIT 1", (event_slug, event_slug))
+            erow = c_ev.fetchone()
+            conn_ev.close()
+            eid = erow["id"] if erow else 1
+            _, creation_token = save_search_result_proof(
+                search_id=search_id,
+                event_id=eid,
+                matched_photo_ids=all_matched_ids,
+                creator_session_id=session_id or visitor_id or "",
+                ttl_seconds=3600
+            )
+        except Exception as e:
+            print(f"Notice: could not record search-result proof: {e}")
+
     return {
         "search_id": search_id,
+        "creation_token": creation_token,
         "multiple_faces": False,
         "count": res["total_count"],
         "total_count": res["total_count"],
@@ -1753,7 +1803,7 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
     new_count = max(0, total_count - last_count) if last_count > 0 else 0
 
     if page == 1:
-        search_id = str(uuid.uuid4())[:12]
+        search_id = search_id or str(uuid.uuid4())[:12]
         sess_id = body.get("session_id") or "anon"
         vis_id = body.get("visitor_id")
         duration_ms = round((time.time() - search_start) * 1000, 1)
@@ -1762,8 +1812,32 @@ async def check_profile_matches_endpoint(slug: str = "brk-sir", request: Request
         else:
             analytics.record_search_no_results(search_id=search_id, session_id=sess_id, duration_ms=duration_ms, visitor_id=vis_id, event_slug=slug)
 
+    creation_token = None
+    all_matched_ids = [p["id"] for p in res.get("all_photos", []) if p.get("id")]
+    if all_matched_ids:
+        try:
+            conn_ev = get_db()
+            c_ev = conn_ev.cursor()
+            c_ev.execute("SELECT id FROM events WHERE slug = ? OR ? IN ('wedding', 'default', 'brk-sir', 'brksir') LIMIT 1", (slug, slug))
+            erow = c_ev.fetchone()
+            conn_ev.close()
+            eid = erow["id"] if erow else 1
+            proof_sid = search_id or f"srch_{secrets.token_hex(12)}"
+            _, creation_token = save_search_result_proof(
+                search_id=proof_sid,
+                event_id=eid,
+                matched_photo_ids=all_matched_ids,
+                creator_session_id=session_id or visitor_id or "",
+                ttl_seconds=3600
+            )
+            search_id = proof_sid
+        except Exception as e:
+            print(f"Notice: could not record check-profile proof: {e}")
+
     return {
         "status": "ok",
+        "search_id": search_id,
+        "creation_token": creation_token,
         "count": total_count,
         "total_count": total_count,
         "unfiltered_total_count": res["unfiltered_total_count"],
@@ -2267,7 +2341,844 @@ def public_album_photos(slug: str, album_slug: str):
     
     return {"album": dict(album), "photos": photos}
 
-# --- Admin APIs ---
+# ===========================================================================
+# MY EVENT ALBUM: PRIVATE SHAREABLE ALBUMS & PROTECTED DELIVERY
+# ===========================================================================
+
+@app.post("/api/shared-albums")
+@app.post("/api/events/{slug}/shared-albums")
+async def create_shared_album_endpoint(request: Request, slug: Optional[str] = None):
+    """
+    Creates a new private, shareable event album from verified search results.
+    Enforces rate limits, validates creation token against server-side proof,
+    and returns independent share and management credentials.
+    """
+    ip = get_client_ip(request)
+
+    # Distributed worker-safe rate limiting: 10 creation attempts per hour per IP
+    if not check_and_increment_shared_rate_limit("create_album", ip, max_requests=10, window_seconds=3600):
+        raise HTTPException(429, "Too many album creation attempts. Please wait an hour before creating more albums.")
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Invalid JSON payload.")
+
+    search_id = str(body.get("search_id") or "").strip()
+    creation_token = str(body.get("creation_token") or "").strip()
+    photo_ids = body.get("photo_ids", [])
+    title = body.get("title")
+    expiry_days = body.get("expiry_days", 30)
+    client_share_token = body.get("share_token")
+    client_manage_token = body.get("manage_token")
+
+    if not search_id or not creation_token:
+        raise HTTPException(400, "Both search_id and creation_token are required.")
+
+    if not photo_ids or not isinstance(photo_ids, list):
+        raise HTTPException(400, "A non-empty list of selected photo_ids is required.")
+
+    try:
+        sess = request.cookies.get("brk_session_id") or request.headers.get("X-Session-Id") or ""
+        result = create_shared_album_atomic(
+            search_id=search_id,
+            creation_token=creation_token,
+            photo_ids=photo_ids,
+            title=title,
+            expiry_days=expiry_days,
+            creator_session=sess,
+            share_token=client_share_token,
+            manage_token=client_manage_token
+        )
+    except PermissionError as pe:
+        raise HTTPException(403, str(pe))
+    except ValueError as ve:
+        err_msg = str(ve)
+        if "already been consumed" in err_msg or "different" in err_msg:
+            raise HTTPException(409, err_msg)
+        raise HTTPException(400, err_msg)
+    except Exception as e:
+        print(f"Error in create_shared_album_endpoint: {e}")
+        raise HTTPException(500, "Failed to create shared album. Please try again.")
+
+    resp_data = {
+        "status": "ok",
+        "id": result["id"],
+        "album_id": result["id"],
+        "share_token": result["share_token"],
+        "manage_token": result["manage_token"],
+        "share_url": f"/s/{result['share_token']}",
+        "title": result["title"],
+        "photo_count": result["photo_count"],
+        "created_at": result["created_at"],
+        "expires_at": result["expires_at"],
+        "is_retry": result.get("is_idempotent_retry", False),
+        "is_idempotent_retry": result.get("is_idempotent_retry", False)
+    }
+
+    resp = JSONResponse(resp_data, status_code=200 if result.get("is_idempotent_retry") else 201)
+    resp.headers["Cache-Control"] = "private, no-store"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    return resp
+
+
+@app.get("/s/{token}")
+def shared_album_page(token: str, request: Request):
+    """
+    Dedicated recipient viewer landing page for /s/{token}.
+    Provides zero-leakage preview metadata (no guest biometric or photo previews in OpenGraph tags)
+    and strictly enforces no-store caching and no-referrer headers.
+    """
+    if not token or not re.match(r'^[a-zA-Z0-9_\-]{16,128}$', token):
+        raise HTTPException(404, "Invalid shared album link format.")
+
+    alb = get_shared_album_by_token(token)
+    title = "Shared Album — BRK Photos"
+    headline = "Personalized Moments"
+    event_label = "BRK Photos Celebration"
+    is_active = True
+    status_msg = ""
+
+    if not alb or alb.get("status") == "not_found":
+        is_active = False
+        status_msg = "This album could not be found. Please double-check the link."
+    elif alb.get("status") == "revoked":
+        is_active = False
+        status_msg = "This album was revoked by its creator and is no longer accessible."
+    elif alb.get("status") == "expired":
+        is_active = False
+        status_msg = f"This album expired on {alb.get('expires_at')}. Please request an updated link."
+    elif alb.get("status") == "unavailable":
+        is_active = False
+        status_msg = "This event is currently private or archived."
+    else:
+        title = f"{alb.get('title', 'My Moments')} — BRK Photos"
+        headline = alb.get("title", "My Moments")
+        event_label = alb.get("event_name", "BRK Photos")
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta name="referrer" content="no-referrer">
+  <title>{title}</title>
+  
+  <!-- Generic, Privacy-Safe OpenGraph (Zero Guest Photo Leaks to Crawlers) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="BRK Photos — Shared Album">
+  <meta property="og:description" content="View shared photographs from Bhashyam Ramakrishna Sir's celebration.">
+  <meta property="og:image" content="/logo.svg">
+  
+  <style>
+    :root {{
+      --primary: #0f5c4d;
+      --bg: #0b0f19;
+      --surface: #131c2e;
+      --card: #1c263c;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --line: #2d3748;
+    }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }}
+    header.shared-hero {{
+      background: linear-gradient(180deg, #162035 0%, var(--bg) 100%);
+      padding: 2rem 1.25rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid var(--line);
+    }}
+    .badge-event {{
+      display: inline-block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.12);
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      margin-bottom: 0.75rem;
+    }}
+    h1.album-title {{
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }}
+    p.album-meta {{
+      color: var(--muted);
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }}
+    main.shared-container {{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 4rem;
+      flex: 1;
+      width: 100%;
+    }}
+    .error-card {{
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      max-width: 480px;
+      margin: 3rem auto;
+    }}
+    .btn-action {{
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      padding: 0.65rem 1.25rem;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }}
+    .photo-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }}
+    @media (min-width: 768px) {{
+      .photo-grid {{
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1rem;
+      }}
+    }}
+    .photo-card {{
+      background: var(--surface);
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      position: relative;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.06);
+    }}
+    .photo-card img {{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.25s ease;
+    }}
+    .photo-card:hover img {{
+      transform: scale(1.04);
+    }}
+    .action-bar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }}
+
+    /* Lightbox Modal */
+    .lightbox-overlay {{
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      touch-action: none;
+    }}
+    .lightbox-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+      z-index: 10;
+    }}
+    .lb-counter {{
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+    }}
+    .lb-icon-btn {{
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: none;
+      font-size: 1.5rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }}
+    .lb-icon-btn:hover {{ background: rgba(255, 255, 255, 0.25); }}
+    .lightbox-stage {{
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      padding: 0 1rem;
+    }}
+    .lightbox-img-wrap {{
+      flex: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }}
+    .lightbox-img-wrap img {{
+      max-width: 95vw;
+      max-height: 85vh;
+      object-fit: contain;
+      user-select: none;
+      transition: transform 0.2s ease;
+    }}
+    .lb-nav-btn {{
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: none;
+      font-size: 1.5rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      transition: background 0.2s;
+    }}
+    .lb-nav-btn:hover {{ background: rgba(255, 255, 255, 0.25); }}
+  </style>
+</head>
+<body>
+  <header class="shared-hero">
+    <div class="badge-event">{event_label}</div>
+    <h1 class="album-title">{headline}</h1>
+    <p class="album-meta">
+      <span id="photoCountLabel">Loading photos...</span>
+      <span>•</span>
+      <span>Private Share</span>
+    </p>
+  </header>
+
+  <main class="shared-container">
+    {"" if is_active else f'<div class="error-card"><h2 style="margin-bottom:0.75rem;font-size:1.25rem;color:#f87171;">Album Unavailable</h2><p style="color:var(--muted);margin-bottom:1.5rem;">{status_msg}</p><a href="/" class="btn-action">Return to Home</a></div>'}
+    
+    <div id="activeContent" {"" if is_active else 'style="display:none;"'}>
+      <div class="action-bar">
+        <div style="font-size:0.9rem;color:var(--muted);" id="albumInfoText"></div>
+        <button id="btnDownloadAllZip" class="btn-action" style="background:#1f2937;">
+          <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download All (ZIP)
+        </button>
+      </div>
+
+      <div class="photo-grid" id="sharedPhotoGrid"></div>
+      <div id="loadingIndicator" style="text-align:center;padding:2rem;color:var(--muted);">Loading album photos...</div>
+    </div>
+  </main>
+
+  <!-- Photo Lightbox Viewer Modal -->
+  <div id="photoLightbox" class="lightbox-overlay" style="display:none;">
+    <div class="lightbox-header">
+      <span id="lbCounter" class="lb-counter">1 / 1</span>
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <a id="lbDownloadBtn" href="#" class="btn-action" style="padding:0.4rem 0.8rem;font-size:0.82rem;background:rgba(255,255,255,0.15);" download>
+          <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download HD
+        </a>
+        <button id="lbCloseBtn" class="lb-icon-btn" title="Close (Esc)">&times;</button>
+      </div>
+    </div>
+    <div class="lightbox-stage">
+      <button id="lbPrevBtn" class="lb-nav-btn" title="Previous (Left Arrow)">&#10094;</button>
+      <div class="lightbox-img-wrap">
+        <img id="lbImage" src="" alt="Viewing photo" />
+      </div>
+      <button id="lbNextBtn" class="lb-nav-btn" title="Next (Right Arrow)">&#10095;</button>
+    </div>
+  </div>
+
+  <script>
+    const SHARE_TOKEN = "{token}";
+    let allPhotos = [];
+    let currentIdx = 0;
+
+    async function loadAlbumData() {{
+      try {{
+        const [metaRes, photosRes] = await Promise.all([
+          fetch(`/api/shared/${{SHARE_TOKEN}}`),
+          fetch(`/api/shared/${{SHARE_TOKEN}}/photos?page=1&page_size=200`)
+        ]);
+
+        if (!metaRes.ok || !photosRes.ok) {{
+          const err = await metaRes.json().catch(() => ({{}}));
+          document.getElementById('activeContent').innerHTML = `
+            <div class="error-card">
+              <h2 style="margin-bottom:0.75rem;font-size:1.25rem;color:#f87171;">Album Unavailable</h2>
+              <p style="color:var(--muted);margin-bottom:1.5rem;">${{err.detail || 'This album is not accessible.'}}</p>
+              <a href="/" class="btn-action">Return to Home</a>
+            </div>
+          `;
+          return;
+        }}
+
+        const meta = await metaRes.json();
+        const data = await photosRes.json();
+        allPhotos = data.photos || [];
+
+        document.getElementById('photoCountLabel').textContent = `${{allPhotos.length}} Photographs`;
+        const expDate = meta.album && meta.album.expires_at ? meta.album.expires_at.split(' ')[0] : '30 days';
+        document.getElementById('albumInfoText').textContent = `Expires on ${{expDate}}`;
+        document.getElementById('loadingIndicator').style.display = 'none';
+
+        if (allPhotos.length === 0) {{
+          document.getElementById('sharedPhotoGrid').innerHTML = `
+            <div style="grid-column: 1 / -1; text-align:center; padding: 3rem 1rem; color:var(--muted);">
+              No photos are currently available in this album.
+            </div>
+          `;
+          return;
+        }}
+
+        renderGrid(allPhotos);
+      }} catch (err) {{
+        document.getElementById('loadingIndicator').textContent = 'Unable to load album photos.';
+      }}
+    }}
+
+    function renderGrid(photos) {{
+      const grid = document.getElementById('sharedPhotoGrid');
+      grid.innerHTML = '';
+      photos.forEach((p, idx) => {{
+        const card = document.createElement('div');
+        card.className = 'photo-card';
+        card.innerHTML = `
+          <img src="${{p.thumb_url}}" alt="${{p.filename}}" loading="lazy" />
+          <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.65);border-radius:4px;padding:4px 8px;font-size:0.72rem;">
+            <a href="${{p.download_hd_url}}" style="color:#fff;text-decoration:none;" download onclick="event.stopPropagation();">HD ↓</a>
+          </div>
+        `;
+        card.addEventListener('click', () => openLightbox(idx));
+        grid.appendChild(card);
+      }});
+    }}
+
+    function openLightbox(idx) {{
+      if (idx < 0 || idx >= allPhotos.length) return;
+      currentIdx = idx;
+      updateLightboxContent();
+      document.getElementById('photoLightbox').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }}
+
+    function closeLightbox() {{
+      document.getElementById('photoLightbox').style.display = 'none';
+      document.body.style.overflow = '';
+    }}
+
+    function updateLightboxContent() {{
+      const p = allPhotos[currentIdx];
+      if (!p) return;
+      const img = document.getElementById('lbImage');
+      img.src = p.preview_url;
+      document.getElementById('lbCounter').textContent = `${{currentIdx + 1}} / ${{allPhotos.length}}`;
+      document.getElementById('lbDownloadBtn').href = p.download_hd_url;
+    }}
+
+    function prevPhoto() {{
+      if (allPhotos.length === 0) return;
+      currentIdx = (currentIdx - 1 + allPhotos.length) % allPhotos.length;
+      updateLightboxContent();
+    }}
+
+    function nextPhoto() {{
+      if (allPhotos.length === 0) return;
+      currentIdx = (currentIdx + 1) % allPhotos.length;
+      updateLightboxContent();
+    }}
+
+    document.getElementById('lbCloseBtn')?.addEventListener('click', closeLightbox);
+    document.getElementById('lbPrevBtn')?.addEventListener('click', prevPhoto);
+    document.getElementById('lbNextBtn')?.addEventListener('click', nextPhoto);
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {{
+      const lb = document.getElementById('photoLightbox');
+      if (lb && lb.style.display === 'flex') {{
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') prevPhoto();
+        if (e.key === 'ArrowRight') nextPhoto();
+      }}
+    }});
+
+    // Mobile touch swipe gestures
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const stage = document.getElementById('photoLightbox');
+    stage?.addEventListener('touchstart', (e) => {{
+      touchStartX = e.changedTouches[0].screenX;
+    }}, {{ passive: true }});
+    stage?.addEventListener('touchend', (e) => {{
+      touchEndX = e.changedTouches[0].screenX;
+      if (touchEndX - touchStartX > 50) prevPhoto();
+      if (touchStartX - touchEndX > 50) nextPhoto();
+    }}, {{ passive: true }});
+
+    document.getElementById('btnDownloadAllZip')?.addEventListener('click', async () => {{
+      const btn = document.getElementById('btnDownloadAllZip');
+      const originalText = btn.innerHTML;
+      btn.textContent = 'Preparing ZIP...';
+      btn.disabled = true;
+      try {{
+        const res = await fetch(`/api/shared/${{SHARE_TOKEN}}/download-zip`, {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{}})
+        }});
+        if (!res.ok) throw new Error('ZIP generation failed');
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `shared_album_${{SHARE_TOKEN.substring(0,8)}}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }} catch (e) {{
+        alert('Could not download ZIP archive.');
+      }} finally {{
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }}
+    }});
+
+    if ({"true" if is_active else "false"}) {{
+      loadAlbumData();
+    }}
+  </script>
+</body>
+</html>
+"""
+    status_code = 200
+    if not is_active:
+        if alb and alb.get("status") in ("revoked", "expired"):
+            status_code = 410
+        elif alb and alb.get("status") == "unavailable":
+            status_code = 403
+        else:
+            status_code = 404
+    resp = HTMLResponse(html, status_code=status_code)
+    resp.headers["Cache-Control"] = "private, no-store"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    resp.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet"
+    return resp
+
+
+@app.get("/api/shared/{token}")
+def get_shared_album_metadata_endpoint(token: str, request: Request):
+    """
+    Returns sanitized metadata for an active shared album.
+    Rate limits probe attempts for invalid tokens.
+    """
+    ip = get_client_ip(request)
+    ua = request.headers.get("User-Agent", "Unknown")
+
+    alb = get_shared_album_by_token(token)
+    if not alb or alb.get("status") == "not_found":
+        check_and_increment_shared_rate_limit("probe_invalid_token", ip, max_requests=60, window_seconds=60)
+        raise HTTPException(404, "Shared album not found. Please verify your link.")
+
+    status = alb.get("status")
+    if status == "revoked":
+        raise HTTPException(410, "This shared album was revoked by its creator and is no longer accessible.")
+    if status == "expired":
+        raise HTTPException(410, f"This shared album expired on {alb.get('expires_at')}.")
+    if status == "unavailable":
+        raise HTTPException(403, "The associated event is currently private or archived.")
+
+    # Record access log
+    record_shared_album_access_log(alb["id"], "view", ip, ua)
+
+    resp = JSONResponse({"status": "ok", "album": alb})
+    resp.headers["Cache-Control"] = "private, no-store"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    return resp
+
+
+@app.get("/api/shared/{token}/photos")
+def get_shared_album_photos_endpoint(token: str, request: Request, page: int = 1, page_size: int = 50):
+    """
+    Returns ordered photos in a shared album with token-scoped media endpoints.
+    Does not expose raw internal filesystem paths.
+    """
+    alb = get_shared_album_by_token(token)
+    if not alb or alb.get("status") != "active":
+        status = alb.get("status") if alb else "not_found"
+        code = 410 if status in ("revoked", "expired") else (403 if status == "unavailable" else 404)
+        raise HTTPException(code, f"Shared album is not active ({status}).")
+
+    data = get_shared_album_photos_page(alb["id"], page=page, page_size=page_size)
+
+    # Attach token-scoped URLs
+    formatted_photos = []
+    for p in data["photos"]:
+        pid = p["id"]
+        formatted_photos.append({
+            "id": pid,
+            "filename": p["filename"],
+            "width": p["width"],
+            "height": p["height"],
+            "captured_at": p["captured_at"],
+            "created_at": p["created_at"],
+            "sort_order": p["sort_order"],
+            "thumb_url": f"/api/shared/{token}/thumb/{pid}",
+            "preview_url": f"/api/shared/{token}/preview/{pid}",
+            "download_hd_url": f"/api/shared/{token}/download/hd/{pid}",
+            "download_4k_url": f"/api/shared/{token}/download/4k/{pid}"
+        })
+
+    data["photos"] = formatted_photos
+    resp = JSONResponse({"status": "ok", **data})
+    resp.headers["Cache-Control"] = "private, no-store"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    return resp
+
+
+@app.get("/api/shared/{token}/thumb/{photo_id}")
+def get_shared_photo_thumb_endpoint(token: str, photo_id: int, request: Request):
+    """
+    Delivers 480px thumbnail strictly verified against album membership and active event status.
+    Uses private, no-store caching to enforce immediate revocation.
+    """
+    photo = verify_photo_in_shared_album(token, photo_id)
+    if not photo:
+        raise HTTPException(404, "Photo not found in this shared album or album is not active.")
+
+    name = photo["rel_path"]
+    photo_file = resolve_photo_path(name)
+
+    # Check cached thumbnail
+    direct_thumb = DATA / "thumbs" / (name.replace("/", "__") + ".jpg")
+    if direct_thumb.exists():
+        return FileResponse(direct_thumb, headers={"Cache-Control": "private, no-store"})
+
+    if photo_file and photo_file.exists():
+        with thumb_semaphore:
+            cache_thumb = DATA / "thumbs" / (name.replace("/", "__") + ".jpg")
+            if cache_thumb.exists():
+                return FileResponse(cache_thumb, headers={"Cache-Control": "private, no-store"})
+            try:
+                cache_thumb.parent.mkdir(parents=True, exist_ok=True)
+                with Image.open(photo_file) as img:
+                    img = ImageOps.exif_transpose(img).convert("RGB")
+                    img.thumbnail((480, 480), Image.Resampling.LANCZOS)
+                    img.save(cache_thumb, "JPEG", quality=80, optimize=True)
+                return FileResponse(cache_thumb, headers={"Cache-Control": "private, no-store"})
+            except Exception:
+                return FileResponse(photo_file, headers={"Cache-Control": "private, no-store"})
+
+    raise HTTPException(404, "Thumbnail image unavailable.")
+
+
+@app.get("/api/shared/{token}/preview/{photo_id}")
+def get_shared_photo_preview_endpoint(token: str, photo_id: int, request: Request):
+    """
+    Delivers 1600px preview verified against album membership and active event status.
+    """
+    photo = verify_photo_in_shared_album(token, photo_id)
+    if not photo:
+        raise HTTPException(404, "Photo not found in this shared album or album is not active.")
+
+    name = photo["rel_path"]
+    cache_preview = DATA / "previews" / (name.replace("/", "__") + ".jpg")
+    if cache_preview.exists():
+        return FileResponse(cache_preview, media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
+
+    target = resolve_photo_path(name)
+    if target and target.exists():
+        try:
+            cache_preview.parent.mkdir(parents=True, exist_ok=True)
+            with Image.open(target) as img:
+                img = ImageOps.exif_transpose(img).convert("RGB")
+                img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+                img.save(cache_preview, "JPEG", quality=86, optimize=True)
+            return FileResponse(cache_preview, media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
+        except Exception:
+            return FileResponse(target, media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
+
+    raise HTTPException(404, "Preview image unavailable.")
+
+
+@app.get("/api/shared/{token}/download/{quality}/{photo_id}")
+def get_shared_photo_download_endpoint(token: str, quality: str, photo_id: int, request: Request):
+    """
+    Streams HD or full-res original photo attachment verified against album membership.
+    """
+    ip = get_client_ip(request)
+    ua = request.headers.get("User-Agent", "Unknown")
+
+    photo = verify_photo_in_shared_album(token, photo_id)
+    if not photo:
+        raise HTTPException(404, "Photo not found in this shared album or album is not active.")
+
+    record_shared_album_access_log(photo["album_id"], f"download_{quality}", ip, ua)
+
+    name = photo["rel_path"]
+    fname = photo["filename"]
+    target = resolve_photo_path(name)
+
+    if not target or not target.exists():
+        # Fallback to preview or high-res thumbnail
+        target = DATA / "previews" / (name.replace("/", "__") + ".jpg")
+        if not target.exists():
+            target = DATA / "thumbs" / (name.replace("/", "__") + ".jpg")
+
+    if not target or not target.exists():
+        raise HTTPException(404, "Photo file not found on server.")
+
+    return FileResponse(
+        target,
+        filename=fname,
+        media_type="image/jpeg",
+        headers={
+            "Content-Disposition": f'attachment; filename="{fname}"',
+            "Cache-Control": "private, no-store",
+            "Referrer-Policy": "no-referrer"
+        }
+    )
+
+
+@app.post("/api/shared/{token}/download-zip")
+def download_shared_album_zip_endpoint(token: str, request: Request, background_tasks: BackgroundTasks):
+    """
+    Streams a ZIP file of all (or selected) photos in this shared album.
+    Protected by album membership verification and zip_semaphore concurrency bounds.
+    """
+    ip = get_client_ip(request)
+    ua = request.headers.get("User-Agent", "Unknown")
+
+    # Distributed rate limit: max 10 ZIP generations per hour per IP/token
+    if not check_and_increment_shared_rate_limit("zip_download", f"{ip}:{token[:16]}", max_requests=10, window_seconds=3600):
+        raise HTTPException(429, "Too many ZIP download requests. Please wait a few minutes before trying again.")
+
+    photo_records = get_all_photo_records_for_shared_album(token)
+    if photo_records is None:
+        raise HTTPException(404, "Shared album not found or no longer active.")
+    if not photo_records:
+        raise HTTPException(400, "No active photos in this shared album to download.")
+
+    job_id = f"shared_zip_{int(time.time())}_{secrets.token_hex(4)}"
+    tmp_dir = DATA / "tmp_zips"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    tmp_zip = tmp_dir / f"{job_id}.zip"
+
+    # Acquire zip concurrency semaphore
+    acquired = zip_semaphore.acquire(timeout=5.0)
+    if not acquired:
+        raise HTTPException(503, "The server is currently generating other photo archives. Please try again in a few moments.")
+
+    try:
+        with zipfile.ZipFile(tmp_zip, 'w', compression=zipfile.ZIP_STORED) as zf:
+            added = 0
+            seen_names = {}
+            for p in photo_records:
+                target = resolve_photo_path(p["rel_path"])
+                if not target or not target.exists():
+                    target = DATA / "previews" / (p["rel_path"].replace("/", "__") + ".jpg")
+                if not target or not target.exists():
+                    target = DATA / "thumbs" / (p["rel_path"].replace("/", "__") + ".jpg")
+
+                if target and target.exists():
+                    base_name = p["filename"]
+                    if base_name in seen_names:
+                        seen_names[base_name] += 1
+                        ext = Path(base_name).suffix
+                        stem = Path(base_name).stem
+                        archive_name = f"{stem}_{seen_names[base_name]}{ext}"
+                    else:
+                        seen_names[base_name] = 1
+                        archive_name = base_name
+
+                    zf.write(target, arcname=archive_name)
+                    added += 1
+
+        if added == 0:
+            if tmp_zip.exists():
+                tmp_zip.unlink()
+            raise HTTPException(404, "No photo files could be retrieved for archive.")
+    finally:
+        zip_semaphore.release()
+
+    def cleanup():
+        try:
+            if tmp_zip.exists():
+                tmp_zip.unlink()
+        except Exception:
+            pass
+
+    background_tasks.add_task(cleanup)
+
+    return FileResponse(
+        tmp_zip,
+        filename=f"my_event_album_{token[:8]}.zip",
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="my_event_album_{token[:8]}.zip"',
+            "Cache-Control": "private, no-store",
+            "Referrer-Policy": "no-referrer"
+        }
+    )
+
+
+@app.delete("/api/shared/{token}")
+@app.delete("/api/shared-albums/manage/{manage_token}")
+@app.post("/api/shared-albums/manage/{manage_token}/revoke")
+def revoke_shared_album_by_creator_endpoint(request: Request, token: Optional[str] = None, manage_token: Optional[str] = None):
+    """
+    Revokes a shared album using creator's management token.
+    Supports either:
+    1. DELETE /api/shared/{token} with header X-Manage-Token: <manage_token>
+    2. POST /api/shared-albums/manage/{manage_token}/revoke
+    3. DELETE /api/shared-albums/manage/{manage_token}
+    The public viewing token cannot authorise this action alone.
+    """
+    eff_manage = manage_token or request.headers.get("X-Manage-Token", "").strip()
+    if not eff_manage:
+        raise HTTPException(401, "Management credential required in X-Manage-Token header or route.")
+
+    success = revoke_shared_album_by_creator(eff_manage, share_token=token)
+    if not success:
+        raise HTTPException(403, "Invalid management credentials for this album, or album already revoked.")
+
+    ip = get_client_ip(request)
+    ua = request.headers.get("User-Agent", "Unknown")
+    log_id = (token[:8] if token else eff_manage[:8]) + "..."
+    record_security_event("shared_album_revoked", f"Creator revoked shared album {log_id}", ip=ip, user_agent=ua)
+
+    return {"status": "ok", "message": "Album revoked successfully."}
+
 
 @app.post("/api/admin/login")
 def admin_login(payload: dict, req: Request):
@@ -2353,7 +3264,7 @@ def admin_auth_2fa_verify(payload: dict, req: Request):
         raise HTTPException(400, "2FA is not configured for this account.")
         
     secret = auth_security.decrypt_secret(u["totp_secret"])
-    if not auth_security.verify_totp_code(secret, code, valid_window=1):
+    if not auth_security.verify_totp_code(secret, code, window=1):
         record_security_event("2fa_code_failed", f"Invalid 2FA code entered for user {u['username']}", ip=ip, user_agent=ua, status="failed")
         raise HTTPException(401, "Invalid 6-digit authenticator code. Check your device clock and try again.")
         
@@ -2674,7 +3585,7 @@ def admin_passkey_register_verify(payload: dict, req: Request, token: str = Depe
     if not challenge:
         raise HTTPException(400, "Registration challenge expired or invalid.")
         
-    user_id = challenge["user_id"] or 1
+    user_id = challenge.get("user_id") or 1
     parsed = auth_security.parse_client_data_json(client_data_json)
     if not parsed or parsed.get("type") != "webauthn.create":
         raise HTTPException(400, "Invalid WebAuthn operation.")
@@ -2738,6 +3649,57 @@ def admin_revoke_session_endpoint(payload: dict, req: Request, token: str = Depe
 def admin_get_security_logs_endpoint(limit: int = 50, token: str = Depends(get_auth_token)):
     events = get_security_events(limit=limit)
     return {"status": "ok", "events": events}
+
+# ===========================================================================
+# ADMIN SHARED ALBUM APIS
+# ===========================================================================
+
+@app.get("/api/admin/shared-albums")
+def admin_list_shared_albums_endpoint(page: int = 1, page_size: int = 50, status: Optional[str] = None, token: str = Depends(get_auth_token)):
+    """Administrator listing of all created shared albums."""
+    return admin_get_shared_albums(page=page, page_size=page_size, status_filter=status)
+
+@app.get("/api/admin/shared-albums/{album_id}/photos")
+def admin_get_shared_album_photos_endpoint(album_id: int, token: str = Depends(get_auth_token)):
+    """Authenticated administrator endpoint to inspect photos in a shared album."""
+    photos = admin_get_shared_album_photos(album_id)
+    for p in photos:
+        p["thumb_url"] = f"/thumb/{p['rel_path']}"
+        p["preview_url"] = f"/preview/{p['rel_path']}"
+    return {"status": "ok", "photos": photos, "total_count": len(photos)}
+
+@app.post("/api/admin/shared-albums/{album_id}/revoke")
+def admin_revoke_shared_album_endpoint(album_id: int, request: Request, token: str = Depends(get_auth_token)):
+    """Admin override to revoke any shared album immediately."""
+    success = admin_revoke_shared_album(album_id)
+    if not success:
+        raise HTTPException(404, "Shared album not found or already revoked.")
+    ip = get_client_ip(request)
+    ua = request.headers.get("User-Agent", "Unknown")
+    record_security_event("admin_shared_album_revoked", f"Admin revoked shared album #{album_id}", ip=ip, user_agent=ua)
+    return {"status": "ok", "message": f"Shared album #{album_id} has been revoked."}
+
+@app.put("/api/admin/shared-albums/{album_id}/expiry")
+def admin_update_expiry_shared_album_endpoint(album_id: int, payload: dict, request: Request, token: str = Depends(get_auth_token)):
+    """Admin adjustment of shared album expiry duration (1 to 90 days)."""
+    days = payload.get("new_expiry_days")
+    if not days or int(days) < 1 or int(days) > 90:
+        raise HTTPException(400, "new_expiry_days must be between 1 and 90 days.")
+    new_expires_str = admin_update_shared_album_expiry(album_id, int(days))
+    if not new_expires_str:
+        raise HTTPException(404, "Shared album not found.")
+    return {"status": "ok", "new_expires_at": new_expires_str}
+
+@app.delete("/api/admin/shared-albums/{album_id}")
+def admin_delete_shared_album_endpoint(album_id: int, request: Request, token: str = Depends(get_auth_token)):
+    """Admin deletion of shared album record and mappings. Original photos are strictly preserved."""
+    success = admin_delete_shared_album(album_id)
+    if not success:
+        raise HTTPException(404, "Shared album record not found.")
+    ip = get_client_ip(request)
+    ua = request.headers.get("User-Agent", "Unknown")
+    record_security_event("admin_shared_album_deleted", f"Admin deleted shared album record #{album_id}", ip=ip, user_agent=ua)
+    return {"status": "ok", "message": f"Shared album record #{album_id} deleted."}
 
 @app.get("/api/admin/overview")
 def admin_overview(token: str = Depends(get_auth_token)):
@@ -4318,11 +5280,18 @@ def admin_update_settings_endpoint(payload: dict, token: str = Depends(get_auth_
         "match_threshold_medium",
         "match_threshold_min",
         "default_event_slug",
-        "dedup_dhash_threshold"
+        "dedup_dhash_threshold",
+        "max_shared_album_photos"
     }
     updated = {}
     for k, v in payload.items():
         if k in allowed_keys:
+            if k == "max_shared_album_photos":
+                try:
+                    v_int = max(1, min(int(v), 500))
+                    v = str(v_int)
+                except Exception:
+                    v = "100"
             set_setting(k, str(v))
             updated[k] = str(v)
             if k == "match_threshold_min":

@@ -2010,6 +2010,14 @@
       <ul class="sidebar-subfolders-tree" id="sidebarSubfoldersList">
         <!-- Injected via JavaScript based on selected event -->
       </ul>
+
+      <li class="nav-item" data-tab="shared-albums">
+        <div class="nav-item-content">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span>Shared Albums</span>
+        </div>
+        <span class="nav-badge-count" id="sidebarSharedAlbumsCount">0</span>
+      </li>
     </ul>
 
     <!-- AI & DISCOVERY SECTION -->
@@ -2292,6 +2300,87 @@
 
         <div id="albumsGrid" class="albums-container">
           <div style="color:var(--muted);padding:1.5rem;text-align:center;">Loading albums...</div>
+        </div>
+      </section>
+
+      <!-- PANEL: SHARED ALBUMS ("My Event Album") -->
+      <section id="panel-shared-albums" hidden>
+        <div class="views-bar">
+          <div class="views-bar-title">Visitor Shared Albums ("My Event Album")</div>
+          <div style="display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:0.5rem;background:var(--bg-card);border:1px solid var(--border-light);padding:0.35rem 0.65rem;border-radius:6px;font-size:0.82rem;">
+              <label for="adminMaxPhotosLimitInput" style="font-weight:600;color:var(--text-muted);">Max Photos Limit:</label>
+              <input type="number" id="adminMaxPhotosLimitInput" min="1" max="500" value="100" style="width:60px;padding:2px 6px;border:1px solid var(--border-light);border-radius:4px;background:var(--bg-main);color:var(--text-main);font-weight:700;">
+              <button class="btn-primary" style="padding:3px 8px;font-size:0.75rem;" onclick="saveAdminMaxPhotosLimit()">Save</button>
+            </div>
+            <button class="btn-outline" onclick="loadAdminSharedAlbums(1)">
+              <svg class="icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metrics Overview Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:1rem;margin-bottom:1.25rem;">
+          <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;padding:1rem;">
+            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Total Created</div>
+            <div id="sharedMetricTotal" style="font-size:1.4rem;font-weight:800;color:var(--text-main);margin-top:0.25rem;">0</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">All visitor albums</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;padding:1rem;">
+            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Active Links</div>
+            <div id="sharedMetricActive" style="font-size:1.4rem;font-weight:800;color:#10b981;margin-top:0.25rem;">0</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Currently accessible</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;padding:1rem;">
+            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Expired Links</div>
+            <div id="sharedMetricExpired" style="font-size:1.4rem;font-weight:800;color:#f59e0b;margin-top:0.25rem;">0</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Past TTL duration</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;padding:1rem;">
+            <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Revoked Links</div>
+            <div id="sharedMetricRevoked" style="font-size:1.4rem;font-weight:800;color:#ef4444;margin-top:0.25rem;">0</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Manually deactivated</div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <span style="font-size:0.82rem;font-weight:600;color:var(--text-muted);">Status Filter:</span>
+            <div class="segmented-control">
+              <button type="button" class="segmented-btn active" id="btnFilterSharedAll" onclick="setAdminSharedFilter('all')">All</button>
+              <button type="button" class="segmented-btn" id="btnFilterSharedActive" onclick="setAdminSharedFilter('active')">Active</button>
+              <button type="button" class="segmented-btn" id="btnFilterSharedExpired" onclick="setAdminSharedFilter('expired')">Expired</button>
+              <button type="button" class="segmented-btn" id="btnFilterSharedRevoked" onclick="setAdminSharedFilter('revoked')">Revoked</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <input type="text" id="sharedAlbumSearchInput" placeholder="Filter current list by title..." style="padding:0.4rem 0.75rem;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:0.84rem;min-width:240px;" oninput="filterSharedAlbumsLocally()">
+          </div>
+        </div>
+
+        <!-- Shared Albums Table Container -->
+        <div class="card-block">
+          <div class="card-block-body" style="padding:0;overflow-x:auto;">
+            <table class="data-table" style="width:100%;border-collapse:collapse;font-size:0.84rem;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border-light);text-align:left;">
+                  <th style="padding:0.75rem 1rem;">ID</th>
+                  <th style="padding:0.75rem 1rem;">Album Title & Event</th>
+                  <th style="padding:0.75rem 1rem;">Photos</th>
+                  <th style="padding:0.75rem 1rem;">Views / Downloads</th>
+                  <th style="padding:0.75rem 1rem;">Created</th>
+                  <th style="padding:0.75rem 1rem;">Expiry</th>
+                  <th style="padding:0.75rem 1rem;">Status</th>
+                  <th style="padding:0.75rem 1rem;text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sharedAlbumsTableBody">
+                <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Loading shared albums...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -3564,6 +3653,26 @@
   </div>
 </div>
 
+<!-- Modal: Inspect Shared Album Photos -->
+<div id="sharedAlbumPhotosModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width:760px;max-height:85vh;display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border-light);">
+      <div>
+        <h3 id="sharedAlbumModalTitle" style="font-size:1.15rem;font-weight:700;margin:0;">Inspect Album Photos</h3>
+        <p id="sharedAlbumModalSubtitle" style="font-size:0.8rem;color:var(--text-muted);margin:0.25rem 0 0 0;">Viewing photo references in this shared album.</p>
+      </div>
+      <button class="modal-close" onclick="closeModal('sharedAlbumPhotosModal')">&times;</button>
+    </div>
+    <div id="sharedAlbumPhotosGrid" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:0.75rem;padding:0.25rem;">
+      <!-- Populated dynamically -->
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border-light);font-size:0.8rem;color:var(--text-muted);">
+      <span>Photo files are referenced, never duplicated.</span>
+      <button class="btn-outline" onclick="closeModal('sharedAlbumPhotosModal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Create Album Modal -->
 <div id="albumModal" class="modal-backdrop" hidden>
   <div class="modal-card">
@@ -3949,6 +4058,7 @@ function switchTab(tabName) {
   }
   if (tabName === 'trash') loadTrash();
   if (tabName === 'settings') loadSystemSettings();
+  if (tabName === 'shared-albums') loadAdminSharedAlbums();
 }
 
 function openAllPhotos() {
@@ -8549,6 +8659,240 @@ async function loadIndexingErrors() {
       tbody.appendChild(tr);
     });
   } catch (e) {}
+}
+
+// ===========================================================================
+// SHARED ALBUMS ("My Event Album") MANAGEMENT
+// ===========================================================================
+
+let currentSharedAlbumsList = [];
+let currentSharedAlbumsFilter = 'all';
+
+async function loadAdminSharedAlbums(page = 1) {
+  const tbody = $('sharedAlbumsTableBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Loading shared albums...</td></tr>';
+
+  try {
+    const statusParam = currentSharedAlbumsFilter === 'all' ? '' : `&status=${encodeURIComponent(currentSharedAlbumsFilter)}`;
+    const { ok, data } = await safeFetchJson(`/api/admin/shared-albums?page=${page}&page_size=50${statusParam}`);
+    if (!ok || !data) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:#ef4444;">Failed to load shared albums.</td></tr>';
+      return;
+    }
+
+    currentSharedAlbumsList = data.albums || [];
+
+    // Update metrics cards
+    if (data.metrics) {
+      if ($('sharedMetricTotal')) $('sharedMetricTotal').textContent = data.metrics.total_albums || 0;
+      if ($('sharedMetricActive')) $('sharedMetricActive').textContent = data.metrics.active_albums || 0;
+      if ($('sharedMetricExpired')) $('sharedMetricExpired').textContent = data.metrics.expired_albums || 0;
+      if ($('sharedMetricRevoked')) $('sharedMetricRevoked').textContent = data.metrics.revoked_albums || 0;
+      if ($('sidebarSharedAlbumsCount')) $('sidebarSharedAlbumsCount').textContent = data.metrics.active_albums || 0;
+    }
+
+    // Load max photos limit setting
+    const { ok: setOk, data: setData } = await safeFetchJson('/api/admin/settings');
+    if (setOk && setData && setData.settings && setData.settings.max_shared_album_photos) {
+      if ($('adminMaxPhotosLimitInput')) $('adminMaxPhotosLimitInput').value = setData.settings.max_shared_album_photos;
+    }
+
+    renderSharedAlbumsTable(currentSharedAlbumsList);
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:#ef4444;">Error: ${err.message}</td></tr>`;
+  }
+}
+
+function setAdminSharedFilter(filter) {
+  currentSharedAlbumsFilter = filter;
+  ['all', 'active', 'expired', 'revoked'].forEach(f => {
+    const btn = $(`btnFilterShared${f.charAt(0).toUpperCase() + f.slice(1)}`);
+    if (btn) btn.classList.toggle('active', f === filter);
+  });
+  loadAdminSharedAlbums(1);
+}
+
+function filterSharedAlbumsLocally() {
+  const q = ($('sharedAlbumSearchInput')?.value || '').toLowerCase().trim();
+  if (!q) {
+    renderSharedAlbumsTable(currentSharedAlbumsList);
+    return;
+  }
+  const filtered = currentSharedAlbumsList.filter(a =>
+    (a.title || '').toLowerCase().includes(q) ||
+    (a.event_name || '').toLowerCase().includes(q) ||
+    String(a.id).includes(q)
+  );
+  renderSharedAlbumsTable(filtered);
+}
+
+function renderSharedAlbumsTable(albums) {
+  const tbody = $('sharedAlbumsTableBody');
+  if (!tbody) return;
+  tbody.replaceChildren();
+
+  if (!albums || albums.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted);">No shared albums match the filter.</td></tr>';
+    return;
+  }
+
+  albums.forEach(album => {
+    const tr = document.createElement('tr');
+    tr.style.cssText = 'border-bottom:1px solid var(--border-light);';
+
+    const status = album.computed_status || (album.revoked_at ? 'revoked' : 'active');
+    const statusBg = status === 'active' ? 'rgba(16,185,129,0.12)' : (status === 'expired' ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)');
+    const statusColor = status === 'active' ? '#10b981' : (status === 'expired' ? '#f59e0b' : '#ef4444');
+
+    const createdStr = album.created_at ? new Date(album.created_at).toLocaleDateString() : '—';
+    const expiresStr = album.expires_at ? new Date(album.expires_at).toLocaleDateString() : '—';
+
+    tr.innerHTML = `
+      <td style="padding:0.75rem 1rem;font-weight:700;color:var(--text-muted);">#${album.id}</td>
+      <td style="padding:0.75rem 1rem;">
+        <div style="font-weight:700;color:var(--text-main);">${escapeHtml(album.title || 'Untitled Album')}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">Event: ${escapeHtml(album.event_name || album.event_slug || 'Event')}</div>
+      </td>
+      <td style="padding:0.75rem 1rem;font-weight:600;">${album.photo_count || 0}</td>
+      <td style="padding:0.75rem 1rem;">
+        <span style="color:var(--text-main);font-weight:600;">${album.view_count || 0}</span> views
+        <span style="color:var(--text-muted);font-size:0.75rem;margin-left:4px;">(${album.download_count || 0} dl)</span>
+      </td>
+      <td style="padding:0.75rem 1rem;font-size:0.8rem;color:var(--text-muted);">${createdStr}</td>
+      <td style="padding:0.75rem 1rem;font-size:0.8rem;color:var(--text-muted);">${expiresStr}</td>
+      <td style="padding:0.75rem 1rem;">
+        <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:700;background:${statusBg};color:${statusColor};text-transform:uppercase;">
+          ${status}
+        </span>
+      </td>
+      <td style="padding:0.75rem 1rem;text-align:right;">
+        <div style="display:inline-flex;gap:0.4rem;align-items:center;">
+          <button class="btn-outline" style="padding:3px 8px;font-size:0.75rem;" onclick="adminInspectSharedAlbumPhotos(${album.id}, '${escapeHtml(album.title || '')}', ${album.photo_count || 0})" title="Inspect Photos">
+            Photos
+          </button>
+          <button class="btn-outline" style="padding:3px 8px;font-size:0.75rem;" onclick="adminAdjustSharedAlbumExpiry(${album.id})" title="Adjust Expiry">
+            Expiry
+          </button>
+          ${status === 'active' ? `
+            <button class="btn-outline" style="padding:3px 8px;font-size:0.75rem;color:#ef4444;border-color:rgba(239,68,68,0.3);" onclick="adminRevokeSharedAlbum(${album.id})" title="Revoke Link">
+              Revoke
+            </button>
+          ` : ''}
+          <button class="btn-outline" style="padding:3px 8px;font-size:0.75rem;color:#ef4444;" onclick="adminDeleteSharedAlbum(${album.id})" title="Delete Record">
+            Delete
+          </button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function adminInspectSharedAlbumPhotos(albumId, title, photoCount) {
+  if ($('sharedAlbumModalTitle')) $('sharedAlbumModalTitle').textContent = `Album: ${title || '#' + albumId}`;
+  if ($('sharedAlbumModalSubtitle')) $('sharedAlbumModalSubtitle').textContent = `${photoCount} photographs in this album`;
+  const grid = $('sharedAlbumPhotosGrid');
+  if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">Loading photos...</div>';
+  openModal('sharedAlbumPhotosModal');
+
+  try {
+    const { ok, data } = await safeFetchJson(`/api/admin/shared-albums/${albumId}/photos`);
+    if (!ok || !data || !data.photos) {
+      if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:#ef4444;">Failed to load photos.</div>';
+      return;
+    }
+    grid.replaceChildren();
+    data.photos.forEach(p => {
+      const item = document.createElement('div');
+      item.style.cssText = 'background:var(--bg-card);border:1px solid var(--border-light);border-radius:6px;overflow:hidden;text-align:center;';
+      const enc = (p.rel_path || '').split('/').map(encodeURIComponent).join('/');
+      item.innerHTML = `
+        <img src="/thumb/${enc}" loading="lazy" style="width:100%;height:110px;object-fit:cover;display:block;">
+        <div style="padding:0.4rem;font-size:0.72rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${escapeHtml(p.filename || '')}
+        </div>
+      `;
+      grid.appendChild(item);
+    });
+  } catch (err) {
+    if (grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:#ef4444;">Error: ${err.message}</div>`;
+  }
+}
+
+async function adminAdjustSharedAlbumExpiry(albumId) {
+  const daysStr = prompt('Enter new duration in days from album creation (1 to 90 days):', '30');
+  if (!daysStr) return;
+  const days = parseInt(daysStr, 10);
+  if (isNaN(days) || days < 1 || days > 90) {
+    alert('Please enter a valid number of days between 1 and 90.');
+    return;
+  }
+
+  const { ok, status, data } = await safeFetchJson(`/api/admin/shared-albums/${albumId}/expiry`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_expiry_days: days })
+  });
+
+  if (!ok) {
+    alert('Failed to update expiry: ' + (data?.detail || status));
+    return;
+  }
+  loadAdminSharedAlbums(1);
+}
+
+async function adminRevokeSharedAlbum(albumId) {
+  if (!confirm(`Are you sure you want to revoke Shared Album #${albumId}? Anyone holding the active link will immediately lose access.`)) {
+    return;
+  }
+
+  const { ok, status, data } = await safeFetchJson(`/api/admin/shared-albums/${albumId}/revoke`, {
+    method: 'POST'
+  });
+
+  if (!ok) {
+    alert('Failed to revoke album: ' + (data?.detail || status));
+    return;
+  }
+  loadAdminSharedAlbums(1);
+}
+
+async function adminDeleteSharedAlbum(albumId) {
+  if (!confirm(`Are you sure you want to delete Shared Album #${albumId}? This deletes the album reference and links, while strictly preserving original event photos.`)) {
+    return;
+  }
+
+  const { ok, status, data } = await safeFetchJson(`/api/admin/shared-albums/${albumId}`, {
+    method: 'DELETE'
+  });
+
+  if (!ok) {
+    alert('Failed to delete album: ' + (data?.detail || status));
+    return;
+  }
+  loadAdminSharedAlbums(1);
+}
+
+async function saveAdminMaxPhotosLimit() {
+  const input = $('adminMaxPhotosLimitInput');
+  if (!input) return;
+  const val = parseInt(input.value, 10);
+  if (isNaN(val) || val < 1 || val > 500) {
+    alert('Max photos limit must be between 1 and 500.');
+    return;
+  }
+
+  const { ok, data } = await safeFetchJson('/api/admin/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ max_shared_album_photos: val })
+  });
+
+  if (ok) {
+    alert(`Maximum photos limit updated to ${val}.`);
+  } else {
+    alert('Failed to update limit: ' + (data?.detail || 'Unknown error'));
+  }
 }
 
 checkAuth();
