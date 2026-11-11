@@ -1665,6 +1665,56 @@
       pointer-events: auto;
     }
 
+    /* =========================================================================
+       My Event Album: Centered Modals & Backdrops
+       ========================================================================= */
+    .album-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 99998;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-sizing: border-box;
+    }
+
+    .album-modal-backdrop.active,
+    .album-modal-backdrop[style*="display: flex"],
+    .album-modal-backdrop[style*="display:flex"] {
+      display: flex !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
+    .album-modal-container {
+      background: var(--surface, #131c2e);
+      border: 1px solid var(--line, #2d3748);
+      border-radius: 16px;
+      max-width: 500px;
+      width: 100%;
+      padding: 1.5rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+      color: var(--text, #f3f4f6);
+      max-height: 90vh;
+      overflow-y: auto;
+      box-sizing: border-box;
+      transform: scale(0.96);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .album-modal-backdrop.active .album-modal-container,
+    .album-modal-backdrop[style*="display: flex"] .album-modal-container,
+    .album-modal-backdrop[style*="display:flex"] .album-modal-container {
+      transform: scale(1);
+    }
+
     .filter-sheet-container {
       background: #ffffff;
       width: 100%;
@@ -3639,8 +3689,8 @@
   <!-- ========================================================================= -->
 
   <!-- Modal 1: Create Album Modal -->
-  <div id="createAlbumModalBackdrop" class="filter-sheet-backdrop" style="display:none;align-items:center;justify-content:center;padding:1rem;z-index:99998;">
-    <div style="background:var(--surface,#131c2e);border:1px solid var(--line,#2d3748);border-radius:14px;max-width:500px;width:100%;padding:1.5rem;box-shadow:0 20px 40px rgba(0,0,0,0.5);color:var(--text,#f3f4f6);max-height:90vh;overflow-y:auto;">
+  <div id="createAlbumModalBackdrop" class="album-modal-backdrop" style="display:none;">
+    <div class="album-modal-container">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
         <div>
           <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:0.25rem;">Create “My Event Album”</h3>
@@ -3698,8 +3748,8 @@
   </div>
 
   <!-- Modal 2: Link-Ready Success Screen -->
-  <div id="albumSuccessModalBackdrop" class="filter-sheet-backdrop" style="display:none;align-items:center;justify-content:center;padding:1rem;z-index:99998;">
-    <div style="background:var(--surface,#131c2e);border:1px solid var(--line,#2d3748);border-radius:14px;max-width:480px;width:100%;padding:1.75rem 1.5rem;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.5);color:var(--text,#f3f4f6);">
+  <div id="albumSuccessModalBackdrop" class="album-modal-backdrop" style="display:none;">
+    <div class="album-modal-container" style="max-width:480px;text-align:center;">
       <div style="width:52px;height:52px;border-radius:50%;background:rgba(16,185,129,0.15);color:#10b981;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
@@ -3736,8 +3786,8 @@
   </div>
 
   <!-- Modal 3: My Shared Albums Drawer / Modal -->
-  <div id="myAlbumsModalBackdrop" class="filter-sheet-backdrop" style="display:none;align-items:center;justify-content:center;padding:1rem;z-index:99998;">
-    <div style="background:var(--surface,#131c2e);border:1px solid var(--line,#2d3748);border-radius:14px;max-width:540px;width:100%;padding:1.5rem;box-shadow:0 20px 40px rgba(0,0,0,0.5);color:var(--text,#f3f4f6);max-height:85vh;display:flex;flex-direction:column;">
+  <div id="myAlbumsModalBackdrop" class="album-modal-backdrop" style="display:none;">
+    <div class="album-modal-container" style="max-width:540px;max-height:85vh;display:flex;flex-direction:column;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--line,#2d3748);">
         <div>
           <h3 style="font-size:1.2rem;font-weight:700;">My Shared Albums</h3>
@@ -3905,6 +3955,12 @@
     function showToast(msg) {
       const toast = $('galleryToast');
       if (!toast) return;
+      const bar = $('bulkSelectionBar');
+      if (bar && bar.classList.contains('active')) {
+        toast.style.bottom = 'calc(max(24px, env(safe-area-inset-bottom)) + 58px)';
+      } else {
+        toast.style.bottom = '';
+      }
       toast.textContent = msg;
       toast.classList.add('show');
       if (toastTimeout) clearTimeout(toastTimeout);
@@ -6723,7 +6779,7 @@
       return prefix ? (prefix + hex) : hex;
     }
 
-    function openCreateAlbumModal() {
+    async function openCreateAlbumModal() {
       if (selectedPhotos.size === 0) {
         showToast('Please select at least one photograph to create an album.');
         return;
@@ -6733,12 +6789,70 @@
         return;
       }
 
-      const sId = currentSearchId || localStorage.getItem('brk_current_search_id');
-      const cTok = currentCreationToken || localStorage.getItem('brk_current_creation_token');
+      let sId = currentSearchId || localStorage.getItem('brk_current_search_id');
+      let cTok = currentCreationToken || localStorage.getItem('brk_current_creation_token');
 
       if (!sId || !cTok) {
-        showToast('Please find your photos first using Face Search to create your private album.');
+        // Attempt automatic background renewal of search proof if biometric profile is saved
+        const savedThumb = localStorage.getItem('brk_saved_face_thumb');
+        const savedEmbJson = localStorage.getItem('brk_saved_embedding');
+        let savedEmb = null;
+        if (savedEmbJson) {
+          try { savedEmb = JSON.parse(savedEmbJson); } catch (e) {}
+        }
+
+        if (savedThumb || savedEmb) {
+          const albumBtn = $('bulkCreateAlbumBtn');
+          const albumText = $('bulkCreateAlbumText');
+          const origText = albumText ? albumText.textContent : 'Create Album';
+          if (albumText) albumText.textContent = 'Verifying...';
+          if (albumBtn) albumBtn.disabled = true;
+
+          try {
+            const renewRes = await fetch('/api/check-profile-matches', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                face_thumb: savedThumb,
+                embedding: savedEmb,
+                session_id: getSessionId(),
+                visitor_id: getVisitorId(),
+                page: 1,
+                page_size: 50
+              })
+            });
+            if (renewRes.ok) {
+              const renewData = await renewRes.json();
+              if (renewData.search_id && renewData.creation_token) {
+                currentSearchId = renewData.search_id;
+                currentCreationToken = renewData.creation_token;
+                try {
+                  localStorage.setItem('brk_current_search_id', currentSearchId);
+                  localStorage.setItem('brk_current_creation_token', currentCreationToken);
+                } catch (e) {}
+                sId = currentSearchId;
+                cTok = currentCreationToken;
+              }
+            }
+          } catch (e) {
+            console.warn('Could not auto-renew search proof:', e);
+          } finally {
+            if (albumBtn) albumBtn.disabled = false;
+            if (albumText) albumText.textContent = origText;
+          }
+        }
+      }
+
+      if (!sId || !cTok) {
+        showToast('Search proof expired. Please find photos with your selfie to re-verify your album.');
         return;
+      }
+
+      // Reset any previous creation errors
+      const errAlert = $('albumCreateErrorAlert');
+      if (errAlert) {
+        errAlert.textContent = '';
+        errAlert.style.display = 'none';
       }
 
       // Populate selected preview count & thumbnails
@@ -6781,12 +6895,19 @@
       const expirySelect = $('selectAlbumExpiry');
       if (expirySelect) expirySelect.value = '30';
 
-      $('createAlbumModalBackdrop').style.display = 'flex';
+      const modal = $('createAlbumModalBackdrop');
+      if (modal) {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+      }
     }
 
     function closeCreateAlbumModal() {
       const modal = $('createAlbumModalBackdrop');
-      if (modal) modal.style.display = 'none';
+      if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+      }
     }
 
     async function confirmCreateAlbum() {
@@ -6917,9 +7038,18 @@
           subTitle.textContent = `${photoIds.length} photograph${photoIds.length === 1 ? '' : 's'} included. Link expires in ${expiryDays} days.`;
         }
 
-        $('albumSuccessModalBackdrop').style.display = 'flex';
+        const succModal = $('albumSuccessModalBackdrop');
+        if (succModal) {
+          succModal.classList.add('active');
+          succModal.style.display = 'flex';
+        }
         showToast('Private album created successfully!');
       } catch (err) {
+        const errAlert = $('albumCreateErrorAlert');
+        if (errAlert) {
+          errAlert.textContent = err.message || 'Album creation failed.';
+          errAlert.style.display = 'block';
+        }
         showToast(`Failed to create album: ${err.message}`);
       } finally {
         if (confirmBtn) {
@@ -6931,16 +7061,27 @@
 
     function closeSuccessModal() {
       const modal = $('albumSuccessModalBackdrop');
-      if (modal) modal.style.display = 'none';
+      if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+      }
     }
 
     function openMyAlbumsModal() {
       renderMyAlbumsList();
-      $('myAlbumsModalBackdrop').style.display = 'flex';
+      const modal = $('myAlbumsModalBackdrop');
+      if (modal) {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+      }
     }
 
     function closeMyAlbumsModal() {
-      $('myAlbumsModalBackdrop').style.display = 'none';
+      const modal = $('myAlbumsModalBackdrop');
+      if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+      }
     }
 
     function renderMyAlbumsList() {
