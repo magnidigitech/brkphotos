@@ -222,3 +222,4 @@ def get_person_photos(event_slug: str, person_id: int):
     photos = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return photos
+

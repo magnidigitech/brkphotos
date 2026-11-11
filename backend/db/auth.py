@@ -428,3 +428,4 @@ def count_recent_failed_logins(ip: str, minutes: int = 5, window_minutes: Option
         return 0
     finally:
         conn.close()
+

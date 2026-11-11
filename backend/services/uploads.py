@@ -502,3 +502,4 @@ def execute_queued_job(job: dict):
             current_task["status"] = "idle"
             current_task["message"] = "Ready"
         append_log(f"[{now_ist().strftime('%H:%M:%S')}] Finished task #{task_id}. Checking next queued task...")
+

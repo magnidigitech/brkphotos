@@ -231,3 +231,4 @@ def advance_automation_schedule(auto_id: int, task_id: str, status: str = "queue
         )
     except Exception as e:
         print(f"Error auto-recording history: {e}")
+

@@ -131,3 +131,4 @@ def public_album_photos(slug: str, album_slug: str):
             p["drive_file_id"] = drive_map.get(p["filename"]) or drive_map.get(p["rel_path"])
     
     return {"album": dict(album), "photos": photos}
+

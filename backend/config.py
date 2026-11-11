@@ -95,3 +95,4 @@ def append_log(msg: str):
             f.write(msg + "\n")
     except Exception:
         pass
+

@@ -787,3 +787,4 @@ def record_shared_album_access_log(shared_album_id: int, access_type: str, ip: s
         print(f"Error logging shared access: {e}")
     finally:
         conn.close()
+

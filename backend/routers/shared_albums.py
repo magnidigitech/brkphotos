@@ -490,3 +490,4 @@ def admin_delete_shared_album_endpoint(album_id: int, request: Request, token: s
     ua = request.headers.get("User-Agent", "Unknown")
     record_security_event("admin_shared_album_deleted", f"Admin deleted shared album record #{album_id}", ip=ip, user_agent=ua)
     return {"status": "ok", "message": f"Shared album record #{album_id} deleted."}
+

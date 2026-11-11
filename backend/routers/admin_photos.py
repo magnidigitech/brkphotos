@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, Request
 
-from backend.config import PHOTOS, DATA, invalidate_public_event_cache
+from backend.config import PHOTOS, DATA, invalidate_public_event_cache, append_log
 from backend.dependencies import get_auth_token
 from backend.db.connection import get_db
 from backend.db.reviews import get_match_reviews, update_match_feedback

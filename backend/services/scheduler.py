@@ -14,6 +14,10 @@ queue_worker_running = False
 queue_worker_lock = threading.Lock()
 _workers_started = False
 
+def is_queue_worker_running() -> bool:
+    global queue_worker_running
+    return queue_worker_running
+
 def trigger_queue_worker():
     global queue_worker_running
     with queue_worker_lock:
@@ -90,3 +94,4 @@ def start_background_workers():
     if not _workers_started:
         _workers_started = True
         threading.Thread(target=_automation_scheduler_loop, daemon=True, name="AutomationScheduler").start()
+

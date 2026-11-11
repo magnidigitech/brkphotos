@@ -4,9 +4,10 @@ from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 
-from backend.config import PHOTOS, invalidate_public_event_cache
+from backend.config import PHOTOS, DATA, invalidate_public_event_cache, current_task, append_log
 from backend.dependencies import get_auth_token
 from backend.db.connection import get_db
+from backend.services.face_search import get_event_index
 from backend.services.indexing import sync_event_folders_and_photos
 
 router = APIRouter(tags=["admin_events"])

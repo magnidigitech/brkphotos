@@ -338,3 +338,4 @@ async def download_bulk_zip(request: Request, background_tasks: BackgroundTasks,
         filename=zip_filename,
         headers=resp_headers
     )
+

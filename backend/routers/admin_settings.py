@@ -11,9 +11,10 @@ from backend.config import (
     _system_metrics_cache, _system_metrics_cache_time, THRESHOLD
 )
 from backend.dependencies import get_auth_token
-from backend.db.connection import get_db
+from backend.db.connection import get_db, now_ist
 from backend.db.tasks import get_queue_stats
 from backend.db.settings import get_all_settings, set_setting, get_indexing_errors
+from backend.services.scheduler import is_queue_worker_running
 
 router = APIRouter(tags=["admin_settings"])
 
@@ -81,7 +82,7 @@ def admin_system_metrics(token: str = Depends(get_auth_token)):
             "total_photos": total_photos,
             "total_faces": total_faces
         },
-        "active_worker": queue_worker_running,
+        "active_worker": is_queue_worker_running(),
         "current_task_status": mem_task.get("status", "idle"),
         "queue_stats": stats,
         "timestamp": now_ist().strftime("%Y-%m-%d %H:%M:%S")

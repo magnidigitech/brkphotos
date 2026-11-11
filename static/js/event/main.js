@@ -2931,10 +2931,16 @@
 
       try {
         let res = await fetch('/api/search', { method: 'POST', body: fd });
-        if (!res.ok) {
+        if (!res.ok && res.status !== 400 && res.status !== 413 && res.status !== 422) {
           res = await fetch(`/api/${slug}/search`, { method: 'POST', body: fd });
         }
-        const j = await res.json();
+        let j;
+        try {
+          j = await res.json();
+        } catch (_) {
+          const txt = await res.text().catch(() => '');
+          j = { detail: txt || 'Search could not be completed.' };
+        }
         if (!res.ok) throw new Error(j.detail || 'Search could not be completed.');
 
         // Check if multiple people were detected in group photo
@@ -3311,7 +3317,13 @@
           body: JSON.stringify(payload)
         });
 
-        const j = await res.json();
+        let j;
+        try {
+          j = await res.json();
+        } catch (_) {
+          const txt = await res.text().catch(() => '');
+          j = { detail: txt || 'Album creation failed.' };
+        }
         if (!res.ok) {
           throw new Error(j.detail || 'Album creation failed.');
         }

@@ -28,7 +28,7 @@ from backend.db.automations import (
     get_automation_history, record_automation_history, advance_automation_schedule
 )
 from backend.services.indexing import run_indexing_task
-from backend.services.scheduler import trigger_queue_worker
+from backend.services.scheduler import trigger_queue_worker, is_queue_worker_running
 
 router = APIRouter(tags=["admin_uploads"])
 active_process = None
@@ -186,7 +186,7 @@ def admin_get_queue(limit: int = 30, token: str = Depends(get_auth_token)):
         "tasks": tasks,
         "stats": stats,
         "current_task": mem_task,
-        "is_worker_running": queue_worker_running
+        "is_worker_running": is_queue_worker_running()
     }
 
 @router.get("/api/admin/queue/{task_id}")

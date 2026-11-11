@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 import auth_security
 from backend.config import ADMIN_KEY, logger
 from backend.dependencies import get_client_ip, get_auth_token, active_tokens
+from backend.db.connection import get_db
 from backend.db.auth import (
     get_admin_user, update_admin_password, set_totp_state,
     save_recovery_codes, verify_and_burn_recovery_code, get_recovery_codes_status,

@@ -180,3 +180,4 @@ def resolve_duplicate_group(group_id: str, action: str, photo_ids: list = None) 
 
     conn.close()
     return {"status": "error", "message": "Unknown action."}
+

@@ -461,3 +461,4 @@ def sync_event_folders_and_photos(slug: str, force: bool = False):
         print(f"Error syncing folders for event {slug}: {e}")
     finally:
         conn.close()
+
