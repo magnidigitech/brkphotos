@@ -1,0 +1,448 @@
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta name="referrer" content="no-referrer">
+  <title>{{ title }}</title>
+  
+  <!-- Generic, Privacy-Safe OpenGraph (Zero Guest Photo Leaks to Crawlers) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="BRK Photos — Shared Album">
+  <meta property="og:description" content="View shared photographs from Bhashyam Ramakrishna Sir's celebration.">
+  <meta property="og:image" content="/logo.svg">
+  
+  <style>
+    :root {
+      --primary: #0f5c4d;
+      --bg: #0b0f19;
+      --surface: #131c2e;
+      --card: #1c263c;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --line: #2d3748;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header.shared-hero {
+      background: linear-gradient(180deg, #162035 0%, var(--bg) 100%);
+      padding: 2rem 1.25rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid var(--line);
+    }
+    .badge-event {
+      display: inline-block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.12);
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      margin-bottom: 0.75rem;
+    }
+    h1.album-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    p.album-meta {
+      color: var(--muted);
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+    main.shared-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 4rem;
+      flex: 1;
+      width: 100%;
+    }
+    .error-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      max-width: 480px;
+      margin: 3rem auto;
+    }
+    .btn-action {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      padding: 0.65rem 1.25rem;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    @media (min-width: 768px) {
+      .photo-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1rem;
+      }
+    }
+    .photo-card {
+      background: var(--surface);
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      position: relative;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.06);
+      -webkit-touch-callout: none !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      -webkit-user-drag: none !important;
+    }
+    .photo-card img,
+    .lightbox-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.25s ease;
+      -webkit-touch-callout: none !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      -webkit-user-drag: none !important;
+    }
+    .photo-card:hover img {
+      transform: scale(1.04);
+    }
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    /* Lightbox Modal */
+    .lightbox-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      touch-action: none;
+    }
+    .lightbox-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+      z-index: 10;
+    }
+    .lb-counter {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .lb-icon-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: none;
+      font-size: 1.5rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .lb-icon-btn:hover { background: rgba(255, 255, 255, 0.25); }
+    .lightbox-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      padding: 0 1rem;
+    }
+    .lightbox-img-wrap {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .lightbox-img-wrap img {
+      max-width: 95vw;
+      max-height: 85vh;
+      object-fit: contain;
+      user-select: none;
+      transition: transform 0.2s ease;
+    }
+    .lb-nav-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: none;
+      font-size: 1.5rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      transition: background 0.2s;
+    }
+    .lb-nav-btn:hover { background: rgba(255, 255, 255, 0.25); }
+  </style>
+</head>
+<body>
+  <header class="shared-hero">
+    <div class="badge-event">{{ event_label }}</div>
+    <h1 class="album-title">{{ headline }}</h1>
+    <p class="album-meta">
+      <span id="photoCountLabel">Loading photos...</span>
+      <span>•</span>
+      <span>Private Share</span>
+    </p>
+  </header>
+
+  <main class="shared-container">
+    {"" if is_active else f'<div class="error-card"><h2 style="margin-bottom:0.75rem;font-size:1.25rem;color:#f87171;">Album Unavailable</h2><p style="color:var(--muted);margin-bottom:1.5rem;">{{ status_msg }}</p><a href="/" class="btn-action">Return to Home</a></div>'}
+    
+    <div id="activeContent" {"" if is_active else 'style="display:none;"'}>
+      <div class="action-bar">
+        <div style="font-size:0.9rem;color:var(--muted);" id="albumInfoText"></div>
+        <button id="btnDownloadAllZip" class="btn-action" style="background:#1f2937;">
+          <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download All (ZIP)
+        </button>
+      </div>
+
+      <div class="photo-grid" id="sharedPhotoGrid"></div>
+      <div id="loadingIndicator" style="text-align:center;padding:2rem;color:var(--muted);">Loading album photos...</div>
+    </div>
+  </main>
+
+  <!-- Photo Lightbox Viewer Modal -->
+  <div id="photoLightbox" class="lightbox-overlay" style="display:none;">
+    <div class="lightbox-header">
+      <span id="lbCounter" class="lb-counter">1 / 1</span>
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <a id="lbDownloadBtn" href="#" class="btn-action" style="padding:0.4rem 0.8rem;font-size:0.82rem;background:rgba(255,255,255,0.15);" download>
+          <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download HD
+        </a>
+        <button id="lbCloseBtn" class="lb-icon-btn" title="Close (Esc)">&times;</button>
+      </div>
+    </div>
+    <div class="lightbox-stage">
+      <button id="lbPrevBtn" class="lb-nav-btn" title="Previous (Left Arrow)">&#10094;</button>
+      <div class="lightbox-img-wrap">
+        <img id="lbImage" src="" alt="Viewing photo" />
+      </div>
+      <button id="lbNextBtn" class="lb-nav-btn" title="Next (Right Arrow)">&#10095;</button>
+    </div>
+  </div>
+
+  <script>
+    const SHARE_TOKEN = "{{ token }}";
+    let allPhotos = [];
+    let currentIdx = 0;
+
+    document.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('.photo-card, .lightbox-img-wrap, img')) {
+        e.preventDefault();
+      }
+    });
+    document.addEventListener('dragstart', (e) => {
+      if (e.target.closest('.photo-card, .lightbox-img-wrap, img')) {
+        e.preventDefault();
+      }
+    });
+
+    async function loadAlbumData() {
+      try {
+        const [metaRes, photosRes] = await Promise.all([
+          fetch(`/api/shared/${SHARE_TOKEN}`),
+          fetch(`/api/shared/${SHARE_TOKEN}/photos?page=1&page_size=200`)
+        ]);
+
+        if (!metaRes.ok || !photosRes.ok) {
+          const err = await metaRes.json().catch(() => ({}));
+          document.getElementById('activeContent').innerHTML = `
+            <div class="error-card">
+              <h2 style="margin-bottom:0.75rem;font-size:1.25rem;color:#f87171;">Album Unavailable</h2>
+              <p style="color:var(--muted);margin-bottom:1.5rem;">${err.detail || 'This album is not accessible.'}</p>
+              <a href="/" class="btn-action">Return to Home</a>
+            </div>
+          `;
+          return;
+        }
+
+        const meta = await metaRes.json();
+        const data = await photosRes.json();
+        allPhotos = data.photos || [];
+
+        document.getElementById('photoCountLabel').textContent = `${allPhotos.length} Photographs`;
+        const expDate = meta.album && meta.album.expires_at ? meta.album.expires_at.split(' ')[0] : '30 days';
+        document.getElementById('albumInfoText').textContent = `Expires on ${expDate}`;
+        document.getElementById('loadingIndicator').style.display = 'none';
+
+        if (allPhotos.length === 0) {
+          document.getElementById('sharedPhotoGrid').innerHTML = `
+            <div style="grid-column: 1 / -1; text-align:center; padding: 3rem 1rem; color:var(--muted);">
+              No photos are currently available in this album.
+            </div>
+          `;
+          return;
+        }
+
+        renderGrid(allPhotos);
+      } catch (err) {
+        document.getElementById('loadingIndicator').textContent = 'Unable to load album photos.';
+      }
+    }
+
+    function renderGrid(photos) {
+      const grid = document.getElementById('sharedPhotoGrid');
+      grid.innerHTML = '';
+      photos.forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = 'photo-card';
+        card.innerHTML = `
+          <img src="${p.thumb_url}" alt="${p.filename}" loading="lazy" />
+          <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.65);border-radius:4px;padding:4px 8px;font-size:0.72rem;">
+            <a href="${p.download_hd_url}" style="color:#fff;text-decoration:none;" download onclick="event.stopPropagation();">HD ↓</a>
+          </div>
+        `;
+        card.addEventListener('click', () => openLightbox(idx));
+        grid.appendChild(card);
+      });
+    }
+
+    function openLightbox(idx) {
+      if (idx < 0 || idx >= allPhotos.length) return;
+      currentIdx = idx;
+      updateLightboxContent();
+      document.getElementById('photoLightbox').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      document.getElementById('photoLightbox').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    function updateLightboxContent() {
+      const p = allPhotos[currentIdx];
+      if (!p) return;
+      const img = document.getElementById('lbImage');
+      img.src = p.preview_url;
+      document.getElementById('lbCounter').textContent = `${currentIdx + 1} / ${allPhotos.length}`;
+      document.getElementById('lbDownloadBtn').href = p.download_hd_url;
+    }
+
+    function prevPhoto() {
+      if (allPhotos.length === 0) return;
+      currentIdx = (currentIdx - 1 + allPhotos.length) % allPhotos.length;
+      updateLightboxContent();
+    }
+
+    function nextPhoto() {
+      if (allPhotos.length === 0) return;
+      currentIdx = (currentIdx + 1) % allPhotos.length;
+      updateLightboxContent();
+    }
+
+    document.getElementById('lbCloseBtn')?.addEventListener('click', closeLightbox);
+    document.getElementById('lbPrevBtn')?.addEventListener('click', prevPhoto);
+    document.getElementById('lbNextBtn')?.addEventListener('click', nextPhoto);
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      const lb = document.getElementById('photoLightbox');
+      if (lb && lb.style.display === 'flex') {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') prevPhoto();
+        if (e.key === 'ArrowRight') nextPhoto();
+      }
+    });
+
+    // Mobile touch swipe gestures
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const stage = document.getElementById('photoLightbox');
+    stage?.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+    stage?.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      if (touchEndX - touchStartX > 50) prevPhoto();
+      if (touchStartX - touchEndX > 50) nextPhoto();
+    }, { passive: true });
+
+    document.getElementById('btnDownloadAllZip')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btnDownloadAllZip');
+      const originalText = btn.innerHTML;
+      btn.textContent = 'Preparing ZIP...';
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/shared/${SHARE_TOKEN}/download-zip`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        if (!res.ok) throw new Error('ZIP generation failed');
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `shared_album_${SHARE_TOKEN.substring(0,8)}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (e) {
+        alert('Could not download ZIP archive.');
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    });
+
+    if ({{ is_active_js }}) {
+      loadAlbumData();
+    }
+  </script>
+</body>
+</html>
+"""
+    status_code = 200
+    if not is_active:

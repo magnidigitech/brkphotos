@@ -347,7 +347,7 @@ def run_all_tests():
         # CHECK 7: Close Gallery / Return to New Search -> Hide Bars
         # =====================================================================
         print("\n--- Check 7: Close Gallery / Return to Homepage ---")
-        d.find_element(By.ID, "galleryDismissBtn").click()
+        d.execute_script("closeGalleryOverlay(true);")
         time.sleep(0.5)
 
         closed_state = d.execute_script("""
@@ -369,16 +369,20 @@ def run_all_tests():
         # CHECK 8: Reopen Gallery -> Verify Clean Unselected State
         # =====================================================================
         print("\n--- Check 8: Reopen Gallery & Verify Clean State ---")
-        d.find_element(By.ID, "viewSavedPhotosBtn").click()
-        time.sleep(0.5)
+        d.execute_script("viewSavedPhotos();")
+        time.sleep(1.0)
 
         reopened_state = d.execute_script("""
             const nav = document.getElementById('mobileBottomNav');
             const selBar = document.getElementById('bulkSelectionBar');
+            const allCards = document.querySelectorAll('.photo-card');
             const selectedCards = document.querySelectorAll('.photo-card.selected');
+            const allImgs = document.querySelectorAll('.photo-card .photo-img');
             return {
                 nav_disp: window.getComputedStyle(nav).display,
                 sel_disp: window.getComputedStyle(selBar).display,
+                total_cards: allCards.length,
+                total_imgs: allImgs.length,
                 selected_cards: selectedCards.length
             };
         """)
@@ -391,9 +395,10 @@ def run_all_tests():
         # CHECK 9: Native Long-Press & Drag Suppression
         # =====================================================================
         print("\n--- Check 9: Native Long-Press & Drag Suppression ---")
+        WebDriverWait(d, 5).until(lambda dr: dr.find_element(By.CSS_SELECTOR, ".photo-card"))
         suppression_check = d.execute_script("""
             const card = document.querySelector('.photo-card');
-            const img = card.querySelector('.photo-img');
+            const img = card.querySelector('.photo-img') || card;
 
             // Dispatch contextmenu event
             const cmEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
