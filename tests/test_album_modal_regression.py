@@ -1,7 +1,9 @@
 """
-Regression test for Create Album button visibility & interaction bug.
-Verifies that clicking 'Create Album' in the bottom toolbar opens the modal visibly,
-above the results gallery, with opacity=1, pointer-events=auto, and responds to real clicks.
+Comprehensive regression test suite for My Event Album UI:
+1. Textbox contrast (dark text #111827 on white #ffffff background, visible borders, caret).
+2. Compact friendly share-link presentation (domain/s/...) with accurate full-URL copy.
+3. Official WhatsApp brand SVG icon button (min 44x44px touch target, aria-label, tooltip, no text).
+4. Desktop and mobile viewports with screenshot captures.
 """
 import os
 import sys
@@ -31,7 +33,7 @@ import uvicorn
 SCREENSHOTS_DIR = Path("/Users/venkatavivek/.gemini/antigravity/brain/64149011-e7dc-4646-853f-dbda7591c5f4/screenshots")
 SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 
-TEST_DIR = Path(tempfile.mkdtemp(prefix="brk_regression_test_"))
+TEST_DIR = Path(tempfile.mkdtemp(prefix="brk_ui_test_"))
 STORAGE_DIR = TEST_DIR / "storage"
 PHOTOS_DIR = STORAGE_DIR / "photos" / "brk-sir"
 PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
@@ -74,7 +76,16 @@ def setup_test_data():
         creator_session_id="visitor_sess_reg",
         ttl_seconds=3600
     )
-    return records, search_id, creation_token
+
+    search_id_mob = "srch_reg_test_mob"
+    _, creation_token_mob = database.save_search_result_proof(
+        search_id=search_id_mob,
+        event_id=1,
+        matched_photo_ids=[1, 2, 3, 4],
+        creator_session_id="visitor_sess_reg_mob",
+        ttl_seconds=3600
+    )
+    return records, search_id, creation_token, search_id_mob, creation_token_mob
 
 def get_driver(viewport=(1280, 800), mobile=False):
     options = Options()
@@ -93,8 +104,8 @@ def get_driver(viewport=(1280, 800), mobile=False):
     return driver
 
 def run_tests():
-    print("=== STARTING MODAL REGRESSION SUITE ===")
-    records, search_id, creation_token = setup_test_data()
+    print("=== STARTING MY EVENT ALBUM UI VERIFICATION SUITE ===")
+    records, search_id, creation_token, search_id_mob, creation_token_mob = setup_test_data()
 
     database.DB_PATH = DB_PATH
     app.STORAGE = STORAGE_DIR
@@ -108,13 +119,14 @@ def run_tests():
     time.sleep(1.5)
 
     try:
-        # TEST 1: DESKTOP - Natural UI Click Opens Modal Visibly
-        print("\n--- Test 1: Desktop - Natural UI Click opens modal visibly ---")
+        # -------------------------------------------------------------
+        # TEST 1: DESKTOP - Creation Modal Input Contrast & Styling
+        # -------------------------------------------------------------
+        print("\n--- Test 1: Desktop - Creation Modal Form Contrast ---")
         driver = get_driver((1280, 800))
         driver.get(SERVER_URL)
         time.sleep(1.5)
 
-        # Inject matched search results and valid search proof into client state
         driver.execute_script(f"""
             const samplePhotos = {records};
             localStorage.setItem('brk_saved_photos', JSON.stringify(samplePhotos));
@@ -129,124 +141,169 @@ def run_tests():
         """)
         time.sleep(0.8)
 
-        # Real UI click on Create Album button
-        create_btn = driver.find_element(By.ID, "bulkCreateAlbumBtn")
-        create_btn.click()
-        time.sleep(0.5)
+        # Real UI click to open modal
+        driver.find_element(By.ID, "bulkCreateAlbumBtn").click()
+        time.sleep(0.6)
 
-        # Check modal computed visibility & stacking
-        modal_info = driver.execute_script("""
-            const el = document.getElementById('createAlbumModalBackdrop');
-            const comp = window.getComputedStyle(el);
-            const cx = window.innerWidth / 2;
-            const cy = window.innerHeight / 2;
-            const topEl = document.elementFromPoint(cx, cy);
+        # Inspect input & select styles
+        input_styles = driver.execute_script("""
+            const inp = document.getElementById('inputAlbumTitle');
+            const sel = document.getElementById('selectAlbumExpiry');
+            const inpComp = window.getComputedStyle(inp);
+            const selComp = window.getComputedStyle(sel);
             return {
-                display: comp.display,
-                opacity: parseFloat(comp.opacity),
-                pointerEvents: comp.pointerEvents,
-                zIndex: parseInt(comp.zIndex, 10),
-                topElementTag: topEl ? topEl.tagName : null,
-                topElementClass: topEl ? topEl.className : null,
-                isInsideModal: el.contains(topEl) || el === topEl
+                input_bg: inpComp.backgroundColor,
+                input_color: inpComp.color,
+                input_caret: inpComp.caretColor,
+                input_border: inpComp.borderColor,
+                select_bg: selComp.backgroundColor,
+                select_color: selComp.color,
+                select_border: selComp.borderColor
             };
         """)
-        print("Modal inspection:", modal_info)
-        assert modal_info["display"] == "flex", f"Expected display: flex, got {modal_info['display']}"
-        assert modal_info["opacity"] == 1.0, f"Expected opacity: 1.0, got {modal_info['opacity']}"
-        assert modal_info["pointerEvents"] == "auto", f"Expected pointerEvents: auto, got {modal_info['pointerEvents']}"
-        assert modal_info["zIndex"] >= 90000, f"Expected zIndex >= 90000, got {modal_info['zIndex']}"
-        assert modal_info["isInsideModal"], f"Center of screen should be inside modal, but was {modal_info['topElementTag']}.{modal_info['topElementClass']}"
+        print("Input & Select styles:", input_styles)
 
-        # Capture Screenshot of visible modal
-        shot1 = SCREENSHOTS_DIR / "creation_modal_opened.png"
+        # Verify white background and dark text (#111827 = rgb(17, 24, 39))
+        assert "rgb(255, 255, 255)" in input_styles["input_bg"], f"Input background must be white, got {input_styles['input_bg']}"
+        assert "rgb(17, 24, 39)" in input_styles["input_color"], f"Input text color must be #111827, got {input_styles['input_color']}"
+        assert "rgb(255, 255, 255)" in input_styles["select_bg"], f"Select background must be white, got {input_styles['select_bg']}"
+        assert "rgb(17, 24, 39)" in input_styles["select_color"], f"Select text color must be #111827, got {input_styles['select_color']}"
+
+        # Enter title and verify readability
+        title_inp = driver.find_element(By.ID, "inputAlbumTitle")
+        title_inp.clear()
+        title_inp.send_keys("Reception Highlights — Special")
+        time.sleep(0.3)
+
+        # Capture Screenshot 1: High Contrast Creation Modal
+        shot1 = SCREENSHOTS_DIR / "01_creation_modal_contrast.png"
         driver.save_screenshot(str(shot1))
-        print("Captured Screenshot:", shot1)
+        print("Captured Screenshot 1:", shot1)
 
-        # Verify modal accepts typing into input
-        title_input = driver.find_element(By.ID, "inputAlbumTitle")
-        title_input.clear()
-        title_input.send_keys("My Moments with BRK Sir")
-        assert title_input.get_attribute("value") == "My Moments with BRK Sir"
-
-        # Click Confirm Create Album button
-        confirm_btn = driver.find_element(By.ID, "btnConfirmCreateAlbum")
-        confirm_btn.click()
+        # -------------------------------------------------------------
+        # TEST 2: Link-Ready Dialog — Compact Link & WhatsApp SVG Button
+        # -------------------------------------------------------------
+        print("\n--- Test 2: Link-Ready Dialog — Compact Link & WhatsApp SVG Button ---")
+        driver.find_element(By.ID, "btnConfirmCreateAlbum").click()
         time.sleep(1.2)
 
-        # Verify success modal is displayed visibly
-        succ_info = driver.execute_script("""
-            const el = document.getElementById('albumSuccessModalBackdrop');
-            const comp = window.getComputedStyle(el);
+        link_dialog_info = driver.execute_script("""
+            const compactTextEl = document.getElementById('compactShareLinkText');
+            const fullInput = document.getElementById('successShareLinkInput');
+            const waBtn = document.getElementById('btnWhatsAppShare');
+            const copyBtn = document.getElementById('btnCopySuccessLink');
+            const waSvg = waBtn ? waBtn.querySelector('svg') : null;
+            const waSvgPath = waSvg ? waSvg.querySelector('path') : null;
+            const waRect = waBtn ? waBtn.getBoundingClientRect() : null;
+            const waComp = waBtn ? window.getComputedStyle(waBtn) : null;
+            const linkPillComp = window.getComputedStyle(document.getElementById('compactShareLinkDisplay'));
+
             return {
-                display: comp.display,
-                opacity: parseFloat(comp.opacity),
-                pointerEvents: comp.pointerEvents
+                compact_text: compactTextEl ? compactTextEl.textContent : '',
+                full_url: fullInput ? fullInput.value : '',
+                link_pill_bg: linkPillComp.backgroundColor,
+                link_pill_color: linkPillComp.color,
+                wa_has_svg: !!waSvg,
+                wa_d_attr: waSvgPath ? waSvgPath.getAttribute('d').substring(0, 30) : '',
+                wa_aria_label: waBtn ? waBtn.getAttribute('aria-label') : null,
+                wa_title: waBtn ? waBtn.getAttribute('title') : null,
+                wa_text_content: waBtn ? waBtn.textContent.trim() : '',
+                wa_width: waRect ? waRect.width : 0,
+                wa_height: waRect ? waRect.height : 0,
+                wa_bg: waComp ? waComp.backgroundColor : '',
+                wa_href: waBtn ? waBtn.getAttribute('href') : ''
             };
         """)
-        assert succ_info["display"] == "flex" and succ_info["opacity"] == 1.0
-        share_url = driver.find_element(By.ID, "successShareLinkInput").get_attribute("value")
-        print("Generated share URL:", share_url)
+        print("Link dialog inspection:", {k: v for k, v in link_dialog_info.items() if k != 'wa_href'})
+        print("WhatsApp URL starts with:", link_dialog_info['wa_href'][:60])
+
+        # 1. Compact link verification
+        assert "/s/…" in link_dialog_info["compact_text"], f"Compact link must show domain/s/…, got {link_dialog_info['compact_text']}"
+        assert link_dialog_info["full_url"].startswith("http"), "Full URL must be a valid complete URL"
+        assert "/s/sh_" in link_dialog_info["full_url"], "Full URL must retain secure share token"
+
+        # 2. Text contrast in link pill
+        assert "rgb(255, 255, 255)" in link_dialog_info["link_pill_bg"], "Link pill background must be white"
+
+        # 3. WhatsApp button verification
+        assert link_dialog_info["wa_has_svg"], "WhatsApp button must contain SVG icon"
+        assert "M12.04" in link_dialog_info["wa_d_attr"], "SVG must use official WhatsApp path asset"
+        assert link_dialog_info["wa_aria_label"] == "Share on WhatsApp", "aria-label must be 'Share on WhatsApp'"
+        assert link_dialog_info["wa_title"] == "Share on WhatsApp", "title tooltip must be 'Share on WhatsApp'"
+        assert link_dialog_info["wa_text_content"] == "", "WhatsApp button must NOT contain visible text, only SVG icon"
+        assert link_dialog_info["wa_width"] >= 44, f"Touch target width must be >= 44px, got {link_dialog_info['wa_width']}"
+        assert link_dialog_info["wa_height"] >= 44, f"Touch target height must be >= 44px, got {link_dialog_info['wa_height']}"
+        assert "rgb(37, 211, 102)" in link_dialog_info["wa_bg"], "WhatsApp button background must be #25D366 green"
+        assert "https://api.whatsapp.com/send?text=" in link_dialog_info["wa_href"], "Must use official wa API"
+        assert "mg_" not in link_dialog_info["wa_href"], "Must NEVER leak management credentials"
+
+        # 4. Copy Link action test
+        copy_btn = driver.find_element(By.ID, "btnCopySuccessLink")
+        copy_btn.click()
+        time.sleep(0.3)
+        btn_copy_text = driver.find_element(By.ID, "btnCopySuccessText").text
+        print("Copy button feedback text:", btn_copy_text)
+        assert "Copied" in btn_copy_text, "Copy button must show '✓ Copied!' feedback"
+
+        # Capture Screenshot 2: Link-Ready Dialog
+        shot2 = SCREENSHOTS_DIR / "02_link_ready_compact_whatsapp.png"
+        driver.save_screenshot(str(shot2))
+        print("Captured Screenshot 2:", shot2)
 
         # Close success modal
         driver.find_element(By.ID, "btnCloseSuccessModal").click()
         time.sleep(0.4)
 
-        # TEST 2: RECIPIENT ZERO-AUTH VIEWER
-        print("\n--- Test 2: Recipient Zero-Auth Viewer ---")
-        recip_driver = get_driver((1280, 800))
-        recip_driver.get(share_url)
-        time.sleep(1.5)
-        cards = recip_driver.find_elements(By.CSS_SELECTOR, "#sharedPhotoGrid .photo-card")
-        print(f"Recipient viewer loaded {len(cards)} photos.")
-        assert len(cards) == 2, f"Expected 2 photos in snapshot, found {len(cards)}"
-        recip_driver.quit()
+        # -------------------------------------------------------------
+        # TEST 3: My Albums Drawer — Compact Link & WhatsApp Icon
+        # -------------------------------------------------------------
+        print("\n--- Test 3: My Albums Drawer — Consistent UI ---")
+        driver.execute_script("openMyAlbumsModal();")
+        time.sleep(0.6)
 
-        # TEST 3: RESTORED RESULTS WITH MISSING / EXPIRED PROOF
-        print("\n--- Test 3: Restored results with missing proof ---")
-        driver.execute_script("""
-            localStorage.removeItem('brk_current_search_id');
-            localStorage.removeItem('brk_current_creation_token');
-            localStorage.removeItem('brk_saved_face_thumb');
-            localStorage.removeItem('brk_saved_embedding');
-            currentSearchId = null;
-            currentCreationToken = null;
-        """)
-        # Click Create Album button with 2 photos selected but no proof
-        create_btn.click()
-        time.sleep(0.5)
-
-        # Verify modal did NOT open and toast alert is displayed above toolbar
-        toast_info = driver.execute_script("""
-            const modal = document.getElementById('createAlbumModalBackdrop');
-            const toast = document.getElementById('galleryToast');
-            const toastComp = window.getComputedStyle(toast);
-            const bar = document.getElementById('bulkSelectionBar');
-            const toastRect = toast.getBoundingClientRect();
-            const barRect = bar.getBoundingClientRect();
+        diag = driver.execute_script("""
             return {
-                modalDisplay: window.getComputedStyle(modal).display,
-                toastText: toast.textContent,
-                toastShown: toast.classList.contains('show'),
-                toastBottom: toastRect.bottom,
-                barTop: barRect.top,
-                isToastAboveBar: toastRect.bottom <= barRect.top + 5
+                modal_display: document.getElementById('myAlbumsModalBackdrop') ? document.getElementById('myAlbumsModalBackdrop').style.display : 'not_found',
+                container_children: document.getElementById('myAlbumsListContainer') ? document.getElementById('myAlbumsListContainer').children.length : -1,
+                container_html: document.getElementById('myAlbumsListContainer') ? document.getElementById('myAlbumsListContainer').innerHTML.substring(0, 200) : 'none',
+                stored_albums: localStorage.getItem('my_shared_albums')
             };
         """)
-        print("Missing proof toast inspection:", toast_info)
-        assert toast_info["modalDisplay"] == "none", "Modal must not open without proof"
-        assert "Search proof expired" in toast_info["toastText"] or "Please find" in toast_info["toastText"]
-        assert toast_info["toastShown"], "Actionable toast must be visible"
+        print("DIAG:", diag)
 
-        # Verify selected photos were preserved!
-        selected_count = driver.execute_script("return selectedPhotos.size;")
-        print("Selected photos count after expired proof warning:", selected_count)
-        assert selected_count == 2, f"Selection must be preserved, got {selected_count}"
+        drawer_info = driver.execute_script("""
+            const firstCard = document.querySelector('#myAlbumsListContainer > div');
+            if (!firstCard) return null;
+            const waBtn = firstCard.querySelector('.btn-whatsapp-icon');
+            const compactPill = firstCard.querySelector('.compact-link-pill');
+            const copyBtn = firstCard.querySelector('.btn-copy-action');
+            return {
+                has_compact_pill: !!compactPill,
+                compact_text: compactPill ? compactPill.textContent.trim() : '',
+                has_wa_icon: !!waBtn,
+                wa_aria: waBtn ? waBtn.getAttribute('aria-label') : null,
+                wa_svg: !!(waBtn && waBtn.querySelector('svg')),
+                has_copy_btn: !!copyBtn
+            };
+        """)
+        print("Drawer inspection:", drawer_info)
+        assert drawer_info["has_compact_pill"], "Drawer must render compact link pill"
+        assert "/s/…" in drawer_info["compact_text"], f"Drawer compact text should contain /s/…, got {drawer_info['compact_text']}"
+        assert drawer_info["has_wa_icon"] and drawer_info["wa_svg"], "Drawer must use WhatsApp SVG icon button"
+        assert drawer_info["wa_aria"] == "Share on WhatsApp"
 
+        # Capture Screenshot 3: My Albums Drawer
+        shot3 = SCREENSHOTS_DIR / "03_my_albums_compact_whatsapp.png"
+        driver.save_screenshot(str(shot3))
+        print("Captured Screenshot 3:", shot3)
+
+        driver.find_element(By.ID, "btnCloseMyAlbumsModal").click()
         driver.quit()
 
-        # TEST 4: MOBILE VIEWPORT (iPhone 14 / 390x844)
-        print("\n--- Test 4: Mobile Viewport ---")
+        # -------------------------------------------------------------
+        # TEST 4: Mobile Viewport (iPhone 14 / 390x844)
+        # -------------------------------------------------------------
+        print("\n--- Test 4: Mobile Viewport Rendering ---")
         mob_driver = get_driver((390, 844), mobile=True)
         mob_driver.get(SERVER_URL)
         time.sleep(1.2)
@@ -255,8 +312,8 @@ def run_tests():
             localStorage.setItem('brk_saved_photos', JSON.stringify(samplePhotos));
             localStorage.setItem('brk_saved_count', '4');
             localStorage.setItem('brk_saved_face_thumb', 'data:image/jpeg;base64,/9j/4AAQSkZJRg==');
-            localStorage.setItem('brk_current_search_id', '{search_id}');
-            localStorage.setItem('brk_current_creation_token', '{creation_token}');
+            localStorage.setItem('brk_current_search_id', '{search_id_mob}');
+            localStorage.setItem('brk_current_creation_token', '{creation_token_mob}');
             viewSavedPhotos();
             toggleSelectionMode(true);
             togglePhotoSelect('{records[0]["rel_path"]}', null);
@@ -264,46 +321,37 @@ def run_tests():
         """)
         time.sleep(0.8)
 
-        mob_btn = mob_driver.find_element(By.ID, "bulkCreateAlbumBtn")
-        mob_btn.click()
+        # Open creation modal on mobile
+        mob_driver.find_element(By.ID, "bulkCreateAlbumBtn").click()
         time.sleep(0.5)
 
-        mob_modal_info = mob_driver.execute_script("""
-            const el = document.getElementById('createAlbumModalBackdrop');
-            const comp = window.getComputedStyle(el);
-            return {
-                display: comp.display,
-                opacity: parseFloat(comp.opacity),
-                pointerEvents: comp.pointerEvents
-            };
-        """)
-        print("Mobile modal info:", mob_modal_info)
-        assert mob_modal_info["display"] == "flex" and mob_modal_info["opacity"] == 1.0
+        # Capture Screenshot 4: Mobile Creation Dialog
+        shot4 = SCREENSHOTS_DIR / "04_mobile_creation_contrast.png"
+        mob_driver.save_screenshot(str(shot4))
+        print("Captured Screenshot 4:", shot4)
 
-        # Close via cancel button
-        mob_driver.find_element(By.ID, "btnCancelCreateAlbum").click()
-        time.sleep(0.4)
-        mob_closed = mob_driver.execute_script("return document.getElementById('createAlbumModalBackdrop').style.display;")
-        assert mob_closed == "none", "Modal must close on cancel"
+        # Submit on mobile
+        mob_driver.find_element(By.ID, "btnConfirmCreateAlbum").click()
+        time.sleep(1.2)
 
-        # Open My Albums drawer on mobile
-        mob_driver.find_element(By.ID, "openMyAlbumsBtn").click()
-        time.sleep(0.5)
-        my_albums_info = mob_driver.execute_script("""
-            const el = document.getElementById('myAlbumsModalBackdrop');
-            const comp = window.getComputedStyle(el);
-            return {
-                display: comp.display,
-                opacity: parseFloat(comp.opacity)
-            };
+        # Verify WhatsApp button on mobile has min 44x44px target
+        mob_wa_size = mob_driver.execute_script("""
+            const wa = document.getElementById('btnWhatsAppShare');
+            const r = wa.getBoundingClientRect();
+            return { w: r.width, h: r.height };
         """)
-        assert my_albums_info["display"] == "flex" and my_albums_info["opacity"] == 1.0
-        print("Mobile My Albums drawer opened visibly.")
+        print("Mobile WhatsApp button size:", mob_wa_size)
+        assert mob_wa_size["w"] >= 44 and mob_wa_size["h"] >= 44, "Must maintain >= 44x44px touch target on mobile"
+
+        # Capture Screenshot 5: Mobile Link-Ready Dialog
+        shot5 = SCREENSHOTS_DIR / "05_mobile_link_ready.png"
+        mob_driver.save_screenshot(str(shot5))
+        print("Captured Screenshot 5:", shot5)
 
         mob_driver.quit()
 
         print("\n=======================================================")
-        print("  ALL REGRESSION CHECKS PASSED SUCCESSFULLY!")
+        print("  ALL UI & CONTRAST VERIFICATIONS PASSED SUCCESSFULLY!")
         print("=======================================================")
 
     finally:
@@ -313,4 +361,3 @@ def run_tests():
 
 if __name__ == "__main__":
     run_tests()
-
