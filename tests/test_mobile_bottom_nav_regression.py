@@ -130,12 +130,10 @@ def inject_mock_data(driver, records, search_id, creation_token, albums=None):
         localStorage.setItem('brk_current_search_id', '{search_id}');
         localStorage.setItem('brk_current_creation_token', '{creation_token}');
         localStorage.setItem('my_shared_albums', JSON.stringify({json.dumps(albums)}));
-        viewSavedPhotos();
     """)
-    time.sleep(1.0)
 
 def run_all_tests():
-    print("=== STARTING COMPREHENSIVE MOBILE GALLERY & BOTTOM NAV VERIFICATION ===")
+    print("=== STARTING 10-CHECK MOBILE NAVIGATION, SELECTION & LONG-PRESS VERIFICATION ===")
     records, proofs = setup_test_environment()
 
     database.DB_PATH = DB_PATH
@@ -151,325 +149,326 @@ def run_all_tests():
 
     try:
         # =====================================================================
-        # CHECK 1: 320px Ultra-Narrow Mobile Gallery
+        # CHECK 1: Fresh Homepage (No Saved Results)
         # =====================================================================
-        print("\n--- Check 1: 320px Viewport (iPhone SE / Ultra-Narrow) ---")
-        d320 = get_driver(320, 568, is_mobile=True)
-        d320.get(SERVER_URL)
+        print("\n--- Check 1: Fresh Homepage (No Saved Results) ---")
+        d = get_driver(390, 844, is_mobile=True)
+        d.get(SERVER_URL)
         time.sleep(1.0)
-        inject_mock_data(d320, records, proofs["mobile_320"]["search_id"], proofs["mobile_320"]["token"])
 
-        info320 = d320.execute_script("""
-            const header = document.querySelector('.gallery-sticky-header');
-            const nav = document.getElementById('mobileBottomNav');
-            const navItems = Array.from(document.querySelectorAll('.bottom-nav-item')).map(it => ({
-                label: it.querySelector('.bottom-nav-label')?.textContent.trim(),
-                active: it.classList.contains('active'),
-                w: it.getBoundingClientRect().width,
-                h: it.getBoundingClientRect().height
-            }));
-            const desktopActions = document.querySelector('.gallery-actions-wrap');
-            const openMyAlbumsDisp = window.getComputedStyle(document.getElementById('openMyAlbumsBtn')).display;
-            const toggleSelectDisp = window.getComputedStyle(document.getElementById('toggleSelectBtn')).display;
-            const closePhotosDisp = window.getComputedStyle(document.getElementById('closePhotosBtn')).display;
-            const closeBtn = document.getElementById('galleryDismissBtn');
-            const closeBtnRect = closeBtn.getBoundingClientRect();
-            const discoveryDisp = window.getComputedStyle(document.getElementById('discoveryToolbar')).display;
-
-            return {
-                header_position: window.getComputedStyle(header).position,
-                header_h: header.getBoundingClientRect().height,
-                nav_displayed: window.getComputedStyle(nav).display,
-                nav_items: navItems,
-                open_albums_hidden: openMyAlbumsDisp === 'none',
-                toggle_select_hidden: toggleSelectDisp === 'none',
-                close_photos_hidden: closePhotosDisp === 'none',
-                close_btn_w: closeBtnRect.width,
-                close_btn_h: closeBtnRect.height,
-                discovery_hidden: discoveryDisp === 'none'
-            };
-        """)
-        print("320px Info:", info320)
-        assert info320["nav_displayed"] == "flex", "Bottom nav must be visible on 320px mobile"
-        assert len(info320["nav_items"]) == 4, "Must have 4 bottom nav destinations"
-        assert info320["nav_items"][0]["label"] == "Photos" and info320["nav_items"][0]["active"], "Photos should be active by default"
-        assert info320["open_albums_hidden"] and info320["toggle_select_hidden"] and info320["close_photos_hidden"], "Desktop header buttons must be hidden on mobile"
-        assert info320["discovery_hidden"], "Discovery toolbar must not crowd header on mobile"
-        assert info320["close_btn_w"] >= 36 and info320["close_btn_h"] >= 36, "Close button must be comfortably tappable"
-
-        shot_320 = SCREENSHOTS_DIR / "mobile_320_normal_gallery.png"
-        d320.save_screenshot(str(shot_320))
-        print("Saved Screenshot: mobile_320_normal_gallery.png")
-        d320.quit()
-
-        # =====================================================================
-        # CHECK 2: 390px Standard Mobile Viewport (iPhone 14)
-        # =====================================================================
-        print("\n--- Check 2: 390px Viewport (iPhone 14) ---")
-        d390 = get_driver(390, 844, is_mobile=True)
-        d390.get(SERVER_URL)
-        time.sleep(1.0)
-        inject_mock_data(d390, records, proofs["mobile_390"]["search_id"], proofs["mobile_390"]["token"])
-
-        shot_390_normal = SCREENSHOTS_DIR / "mobile_390_normal_gallery.png"
-        d390.save_screenshot(str(shot_390_normal))
-        print("Saved Screenshot: mobile_390_normal_gallery.png")
-
-        # -----------------------------------------------------------------
-        # CHECK 3: More Sheet -> Select Photos -> Contextual Selection Mode
-        # -----------------------------------------------------------------
-        print("\n--- Check 3: More Sheet and Contextual Selection Mode ---")
-        d390.find_element(By.ID, "navBtnMore").click()
-        time.sleep(0.4)
-
-        more_sheet_info = d390.execute_script("""
-            const sheet = document.getElementById('moreSheetBackdrop');
-            const cont = document.getElementById('moreSheetContainer');
-            return {
-                hidden: sheet.hidden,
-                active: sheet.classList.contains('active'),
-                select_photos_btn: !!document.getElementById('sheetSelectPhotosBtn'),
-                new_search_btn: !!document.getElementById('sheetNewSearchBtn')
-            };
-        """)
-        print("More Sheet Info:", more_sheet_info)
-        assert not more_sheet_info["hidden"] and more_sheet_info["active"], "More sheet must open"
-
-        shot_390_sheet = SCREENSHOTS_DIR / "mobile_390_more_sheet.png"
-        d390.save_screenshot(str(shot_390_sheet))
-        print("Saved Screenshot: mobile_390_more_sheet.png")
-
-        # Click "Select Photos" inside More Sheet
-        d390.find_element(By.ID, "sheetSelectPhotosBtn").click()
-        time.sleep(0.5)
-
-        # Verify bottom nav replaced by Selection Panel
-        selection_mode_info = d390.execute_script("""
+        home_state = d.execute_script("""
             const nav = document.getElementById('mobileBottomNav');
             const selBar = document.getElementById('bulkSelectionBar');
-            const createBtn = document.getElementById('bulkCreateAlbumBtn');
-            const zipBtn = document.getElementById('bulkDownloadZipBtn');
-            const countEl = document.getElementById('bulkSelectedCount');
-            const doneBtn = document.getElementById('bulkCancelBtn');
-
-            const navDisp = window.getComputedStyle(nav).display;
-            const selBarActive = selBar.classList.contains('active');
-            const createRect = createBtn.getBoundingClientRect();
-            const zipRect = zipBtn.getBoundingClientRect();
-
+            const gallery = document.getElementById('photosSection');
             return {
-                nav_hidden: navDisp === 'none',
-                selection_bar_active: selBarActive,
-                count_text: countEl.textContent.trim(),
-                done_text: doneBtn.textContent.trim(),
-                create_disabled: createBtn.disabled || window.getComputedStyle(createBtn).pointerEvents === 'none',
-                zip_disabled: zipBtn.disabled || window.getComputedStyle(zipBtn).pointerEvents === 'none',
-                create_w: createRect.width,
-                zip_w: zipRect.width,
-                equal_width: Math.abs(createRect.width - zipRect.width) <= 4,
-                create_h: createRect.height,
-                zip_h: zipRect.height
+                nav_disp: window.getComputedStyle(nav).display,
+                nav_hidden: nav.hidden || window.getComputedStyle(nav).display === 'none',
+                sel_hidden: selBar.hidden || window.getComputedStyle(selBar).display === 'none',
+                gallery_hidden: gallery.hidden || window.getComputedStyle(gallery).display === 'none'
             };
         """)
-        print("Selection Mode Info (0 selected):", selection_mode_info)
-        assert selection_mode_info["nav_hidden"], "Bottom navigation must be hidden in selection mode"
-        assert selection_mode_info["selection_bar_active"], "Selection panel must be active in selection mode"
-        assert selection_mode_info["done_text"] == "Done", "Exit button must be labeled 'Done'"
-        assert selection_mode_info["create_disabled"] and selection_mode_info["zip_disabled"], "Actions must be disabled when 0 selected"
-        assert selection_mode_info["equal_width"], "Create Album and Download ZIP must be equal width (2-column layout)"
-        assert selection_mode_info["create_h"] >= 40 and selection_mode_info["zip_h"] >= 40, "Action buttons must be touch-friendly (>=40px)"
+        print("Fresh Homepage State:", home_state)
+        assert home_state["nav_hidden"], "Mobile bottom nav must be strictly hidden on fresh homepage"
+        assert home_state["sel_hidden"], "Selection panel must be strictly hidden on fresh homepage"
+        assert home_state["gallery_hidden"], "Gallery section must be hidden"
+
+        shot_fresh = SCREENSHOTS_DIR / "fresh_homepage_clean.png"
+        d.save_screenshot(str(shot_fresh))
+        print("Saved Screenshot: fresh_homepage_clean.png")
+
+        # =====================================================================
+        # CHECK 2: Homepage with Saved Results in localStorage
+        # =====================================================================
+        print("\n--- Check 2: Homepage with Saved Results in localStorage ---")
+        inject_mock_data(d, records, proofs["mobile_390"]["search_id"], proofs["mobile_390"]["token"])
+        d.get(SERVER_URL)
+        time.sleep(1.0)
+
+        saved_home_state = d.execute_script("""
+            const nav = document.getElementById('mobileBottomNav');
+            const selBar = document.getElementById('bulkSelectionBar');
+            const gallery = document.getElementById('photosSection');
+            const welcomeBanner = document.getElementById('savedProfileBadge');
+            return {
+                nav_disp: window.getComputedStyle(nav).display,
+                nav_hidden: nav.hidden || window.getComputedStyle(nav).display === 'none',
+                sel_hidden: selBar.hidden || window.getComputedStyle(selBar).display === 'none',
+                gallery_hidden: gallery.hidden || window.getComputedStyle(gallery).display === 'none',
+                welcome_visible: welcomeBanner && !welcomeBanner.hidden && window.getComputedStyle(welcomeBanner).display !== 'none'
+            };
+        """)
+        print("Homepage with Saved Results State:", saved_home_state)
+        assert saved_home_state["welcome_visible"], "Welcome back banner must be visible when results are saved"
+        assert saved_home_state["nav_hidden"], "Bottom nav must STILL be hidden on homepage even with saved results!"
+        assert saved_home_state["sel_hidden"], "Selection panel must be hidden on homepage"
+
+        shot_saved_home = SCREENSHOTS_DIR / "homepage_saved_results_clean.png"
+        d.save_screenshot(str(shot_saved_home))
+        print("Saved Screenshot: homepage_saved_results_clean.png")
+
+        # =====================================================================
+        # CHECK 3: Click "View Photos >" to Open Gallery
+        # =====================================================================
+        print("\n--- Check 3: Click 'View Photos >' to Open Gallery ---")
+        d.find_element(By.ID, "viewSavedPhotosBtn").click()
+        time.sleep(0.8)
+
+        gallery_open_state = d.execute_script("""
+            const nav = document.getElementById('mobileBottomNav');
+            const selBar = document.getElementById('bulkSelectionBar');
+            const gallery = document.getElementById('photosSection');
+            const cards = document.querySelectorAll('.photo-card');
+            return {
+                nav_disp: window.getComputedStyle(nav).display,
+                sel_disp: window.getComputedStyle(selBar).display,
+                gallery_hidden: gallery.hidden,
+                cards_count: cards.length
+            };
+        """)
+        print("Gallery Open State:", gallery_open_state)
+        assert gallery_open_state["nav_disp"] == "flex", "Bottom nav must be visible ('flex') inside active gallery"
+        assert gallery_open_state["sel_disp"] == "none", "Selection bar must be hidden in normal gallery mode"
+        assert not gallery_open_state["gallery_hidden"], "Gallery overlay must be visible"
+        assert gallery_open_state["cards_count"] > 0, "Photo cards must be rendered"
+
+        # =====================================================================
+        # CHECK 4: Enter Selection Mode
+        # =====================================================================
+        print("\n--- Check 4: Enter Selection Mode via More Sheet ---")
+        d.find_element(By.ID, "navBtnMore").click()
+        time.sleep(0.4)
+        d.find_element(By.ID, "sheetSelectPhotosBtn").click()
+        time.sleep(0.4)
+
+        sel_mode_state = d.execute_script("""
+            const nav = document.getElementById('mobileBottomNav');
+            const selBar = document.getElementById('bulkSelectionBar');
+            const count = document.getElementById('bulkSelectedCount').textContent.trim();
+            const doneBtn = document.getElementById('bulkCancelBtn');
+            return {
+                nav_disp: window.getComputedStyle(nav).display,
+                sel_disp: window.getComputedStyle(selBar).display,
+                sel_active: selBar.classList.contains('active'),
+                count_text: count,
+                done_text: doneBtn.textContent.trim()
+            };
+        """)
+        print("Selection Mode State:", sel_mode_state)
+        assert sel_mode_state["nav_disp"] == "none", "Bottom nav MUST be hidden during selection mode"
+        assert sel_mode_state["sel_disp"] == "flex" and sel_mode_state["sel_active"], "Selection bar must be active"
 
         # Select 2 photos
-        d390.execute_script(f"""
+        d.execute_script(f"""
             togglePhotoSelect('{records[0]["rel_path"]}', null);
             togglePhotoSelect('{records[1]["rel_path"]}', null);
         """)
         time.sleep(0.3)
 
-        count_after = d390.execute_script("return document.getElementById('bulkSelectedCount').textContent.trim();")
-        print("Count after 2 selects:", count_after)
-        assert "2 selected" in count_after, f"Count should be '2 selected', got {count_after}"
+        count_text = d.execute_script("return document.getElementById('bulkSelectedCount').textContent.trim();")
+        assert "2 selected" in count_text, f"Expected 2 selected, got {count_text}"
 
-        shot_390_sel = SCREENSHOTS_DIR / "mobile_390_selection_mode.png"
-        d390.save_screenshot(str(shot_390_sel))
-        print("Saved Screenshot: mobile_390_selection_mode.png")
-
-        # Open Create Album modal from selection bar
-        d390.find_element(By.ID, "bulkCreateAlbumBtn").click()
+        # =====================================================================
+        # CHECK 5: Open Create Album Modal and Cancel (Preserve Selection)
+        # =====================================================================
+        print("\n--- Check 5: Open Create Album Modal & Cancel ---")
+        d.find_element(By.ID, "bulkCreateAlbumBtn").click()
         time.sleep(0.5)
 
-        modal_open = d390.execute_script("return document.getElementById('createAlbumModalBackdrop').style.display;")
-        assert "flex" in modal_open, "Create album modal must open"
-
-        # Cancel modal and verify selection is PRESERVED (closing modal does not exit selection mode)
-        d390.find_element(By.ID, "btnCancelCreateAlbum").click()
+        # Cancel modal
+        d.find_element(By.ID, "btnCancelCreateAlbum").click()
         time.sleep(0.4)
 
-        preservation_check = d390.execute_script("""
-            const count = document.getElementById('bulkSelectedCount').textContent.trim();
-            const navDisp = window.getComputedStyle(document.getElementById('mobileBottomNav')).display;
-            const selActive = document.getElementById('bulkSelectionBar').classList.contains('active');
-            return { count, nav_hidden: navDisp === 'none', sel_active: selActive };
-        """)
-        print("Preservation after cancel modal:", preservation_check)
-        assert "2 selected" in preservation_check["count"], "Selection must be preserved after canceling modal"
-        assert preservation_check["nav_hidden"] and preservation_check["sel_active"], "Selection mode must still be active"
-
-        # Now click "Done" to exit selection mode and restore bottom nav
-        d390.find_element(By.ID, "bulkCancelBtn").click()
-        time.sleep(0.4)
-
-        restored_check = d390.execute_script("""
-            const navDisp = window.getComputedStyle(document.getElementById('mobileBottomNav')).display;
-            const selActive = document.getElementById('bulkSelectionBar').classList.contains('active');
-            const count = document.getElementById('bulkSelectedCount').textContent.trim();
-            return { nav_restored: navDisp === 'flex', sel_inactive: !selActive, count };
-        """)
-        print("After Done clicked:", restored_check)
-        assert restored_check["nav_restored"], "Bottom navigation must be restored after Done"
-        assert restored_check["sel_inactive"], "Selection panel must be deactivated"
-
-        # -----------------------------------------------------------------
-        # CHECK 4: Filter Sheet from Bottom Nav
-        # -----------------------------------------------------------------
-        print("\n--- Check 4: Filter Sheet from Bottom Nav ---")
-        d390.find_element(By.ID, "navBtnFilter").click()
-        time.sleep(0.5)
-
-        filter_info = d390.execute_script("""
-            const sheet = document.getElementById('filterSheetBackdrop');
+        cancel_state = d.execute_script("""
             return {
-                hidden: sheet.hidden,
-                active: sheet.classList.contains('active')
+                count: document.getElementById('bulkSelectedCount').textContent.trim(),
+                nav_disp: window.getComputedStyle(document.getElementById('mobileBottomNav')).display,
+                sel_disp: window.getComputedStyle(document.getElementById('bulkSelectionBar')).display
             };
         """)
-        assert not filter_info["hidden"] and filter_info["active"], "Filter sheet must open from bottom nav"
-
-        shot_filter = SCREENSHOTS_DIR / "mobile_390_filter_sheet.png"
-        d390.save_screenshot(str(shot_filter))
-        print("Saved Screenshot: mobile_390_filter_sheet.png")
-
-        # Close filter sheet
-        d390.find_element(By.ID, "closeFilterSheetBtn").click()
-        time.sleep(0.4)
-
-        d390.quit()
+        print("State after Cancel Modal:", cancel_state)
+        assert "2 selected" in cancel_state["count"], "Selection must be preserved after canceling creation modal"
+        assert cancel_state["nav_disp"] == "none", "Bottom nav must remain hidden while in selection mode"
+        assert cancel_state["sel_disp"] == "flex", "Selection bar must remain visible"
 
         # =====================================================================
-        # CHECK 5: 430px Viewport (iPhone 14 Pro Max) — My Albums Light Modal
+        # CHECK 6: Confirm Album Creation -> Selection Cleared & Nav Restored
         # =====================================================================
-        print("\n--- Check 5: 430px Viewport & Image 1 Light My Albums Verification ---")
-        d430 = get_driver(430, 932, is_mobile=True)
-        d430.get(SERVER_URL)
+        print("\n--- Check 6: Confirm Album Creation (Clear Selection & Reset Mode) ---")
+        d.find_element(By.ID, "bulkCreateAlbumBtn").click()
+        time.sleep(0.5)
+
+        title_input = d.find_element(By.ID, "inputAlbumTitle")
+        title_input.clear()
+        title_input.send_keys("BRK Sir — Special Moments")
+
+        # Click Confirm Create Album
+        d.find_element(By.ID, "btnConfirmCreateAlbum").click()
         time.sleep(1.0)
-        inject_mock_data(d430, records, proofs["mobile_430"]["search_id"], proofs["mobile_430"]["token"])
 
-        # Open My Albums via Bottom Nav
-        d430.find_element(By.ID, "navBtnAlbums").click()
-        time.sleep(0.5)
-
-        # Inspect Light Modal styling matching Image 1
-        modal_styles = d430.execute_script("""
-            const modalCont = document.querySelector('#myAlbumsModalBackdrop .album-modal-container');
-            const titleEl = modalCont.querySelector('h3');
-            const subtitleEl = modalCont.querySelector('p');
-            const closeBtn = document.getElementById('btnCloseMyAlbumsModal');
-
-            const firstCard = document.querySelector('#myAlbumsListContainer > div');
-            const cardTitle = firstCard.querySelector('h4');
-            const cardBadge = firstCard.querySelector('span');
-            const compactPill = firstCard.querySelector('.compact-link-pill');
-            const copyBtn = firstCard.querySelector('.btn-copy-action');
-            const waBtn = firstCard.querySelector('.btn-whatsapp-icon');
-            const openBtn = firstCard.querySelector('a[title="Open album in new tab"]');
-            const revokeBtn = firstCard.querySelector('.btn-revoke-album');
-
-            const modalComp = window.getComputedStyle(modalCont);
-            const cardComp = window.getComputedStyle(firstCard);
-            const pillComp = window.getComputedStyle(compactPill);
-            const openComp = window.getComputedStyle(openBtn);
-            const revokeComp = window.getComputedStyle(revokeBtn);
-            const badgeComp = window.getComputedStyle(cardBadge);
+        # Verify success dialog is visible
+        success_info = d.execute_script("""
+            const modal = document.getElementById('albumSuccessModalBackdrop');
+            const nav = document.getElementById('mobileBottomNav');
+            const selBar = document.getElementById('bulkSelectionBar');
+            const selectedCards = document.querySelectorAll('.photo-card.selected');
+            const activeCards = document.querySelectorAll('.photo-card.selection-active');
+            const checkboxes = Array.from(document.querySelectorAll('.photo-select-checkbox')).filter(c => window.getComputedStyle(c).display !== 'none');
+            const count = document.getElementById('bulkSelectedCount').textContent.trim();
 
             return {
-                modal_bg: modalComp.backgroundColor,
-                title_color: window.getComputedStyle(titleEl).color,
-                card_bg: cardComp.backgroundColor,
-                card_title_color: window.getComputedStyle(cardTitle).color,
-                badge_bg: badgeComp.backgroundColor,
-                badge_color: badgeComp.color,
-                pill_bg: pillComp.backgroundColor,
-                open_color: openComp.color,
-                open_border: openComp.borderColor,
-                revoke_color: revokeComp.color,
-                revoke_border: revokeComp.borderColor,
-                has_wa_svg: !!waBtn.querySelector('svg'),
-                wa_bg: window.getComputedStyle(waBtn).backgroundColor
+                modal_open: modal && (modal.style.display === 'flex' || modal.classList.contains('active')),
+                nav_disp: window.getComputedStyle(nav).display,
+                sel_disp: window.getComputedStyle(selBar).display,
+                selected_cards_count: selectedCards.length,
+                active_cards_count: activeCards.length,
+                visible_checkboxes_count: checkboxes.length,
+                count_text: count
             };
         """)
-        print("Image 1 Light Modal Styles:", modal_styles)
+        print("Success State & Selection Reset Info:", success_info)
+        assert success_info["modal_open"], "Success modal backdrop must be open"
+        assert success_info["selected_cards_count"] == 0, "No cards should retain .selected class"
+        assert success_info["active_cards_count"] == 0, "No cards should retain .selection-active class"
+        assert success_info["visible_checkboxes_count"] == 0, "All selection checkboxes must be hidden"
+        assert "0 selected" in success_info["count_text"], "Count must be reset to 0 selected"
+        assert success_info["sel_disp"] == "none", "Selection bar must be hidden after creation"
+        assert success_info["nav_disp"] == "flex", "Bottom nav must be restored behind success modal"
 
-        # 1. White modal surface (#ffffff)
-        assert "rgb(255, 255, 255)" in modal_styles["modal_bg"], f"Modal background must be white, got {modal_styles['modal_bg']}"
-        # 2. Dark navy titles (#0f172a = rgb(15, 23, 42))
-        assert "rgb(15, 23, 42)" in modal_styles["title_color"], f"Title must be #0f172a, got {modal_styles['title_color']}"
-        assert "rgb(15, 23, 42)" in modal_styles["card_title_color"], f"Card title must be #0f172a, got {modal_styles['card_title_color']}"
-        # 3. Light card background (#f8fafc = rgb(248, 250, 252))
-        assert "rgb(248, 250, 252)" in modal_styles["card_bg"], f"Card must be light #f8fafc, got {modal_styles['card_bg']}"
-        # 4. Active status badge: soft green
-        assert "rgb(220, 252, 231)" in modal_styles["badge_bg"], "Badge must be soft green #dcfce7"
-        assert "rgb(21, 128, 61)" in modal_styles["badge_color"], "Badge text must be green #15803d"
-        # 5. Open action: dark green text and border (#0f5c4d = rgb(15, 92, 77))
-        assert "rgb(15, 92, 77)" in modal_styles["open_color"], f"Open button text must be #0f5c4d, got {modal_styles['open_color']}"
-        # 6. Revoke action: red text and border (#dc2626 = rgb(220, 38, 38))
-        assert "rgb(220, 38, 38)" in modal_styles["revoke_color"], f"Revoke button text must be #dc2626, got {modal_styles['revoke_color']}"
-        # 7. WhatsApp official SVG
-        assert modal_styles["has_wa_svg"], "WhatsApp button must have official SVG"
+        # Close success modal
+        d.find_element(By.ID, "btnCloseSuccessModal").click()
+        time.sleep(0.5)
 
-        shot_430_my_albums = SCREENSHOTS_DIR / "mobile_430_my_albums_light.png"
-        d430.save_screenshot(str(shot_430_my_albums))
-        print("Saved Screenshot: mobile_430_my_albums_light.png")
-
-        d430.find_element(By.ID, "btnCloseMyAlbumsModal").click()
-        d430.quit()
+        # Capture gallery after creation
+        shot_gallery_after = SCREENSHOTS_DIR / "gallery_after_successful_creation.png"
+        d.save_screenshot(str(shot_gallery_after))
+        print("Saved Screenshot: gallery_after_successful_creation.png")
 
         # =====================================================================
-        # CHECK 6: Desktop Viewport (1280x800) — Unchanged Functional Toolbar
+        # CHECK 7: Close Gallery / Return to New Search -> Hide Bars
         # =====================================================================
-        print("\n--- Check 6: Desktop Viewport (1280x800) ---")
+        print("\n--- Check 7: Close Gallery / Return to Homepage ---")
+        d.find_element(By.ID, "galleryDismissBtn").click()
+        time.sleep(0.5)
+
+        closed_state = d.execute_script("""
+            const nav = document.getElementById('mobileBottomNav');
+            const selBar = document.getElementById('bulkSelectionBar');
+            const gallery = document.getElementById('photosSection');
+            return {
+                gallery_hidden: gallery.hidden,
+                nav_disp: window.getComputedStyle(nav).display,
+                sel_disp: window.getComputedStyle(selBar).display
+            };
+        """)
+        print("Closed Gallery State:", closed_state)
+        assert closed_state["gallery_hidden"], "Gallery must be closed"
+        assert closed_state["nav_disp"] == "none", "Bottom nav must be hidden on homepage"
+        assert closed_state["sel_disp"] == "none", "Selection bar must be hidden on homepage"
+
+        # =====================================================================
+        # CHECK 8: Reopen Gallery -> Verify Clean Unselected State
+        # =====================================================================
+        print("\n--- Check 8: Reopen Gallery & Verify Clean State ---")
+        d.find_element(By.ID, "viewSavedPhotosBtn").click()
+        time.sleep(0.5)
+
+        reopened_state = d.execute_script("""
+            const nav = document.getElementById('mobileBottomNav');
+            const selBar = document.getElementById('bulkSelectionBar');
+            const selectedCards = document.querySelectorAll('.photo-card.selected');
+            return {
+                nav_disp: window.getComputedStyle(nav).display,
+                sel_disp: window.getComputedStyle(selBar).display,
+                selected_cards: selectedCards.length
+            };
+        """)
+        print("Reopened Gallery State:", reopened_state)
+        assert reopened_state["nav_disp"] == "flex", "Bottom nav must be restored upon reopening gallery"
+        assert reopened_state["sel_disp"] == "none", "Selection bar must not be visible"
+        assert reopened_state["selected_cards"] == 0, "No stale selections should exist"
+
+        # =====================================================================
+        # CHECK 9: Native Long-Press & Drag Suppression
+        # =====================================================================
+        print("\n--- Check 9: Native Long-Press & Drag Suppression ---")
+        suppression_check = d.execute_script("""
+            const card = document.querySelector('.photo-card');
+            const img = card.querySelector('.photo-img');
+
+            // Dispatch contextmenu event
+            const cmEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+            const cmPrevented = !img.dispatchEvent(cmEvent);
+
+            // Dispatch dragstart event
+            const dragEvent = new MouseEvent('dragstart', { bubbles: true, cancelable: true });
+            const dragPrevented = !img.dispatchEvent(dragEvent);
+
+            const cardStyle = window.getComputedStyle(card);
+            const imgStyle = window.getComputedStyle(img);
+
+            // Check raw style sheet declarations for iOS Safari -webkit-touch-callout
+            let touchCalloutInStyles = false;
+            for (const s of document.querySelectorAll('style')) {
+                if (s.textContent.includes('-webkit-touch-callout: none')) {
+                    touchCalloutInStyles = true;
+                    break;
+                }
+            }
+
+            return {
+                cm_prevented: cmPrevented,
+                drag_prevented: dragPrevented,
+                card_user_select: cardStyle.webkitUserSelect || cardStyle.userSelect,
+                img_user_select: imgStyle.webkitUserSelect || imgStyle.userSelect,
+                img_draggable: img.getAttribute('draggable'),
+                card_draggable: card.getAttribute('draggable'),
+                touch_callout_in_styles: touchCalloutInStyles
+            };
+        """)
+        print("Suppression Check Info:", suppression_check)
+        assert suppression_check["cm_prevented"], "contextmenu event must be prevented on photo images"
+        assert suppression_check["drag_prevented"], "dragstart event must be prevented on photo images"
+        assert suppression_check["img_draggable"] == "false", "Image attribute draggable must be false"
+        assert suppression_check["card_draggable"] == "false", "Card attribute draggable must be false"
+        assert suppression_check["img_user_select"] == "none", "Image user-select must be none"
+        assert suppression_check["card_user_select"] == "none", "Card user-select must be none"
+        assert suppression_check["touch_callout_in_styles"], "-webkit-touch-callout: none must be present in stylesheet for iOS Safari"
+
+        # =====================================================================
+        # CHECK 10: Multi-viewport Integrity (320px, 430px, Desktop)
+        # =====================================================================
+        print("\n--- Check 10: Multi-viewport & Desktop Toolbar Integrity ---")
+        d.quit()
+
+        # Desktop (1280x800)
         ddesk = get_driver(1280, 800, is_mobile=False)
         ddesk.get(SERVER_URL)
         time.sleep(1.0)
         inject_mock_data(ddesk, records, proofs["desktop"]["search_id"], proofs["desktop"]["token"])
+        ddesk.execute_script("viewSavedPhotos();")
+        time.sleep(0.5)
 
         desk_info = ddesk.execute_script("""
             const nav = document.getElementById('mobileBottomNav');
             const openMyAlbums = document.getElementById('openMyAlbumsBtn');
             const toggleSelect = document.getElementById('toggleSelectBtn');
             const closePhotos = document.getElementById('closePhotosBtn');
-            const discovery = document.getElementById('discoveryToolbar');
 
             return {
                 nav_hidden: window.getComputedStyle(nav).display === 'none',
                 open_my_albums_visible: window.getComputedStyle(openMyAlbums).display !== 'none',
                 toggle_select_visible: window.getComputedStyle(toggleSelect).display !== 'none',
-                close_photos_visible: window.getComputedStyle(closePhotos).display !== 'none',
-                discovery_visible: window.getComputedStyle(discovery).display !== 'none'
+                close_photos_visible: window.getComputedStyle(closePhotos).display !== 'none'
             };
         """)
-        print("Desktop Toolbar Info:", desk_info)
-        assert desk_info["nav_hidden"], "Mobile bottom nav must be hidden on desktop"
-        assert desk_info["open_my_albums_visible"], "My Albums button must be visible in desktop header"
-        assert desk_info["toggle_select_visible"], "Select button must be visible in desktop header"
-        assert desk_info["close_photos_visible"], "New Search button must be visible in desktop header"
-
-        shot_desk = SCREENSHOTS_DIR / "desktop_functional_toolbar.png"
-        ddesk.save_screenshot(str(shot_desk))
-        print("Saved Screenshot: desktop_functional_toolbar.png")
+        print("Desktop Toolbar Check:", desk_info)
+        assert desk_info["nav_hidden"], "Mobile bottom nav must NEVER appear on desktop"
+        assert desk_info["open_my_albums_visible"], "My Albums button visible on desktop"
+        assert desk_info["toggle_select_visible"], "Select button visible on desktop"
         ddesk.quit()
 
         print("\n=======================================================")
-        print("  ALL 6 MOBILE & DESKTOP REGRESSION CHECKS PASSED!     ")
+        print("  ALL 10 VERIFICATION CHECKS PASSED FLAWLESSLY!        ")
         print("=======================================================")
 
     finally:

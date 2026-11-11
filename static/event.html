@@ -1153,7 +1153,24 @@
       transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none !important;
+      -webkit-user-drag: none !important;
       contain: content;
+    }
+
+    .photo-card *,
+    .photo-img-wrap,
+    .photo-img,
+    .lightbox-slide-slot,
+    .lightbox-slide-slot *,
+    .lightbox-img-wrap,
+    .lightbox-img,
+    .filmstrip-thumb,
+    .filmstrip-thumb * {
+      -webkit-touch-callout: none !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      -webkit-user-drag: none !important;
     }
 
     .photo-card:hover {
@@ -1361,7 +1378,7 @@
       color: #0f172a;
       padding: 0.75rem 1rem;
       border-radius: 16px;
-      display: flex;
+      display: none; /* Managed centrally by updateMobileNavigationState() */
       flex-direction: column;
       gap: 0.55rem;
       box-shadow: 0 16px 36px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
@@ -1502,7 +1519,7 @@
       background: #ffffff;
       border-top: 1px solid #e2e8f0;
       box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-      display: flex;
+      display: none; /* Managed centrally by updateMobileNavigationState() */
       justify-content: space-around;
       align-items: center;
       padding: 0.35rem 0.5rem max(0.45rem, env(safe-area-inset-bottom)) 0.5rem;
@@ -3859,7 +3876,7 @@
     </section>
 
     <!-- Contextual Selection Bar (Replaces Bottom Nav when Select Photos is activated) -->
-    <div id="bulkSelectionBar" class="bulk-selection-bar" aria-label="Photo Selection Controls">
+    <div id="bulkSelectionBar" class="bulk-selection-bar" aria-label="Photo Selection Controls" hidden style="display:none;">
       <!-- First Row: Dynamic Count, Select/Deselect All, Done -->
       <div class="bulk-selection-header-row">
         <div class="bulk-info-wrap">
@@ -3891,7 +3908,7 @@
     </div>
 
     <!-- Fixed Mobile Bottom Navigation Bar (Normal Browsing Mode) -->
-    <nav id="mobileBottomNav" class="mobile-bottom-nav" aria-label="Gallery Navigation">
+    <nav id="mobileBottomNav" class="mobile-bottom-nav" aria-label="Gallery Navigation" hidden style="display:none;">
       <button type="button" class="bottom-nav-item active" id="navBtnPhotos" aria-label="Photos">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -4573,19 +4590,87 @@
     const selectedPhotos = new Set();
     let toastTimeout = null;
 
+    // Central UI-State Update Function for Mobile Navigation & Selection Bars
+    function updateMobileNavigationState() {
+      const galleryOverlay = $('photosSection');
+      const isGalleryOpen = !!(galleryOverlay && !galleryOverlay.hidden && window.getComputedStyle(galleryOverlay).display !== 'none');
+      const isMobile = window.innerWidth <= 767;
+      const nav = $('mobileBottomNav');
+      const bar = $('bulkSelectionBar');
+
+      if (!isGalleryOpen) {
+        // Gallery is closed (homepage, selfie capture, tips, etc.)
+        if (nav) {
+          nav.hidden = true;
+          nav.style.display = 'none';
+        }
+        if (bar) {
+          bar.hidden = true;
+          bar.style.display = 'none';
+          bar.classList.remove('active');
+        }
+        return;
+      }
+
+      // Gallery is open
+      if (isMobile) {
+        if (isSelectionMode) {
+          // Contextual Selection Panel replaces Bottom Nav on Mobile
+          if (nav) {
+            nav.hidden = true;
+            nav.style.display = 'none';
+          }
+          if (bar) {
+            bar.hidden = false;
+            bar.style.display = 'flex';
+            bar.classList.add('active');
+          }
+        } else {
+          // Normal Mobile Gallery Browsing Mode
+          if (nav) {
+            nav.hidden = false;
+            nav.style.display = 'flex';
+          }
+          if (bar) {
+            bar.classList.remove('active');
+            bar.style.display = 'none';
+            bar.hidden = true;
+          }
+        }
+      } else {
+        // Desktop gallery mode: mobile bottom nav is ALWAYS hidden
+        if (nav) {
+          nav.hidden = true;
+          nav.style.display = 'none';
+        }
+        if (isSelectionMode) {
+          if (bar) {
+            bar.hidden = false;
+            bar.style.display = 'flex';
+            bar.classList.add('active');
+          }
+        } else {
+          if (bar) {
+            bar.classList.remove('active');
+            bar.style.display = 'none';
+            bar.hidden = true;
+          }
+        }
+      }
+    }
+
     function showToast(msg) {
       const toast = $('galleryToast');
       if (!toast) return;
       const isMob = window.innerWidth < 768;
+      const isGalleryOpen = !$('photosSection')?.hidden;
       const bar = $('bulkSelectionBar');
-      if (bar && bar.classList.contains('active')) {
-        toast.style.bottom = isMob
-          ? 'calc(max(1rem, env(safe-area-inset-bottom)) + 120px)'
-          : 'calc(max(1.5rem, env(safe-area-inset-bottom)) + 120px)';
-      } else if (isMob) {
+      if (isGalleryOpen && isMob && bar && bar.classList.contains('active')) {
+        toast.style.bottom = 'calc(max(1rem, env(safe-area-inset-bottom)) + 120px)';
+      } else if (isGalleryOpen && isMob) {
         toast.style.bottom = 'calc(max(0.75rem, env(safe-area-inset-bottom)) + 65px)';
       } else {
-        toast.style.bottom = '1.5rem';
+        toast.style.bottom = 'max(24px, env(safe-area-inset-bottom))';
       }
       toast.textContent = msg;
       toast.classList.add('show');
@@ -4599,8 +4684,6 @@
       isSelectionMode = typeof force === 'boolean' ? force : !isSelectionMode;
       const toggleBtn = $('toggleSelectBtn');
       const toggleText = $('toggleSelectText');
-      const bar = $('bulkSelectionBar');
-      const nav = $('mobileBottomNav');
 
       if (toggleText) {
         toggleText.textContent = isSelectionMode ? 'Done' : 'Select';
@@ -4617,13 +4700,8 @@
         if (chk) chk.style.display = isSelectionMode ? 'flex' : 'none';
       });
 
-      if (bar) {
-        bar.classList.toggle('active', isSelectionMode);
-      }
-      if (nav) {
-        nav.style.display = isSelectionMode ? 'none' : '';
-      }
       updateBulkBar();
+      updateMobileNavigationState();
     }
 
     function togglePhotoSelect(path, cardEl) {
@@ -4680,7 +4758,11 @@
 
     function clearSelection() {
       selectedPhotos.clear();
-      document.querySelectorAll('.photo-card').forEach(c => c.classList.remove('selected'));
+      document.querySelectorAll('.photo-card').forEach(c => {
+        c.classList.remove('selected', 'selection-active');
+        const chk = c.querySelector('.photo-select-checkbox');
+        if (chk) chk.style.display = 'none';
+      });
       toggleSelectionMode(false);
     }
 
@@ -5305,6 +5387,10 @@
       const card = document.createElement('div');
       card.className = 'photo-card' + (isSelectionMode ? ' selection-active' : '') + (selectedPhotos.has(p) ? ' selected' : '');
       card.dataset.photoPath = p;
+      card.setAttribute('draggable', 'false');
+      card.draggable = false;
+      card.addEventListener('contextmenu', (e) => e.preventDefault());
+      card.addEventListener('dragstart', (e) => e.preventDefault());
 
       // Checkbox indicator for selection mode
       const chk = document.createElement('div');
@@ -5328,6 +5414,10 @@
       img.alt = filename;
       img.loading = idx < 12 ? 'eager' : 'lazy';
       img.decoding = 'async';
+      img.setAttribute('draggable', 'false');
+      img.draggable = false;
+      img.addEventListener('contextmenu', (e) => e.preventDefault());
+      img.addEventListener('dragstart', (e) => e.preventDefault());
 
       const onLoad = () => {
         wrap.classList.add('loaded');
@@ -5796,6 +5886,8 @@
       const viewAction = $('searchViewPhotosAction');
       if (viewAction) viewAction.hidden = false;
 
+      updateMobileNavigationState();
+
       try {
         history.pushState({ brkGalleryOpen: true }, '');
       } catch (e) {}
@@ -5807,6 +5899,12 @@
 
       overlay.hidden = true;
       document.body.style.overflow = '';
+
+      if (isSelectionMode || selectedPhotos.size > 0) {
+        clearSelection();
+      } else {
+        updateMobileNavigationState();
+      }
 
       if (!isFromPopState && window.history.state && window.history.state.brkGalleryOpen) {
         try {
@@ -5845,6 +5943,14 @@
       spinnerPrev = $('spinnerPrev');
       spinnerCurr = $('spinnerCurr');
       spinnerNext = $('spinnerNext');
+      [imgPrev, imgCurr, imgNext].forEach(img => {
+        if (img) {
+          img.setAttribute('draggable', 'false');
+          img.draggable = false;
+          img.addEventListener('contextmenu', (e) => e.preventDefault());
+          img.addEventListener('dragstart', (e) => e.preventDefault());
+        }
+      });
     }
 
     // Web Audio API Swipe Sound & Mute Preference
@@ -7680,6 +7786,9 @@
         localStorage.setItem('my_shared_albums', JSON.stringify(savedAlbums));
         updateMyAlbumsBadge();
 
+        // Clear selection, reset cards, exit selection mode, and restore gallery nav
+        clearSelection();
+
         // Populate Success Modal
         const linkInput = $('successShareLinkInput');
         if (linkInput) linkInput.value = fullShareUrl;
@@ -8248,6 +8357,37 @@
         syncLatestProfileCount();
       }
     });
+    // Container-level long-press & drag suppression on gallery photos & lightbox
+    const photosGridEl = $('photosGrid');
+    if (photosGridEl) {
+      photosGridEl.addEventListener('contextmenu', (e) => {
+        if (e.target.closest('.photo-card, .photo-img-wrap, img, a')) {
+          e.preventDefault();
+        }
+      });
+      photosGridEl.addEventListener('dragstart', (e) => {
+        if (e.target.closest('.photo-card, .photo-img-wrap, img, a')) {
+          e.preventDefault();
+        }
+      });
+    }
+
+    const lightboxModalEl = $('photoLightboxModal');
+    if (lightboxModalEl) {
+      lightboxModalEl.addEventListener('contextmenu', (e) => {
+        if (e.target.closest('.lightbox-slide-slot, .lightbox-img-wrap, .filmstrip-thumb, img, a')) {
+          e.preventDefault();
+        }
+      });
+      lightboxModalEl.addEventListener('dragstart', (e) => {
+        if (e.target.closest('.lightbox-slide-slot, .lightbox-img-wrap, .filmstrip-thumb, img, a')) {
+          e.preventDefault();
+        }
+      });
+    }
+
+    window.addEventListener('resize', updateMobileNavigationState);
+    updateMobileNavigationState();
     loadEvent();
   </script>
 </body>

@@ -2575,13 +2575,22 @@ def shared_album_page(token: str, request: Request):
       position: relative;
       cursor: pointer;
       border: 1px solid rgba(255,255,255,0.06);
+      -webkit-touch-callout: none !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      -webkit-user-drag: none !important;
     }}
-    .photo-card img {{
+    .photo-card img,
+    .lightbox-img-wrap img {{
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
       transition: transform 0.25s ease;
+      -webkit-touch-callout: none !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      -webkit-user-drag: none !important;
     }}
     .photo-card:hover img {{
       transform: scale(1.04);
@@ -2728,6 +2737,17 @@ def shared_album_page(token: str, request: Request):
     const SHARE_TOKEN = "{token}";
     let allPhotos = [];
     let currentIdx = 0;
+
+    document.addEventListener('contextmenu', (e) => {{
+      if (e.target.closest('.photo-card, .lightbox-img-wrap, img')) {{
+        e.preventDefault();
+      }}
+    }});
+    document.addEventListener('dragstart', (e) => {{
+      if (e.target.closest('.photo-card, .lightbox-img-wrap, img')) {{
+        e.preventDefault();
+      }}
+    }});
 
     async function loadAlbumData() {{
       try {{
