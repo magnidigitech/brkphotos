@@ -244,7 +244,11 @@ def run_tests():
 
     # TEST 10: Creator Revocation with Management Token
     total += 1
-    rev_ok = revoke_shared_album_by_creator(share_token, manage_token)
+    # Viewing token MUST NOT authorise management
+    hack_ok = revoke_shared_album_by_creator(album_id=album_id, manage_token=share_token)
+    assert hack_ok is False, "Viewing token must NEVER authorise revocation"
+
+    rev_ok = revoke_shared_album_by_creator(album_id=album_id, manage_token=manage_token)
     assert rev_ok is True, "Revocation with valid management token must succeed"
     # Immediate subsequent view request
     view_revoked = get_shared_album_by_token(share_token)

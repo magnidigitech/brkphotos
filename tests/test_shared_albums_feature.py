@@ -219,7 +219,7 @@ class TestSharedAlbumsFeature(unittest.TestCase):
         )
         share_tok = "sh_" + secrets.token_hex(32)
         manage_tok = "mg_" + secrets.token_hex(32)
-        self.client.post("/api/shared-albums", json={
+        create_res = self.client.post("/api/shared-albums", json={
             "search_id": search_id,
             "creation_token": creation_token,
             "photo_ids": [1],
@@ -227,18 +227,31 @@ class TestSharedAlbumsFeature(unittest.TestCase):
             "share_token": share_tok,
             "manage_token": manage_tok
         })
+        album_id = create_res.json()["id"]
 
-        # Revoke via manage token
-        res_revoke = self.client.post(f"/api/shared-albums/manage/{manage_tok}/revoke")
+        # 1. Old route containing management token in path MUST NOT exist (404 or 405)
+        res_old = self.client.post(f"/api/shared-albums/manage/{manage_tok}/revoke")
+        self.assertIn(res_old.status_code, (404, 405))
+
+        # 2. Attempting to authorise revocation with viewing token (share_token) MUST fail (403)
+        res_view_hack = self.client.post(f"/api/shared-albums/{album_id}/revoke", headers={"X-Manage-Token": share_tok})
+        self.assertEqual(res_view_hack.status_code, 403)
+
+        # 3. Missing X-Manage-Token header returns 401
+        res_no_token = self.client.post(f"/api/shared-albums/{album_id}/revoke")
+        self.assertEqual(res_no_token.status_code, 401)
+
+        # 4. Correct revocation: identifies by internal ID and receives management credential via X-Manage-Token header
+        res_revoke = self.client.post(f"/api/shared-albums/{album_id}/revoke", headers={"X-Manage-Token": manage_tok})
         self.assertEqual(res_revoke.status_code, 200)
 
-        # Subsequent recipient HTML request returns 410 Gone
+        # 5. Subsequent recipient HTML request returns 410 Gone
         res_page = self.client.get(f"/s/{share_tok}")
         self.assertEqual(res_page.status_code, 410)
         self.assertIn("Album Unavailable", res_page.text)
         self.assertIn("revoked by its creator", res_page.text)
 
-        # Subsequent metadata API returns 410
+        # 6. Subsequent metadata API returns 410
         res_api = self.client.get(f"/api/shared/{share_tok}")
         self.assertEqual(res_api.status_code, 410)
 
@@ -303,6 +316,111 @@ class TestSharedAlbumsFeature(unittest.TestCase):
         res_set = self.client.post("/api/admin/settings", json={"max_shared_album_photos": 150}, headers=headers)
         self.assertEqual(res_set.status_code, 200)
         self.assertEqual(res_set.json()["updated"]["max_shared_album_photos"], "150")
+
+    def test_06_concurrent_creation_and_retry_integrity(self):
+        import concurrent.futures
+
+        search_id = "srch_" + secrets.token_hex(8)
+        _, creation_token = database.save_search_result_proof(
+            search_id=search_id,
+            event_id=1,
+            matched_photo_ids=[1, 2, 3],
+            creator_session_id="sess_concurrent"
+        )
+        share_tok = "sh_" + secrets.token_hex(32)
+        manage_tok = "mg_" + secrets.token_hex(32)
+        payload = {
+            "search_id": search_id,
+            "creation_token": creation_token,
+            "photo_ids": [1, 2],
+            "title": "Concurrent Creation Album",
+            "share_token": share_tok,
+            "manage_token": manage_tok
+        }
+
+        # Send identical requests concurrently across threads
+        def send_create():
+            return self.client.post("/api/shared-albums", json=payload, headers={"X-Session-Id": "sess_concurrent"})
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(send_create) for _ in range(4)]
+            responses = [f.result() for f in futures]
+
+        status_codes = [r.status_code for r in responses]
+        self.assertTrue(all(sc in (200, 201) for sc in status_codes))
+        created_ids = set(r.json()["id"] for r in responses)
+        # Exactly one album must be created
+        self.assertEqual(len(created_ids), 1)
+
+        # Confirm database contains only 1 record
+        conn = database.get_db()
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) as cnt FROM shared_albums WHERE id = ?", (list(created_ids)[0],))
+        db_cnt = c.fetchone()["cnt"]
+        conn.close()
+        self.assertEqual(db_cnt, 1)
+
+        # Changed payload retry is strictly rejected with 409 Conflict
+        changed_payload = dict(payload)
+        changed_payload["photo_ids"] = [1, 3]
+        res_conflict = self.client.post("/api/shared-albums", json=changed_payload, headers={"X-Session-Id": "sess_concurrent"})
+        self.assertEqual(res_conflict.status_code, 409)
+
+    def test_07_limits_and_expiry_bounds(self):
+        token = self._login_admin()
+        headers = {"X-Admin-Token": token}
+
+        # 1. Dynamically set limit to 2 photos
+        self.client.post("/api/admin/settings", json={"max_shared_album_photos": 2}, headers=headers)
+
+        search_id = "srch_" + secrets.token_hex(8)
+        _, creation_token = database.save_search_result_proof(
+            search_id=search_id,
+            event_id=1,
+            matched_photo_ids=[1, 2, 3],
+            creator_session_id="sess_limit"
+        )
+
+        # Attempt to create with 3 photos exceeds dynamic limit of 2 -> 400
+        res_exceed = self.client.post("/api/shared-albums", json={
+            "search_id": search_id,
+            "creation_token": creation_token,
+            "photo_ids": [1, 2, 3],
+            "title": "Exceeding Limit Album",
+            "share_token": "sh_" + secrets.token_hex(32),
+            "manage_token": "mg_" + secrets.token_hex(32)
+        })
+        self.assertEqual(res_exceed.status_code, 400)
+        self.assertIn("exceeds maximum allowed limit", res_exceed.json()["detail"])
+
+        # 2. Expiry lifetime cap: requested 180 days is clamped to at most 90 days
+        share_tok = "sh_" + secrets.token_hex(32)
+        manage_tok = "mg_" + secrets.token_hex(32)
+        res_create = self.client.post("/api/shared-albums", json={
+            "search_id": search_id,
+            "creation_token": creation_token,
+            "photo_ids": [1, 2],
+            "title": "Capped Expiry Album",
+            "expiry_days": 180,
+            "share_token": share_tok,
+            "manage_token": manage_tok
+        })
+        self.assertEqual(res_create.status_code, 201)
+        created_data = res_create.json()
+        created_dt = datetime.strptime(created_data["created_at"][:19], "%Y-%m-%d %H:%M:%S")
+        expires_dt = datetime.strptime(created_data["expires_at"][:19], "%Y-%m-%d %H:%M:%S")
+        # Difference must not exceed 90 days + 1 hour margin
+        self.assertLessEqual((expires_dt - created_dt).total_seconds(), 90 * 86400 + 3600)
+
+        # 3. Admin expiry adjustment never exceeds 90 days
+        album_id = created_data["id"]
+        res_exp_update = self.client.put(f"/api/admin/shared-albums/{album_id}/expiry", json={"new_expiry_days": 90}, headers=headers)
+        self.assertEqual(res_exp_update.status_code, 200)
+        new_exp_dt = datetime.strptime(res_exp_update.json()["new_expires_at"][:19], "%Y-%m-%d %H:%M:%S")
+        self.assertLessEqual((new_exp_dt - created_dt).total_seconds(), 90 * 86400 + 3600)
+
+        # Reset max limit
+        self.client.post("/api/admin/settings", json={"max_shared_album_photos": 100}, headers=headers)
 
 if __name__ == "__main__":
     unittest.main()

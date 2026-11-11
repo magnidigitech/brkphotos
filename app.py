@@ -6,9 +6,12 @@ logger = logging.getLogger("uvicorn.error")
 def redact_token_from_string(text: str) -> str:
     if not text or not isinstance(text, str):
         return text
-    text = re.sub(r"/s/[a-zA-Z0-9_\-]{16,80}", "/s/[REDACTED]", text)
-    text = re.sub(r"/api/shared/[a-zA-Z0-9_\-]{16,80}", "/api/shared/[REDACTED]", text)
-    text = re.sub(r"/api/shared-albums/manage/[a-zA-Z0-9_\-]{16,80}", "/api/shared-albums/manage/[REDACTED]", text)
+    text = re.sub(r"/s/[a-zA-Z0-9_\-]{16,128}", "/s/[REDACTED]", text)
+    text = re.sub(r"/api/shared/[a-zA-Z0-9_\-]{16,128}", "/api/shared/[REDACTED]", text)
+    text = re.sub(r"/api/shared-albums/manage/[a-zA-Z0-9_\-]{16,128}", "/api/shared-albums/manage/[REDACTED]", text)
+    text = re.sub(r"mg_[a-zA-Z0-9]{32,128}", "[REDACTED_MANAGE_TOKEN]", text)
+    text = re.sub(r"sh_[a-zA-Z0-9]{32,128}", "[REDACTED_SHARE_TOKEN]", text)
+    text = re.sub(r"(?i)x-manage-token:\s*([^\s,]+)", "X-Manage-Token: [REDACTED]", text)
     return text
 
 class TokenRedactingFilter(logging.Filter):
@@ -3152,32 +3155,28 @@ def download_shared_album_zip_endpoint(token: str, request: Request, background_
     )
 
 
-@app.delete("/api/shared/{token}")
-@app.delete("/api/shared-albums/manage/{manage_token}")
-@app.post("/api/shared-albums/manage/{manage_token}/revoke")
-def revoke_shared_album_by_creator_endpoint(request: Request, token: Optional[str] = None, manage_token: Optional[str] = None):
+@app.post("/api/shared-albums/{album_id}/revoke")
+@app.delete("/api/shared-albums/{album_id}")
+def revoke_shared_album_by_creator_endpoint(album_id: int, request: Request):
     """
-    Revokes a shared album using creator's management token.
-    Supports either:
-    1. DELETE /api/shared/{token} with header X-Manage-Token: <manage_token>
-    2. POST /api/shared-albums/manage/{manage_token}/revoke
-    3. DELETE /api/shared-albums/manage/{manage_token}
-    The public viewing token cannot authorise this action alone.
+    Revokes a shared album identified by its internal ID.
+    Receives the independent management credential through header 'X-Manage-Token'.
+    The management credential NEVER enters the request URL or path.
+    Viewing credentials cannot authorise this action.
     """
-    eff_manage = manage_token or request.headers.get("X-Manage-Token", "").strip()
-    if not eff_manage:
-        raise HTTPException(401, "Management credential required in X-Manage-Token header or route.")
+    manage_token = request.headers.get("X-Manage-Token", "").strip()
+    if not manage_token:
+        raise HTTPException(401, "Management credential required in X-Manage-Token header.")
 
-    success = revoke_shared_album_by_creator(eff_manage, share_token=token)
+    success = revoke_shared_album_by_creator(album_id=album_id, manage_token=manage_token)
     if not success:
         raise HTTPException(403, "Invalid management credentials for this album, or album already revoked.")
 
     ip = get_client_ip(request)
     ua = request.headers.get("User-Agent", "Unknown")
-    log_id = (token[:8] if token else eff_manage[:8]) + "..."
-    record_security_event("shared_album_revoked", f"Creator revoked shared album {log_id}", ip=ip, user_agent=ua)
+    record_security_event("shared_album_revoked", f"Creator revoked shared album #{album_id}", ip=ip, user_agent=ua)
 
-    return {"status": "ok", "message": "Album revoked successfully."}
+    return {"status": "ok", "message": f"Shared album #{album_id} revoked successfully."}
 
 
 @app.post("/api/admin/login")

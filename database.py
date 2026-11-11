@@ -2476,6 +2476,7 @@ def create_shared_album_atomic(
     conn = get_db()
     c = conn.cursor()
     try:
+        conn.execute("BEGIN IMMEDIATE")
         # 1. Fetch active proof
         c.execute("""
             SELECT p.*, e.name as event_name, e.slug as event_slug, e.status as event_status
@@ -2883,35 +2884,41 @@ def get_all_photo_records_for_shared_album(share_token: str, requested_ids: Opti
     return rows
 
 
-def revoke_shared_album_by_creator(*args, **kwargs) -> bool:
+def revoke_shared_album_by_creator(album_id: Optional[int] = None, manage_token: Optional[str] = None, *args, **kwargs) -> bool:
     """
-    Revokes a shared album using creator's management token.
-    Supports:
-      - revoke_shared_album_by_creator(manage_token)
-      - revoke_shared_album_by_creator(share_token, manage_token)
-      - revoke_shared_album_by_creator(manage_token, share_token=share_token)
-    Viewing token share_token cannot authorise this action alone.
+    Revokes a shared album using creator's management token and internal album ID.
+    Viewing credentials (share_token) cannot authorise management.
     """
-    manage_token = kwargs.get("manage_token")
+    if not album_id and "album_id" in kwargs:
+        album_id = kwargs["album_id"]
+    if not manage_token and "manage_token" in kwargs:
+        manage_token = kwargs["manage_token"]
+
     share_token = kwargs.get("share_token")
 
-    if not manage_token and args:
+    if not album_id and not manage_token and args:
         if len(args) == 1:
-            manage_token = args[0]
-        elif len(args) >= 2:
-            if str(args[0]).startswith("mg_"):
-                manage_token = args[0]
-                if not share_token:
-                    share_token = args[1]
-            elif str(args[1]).startswith("mg_"):
-                manage_token = args[1]
-                if not share_token:
-                    share_token = args[0]
+            if isinstance(args[0], int) or (isinstance(args[0], str) and str(args[0]).isdigit()):
+                album_id = int(args[0])
             else:
-                # Default convention: (share_token, manage_token)
-                manage_token = args[1]
-                if not share_token:
-                    share_token = args[0]
+                manage_token = str(args[0])
+        elif len(args) >= 2:
+            if isinstance(args[0], int) or (isinstance(args[0], str) and str(args[0]).isdigit()):
+                album_id = int(args[0])
+                manage_token = str(args[1])
+            elif isinstance(args[1], int) or (isinstance(args[1], str) and str(args[1]).isdigit()):
+                album_id = int(args[1])
+                manage_token = str(args[0])
+            else:
+                if str(args[0]).startswith("mg_"):
+                    manage_token = str(args[0])
+                    share_token = str(args[1])
+                elif str(args[1]).startswith("mg_"):
+                    manage_token = str(args[1])
+                    share_token = str(args[0])
+                else:
+                    manage_token = str(args[1])
+                    share_token = str(args[0])
 
     if not manage_token:
         return False
@@ -2921,7 +2928,13 @@ def revoke_shared_album_by_creator(*args, **kwargs) -> bool:
 
     conn = get_db()
     c = conn.cursor()
-    if share_token:
+    if album_id is not None:
+        c.execute("""
+            UPDATE shared_albums
+            SET revoked_at = ?
+            WHERE id = ? AND manage_token_hash = ? AND revoked_at IS NULL
+        """, (now_utc_str, album_id, manage_hash))
+    elif share_token:
         share_hash = hashlib.sha256(str(share_token).encode("utf-8")).hexdigest()
         c.execute("""
             UPDATE shared_albums
@@ -2937,7 +2950,7 @@ def revoke_shared_album_by_creator(*args, **kwargs) -> bool:
     affected = c.rowcount
 
     # Fallback if positional order was reversed and no prefix was present
-    if affected == 0 and len(args) >= 2 and not kwargs.get("manage_token"):
+    if affected == 0 and album_id is None and len(args) >= 2 and not kwargs.get("manage_token"):
         alt_manage = args[0] if manage_token == args[1] else args[1]
         alt_share = args[1] if alt_manage == args[0] else args[0]
         alt_manage_hash = hashlib.sha256(str(alt_manage).encode("utf-8")).hexdigest()
@@ -2949,9 +2962,6 @@ def revoke_shared_album_by_creator(*args, **kwargs) -> bool:
         """, (now_utc_str, alt_share_hash, alt_manage_hash))
         affected = c.rowcount
 
-    conn.commit()
-    conn.close()
-    return affected > 0
     conn.commit()
     conn.close()
     return affected > 0
