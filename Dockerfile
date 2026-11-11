@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && python -c "import cv2; print('OpenCV successfully loaded:', cv2.__version__)"
 
 COPY *.py ./
+COPY backend ./backend
+COPY templates ./templates
 COPY static ./static
 
 ENV STORAGE_DIR=/storage
